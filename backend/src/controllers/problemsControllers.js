@@ -162,12 +162,16 @@ const solvedProblems=async(req,res)=>{
 
 const submittedProblem = async(req,res)=>{
   try{
+    console.log("I am here");
     const userId=req.result._id;
     const problemId=req.params.id;
     const ans=await Submission.find({userId,problemId});
+    console.log(ans);
+    
     if(ans.length==0)
-      return res.status(200).send('No Submission for the Given Probelem');
-    res.status(200).send(ans);
+      return res.status(200).json([]);
+
+    res.status(200).json(ans);
   }catch(err){
     res.status(500).send('Internal Server Error:'+err);
   }

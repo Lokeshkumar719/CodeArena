@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import Editor from '@monaco-editor/react';
 import { useParams } from 'react-router';
 import axiosClient from "../utils/axiosClient"
+import SubmissionHistory from '../components/SubmissionHistory';
 
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Sora:wght@400;500;600;700&display=swap');
@@ -320,6 +321,8 @@ const ProblemPage = () => {
   const [activeRightTab, setActiveRightTab] = useState('code');
   const editorRef = useRef(null);
   let { problemId } = useParams();
+
+
   const { handleSubmit } = useForm();
 
   useEffect(() => {
@@ -509,7 +512,7 @@ const ProblemPage = () => {
                 {activeLeftTab === 'submissions' && (
                   <div>
                     <p className="section-title">My Submissions</p>
-                    <p className="desc-text">Your submission history will appear here.</p>
+                    <SubmissionHistory problemId={problemId} />
                   </div>
                 )}
               </>

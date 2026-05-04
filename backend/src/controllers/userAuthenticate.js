@@ -23,7 +23,8 @@ const register=async (req,res)=>{
     const reply={
       firstName:user.firstName,
       emailId:user.emailId,
-      _id:user._id
+      _id:user._id,
+      role:user.role
     };
     // send the JWT and assign the role to the user in the JWT payload so that we can use it in the future for authorization
     const token=jwt.sign({id:user._id,emailId:user.emailId,role:'user'},process.env.JWT_KEY,{expiresIn:60*60});
@@ -62,8 +63,11 @@ const login=async (req,res)=>{
     const reply={
       firstName:user.firstName,
       emailId:user.emailId,
-      _id:user._id
+      _id:user._id,
+      role:user.role
     };
+    console.log(reply);
+    
     // send the JWT and assign the role to the user in the JWT payload so that we can use it in the future for authorization
     const token=jwt.sign({id:user._id,emailId:user.emailId,role:user.role},process.env.JWT_KEY,{expiresIn:60*60});
     //Always add these two to ensure frontend don't access JWT and Cookie is sent ONLY when request comes from your own site.
