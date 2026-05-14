@@ -2,13 +2,15 @@ import { Routes, Route, Navigate } from "react-router";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Homepage from "./pages/Homepage";
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch, useSelector } from "react-redux";
 import { checkAuth } from "./authSlice";
 import { useEffect } from "react";
 import AdminPanel from "./components/AdminPanel";
 import ProblemPage from "./pages/ProblemPage";
 import Admin from "./pages/Admin";
-import AdminDelete from "./components/AdminDelete";
+import AdminVideo from "./components/AdminVideo"
+import AdminDelete from "./components/AdminDelete"
+import AdminUpload from "./components/AdminUpload"
 
 function App() {
   const dispatch = useDispatch();
@@ -26,7 +28,7 @@ function App() {
     );
   }
 
-  const isAdmin = user?.role?.toLowerCase() === 'admin';
+  const isAdmin = user?.role?.toLowerCase() === "admin";
 
   return (
     <>
@@ -53,17 +55,40 @@ function App() {
 
         <Route
           path="/admin/create"
-          element={isAuthenticated && isAdmin ? <AdminPanel /> : <Navigate to="/" />}
+          element={
+            isAuthenticated && isAdmin ? <AdminPanel /> : <Navigate to="/" />
+          }
         />
 
         <Route
           path="/admin/delete"
-          element={isAuthenticated && isAdmin ? <AdminDelete /> : <Navigate to="/" />}
+          element={
+            isAuthenticated && isAdmin ? <AdminDelete /> : <Navigate to="/" />
+          }
+        />
+
+        <Route path="/problem/:problemId" element={<ProblemPage />} />
+
+        <Route
+          path="/admin/video"
+          element={
+            isAuthenticated && user?.role === "admin" ? (
+              <AdminVideo />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
         />
 
         <Route
-          path="/problem/:problemId"
-          element={<ProblemPage />}
+          path="/admin/upload/:problemId"
+          element={
+            isAuthenticated && user?.role === "admin" ? (
+              <AdminUpload />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
         />
       </Routes>
     </>

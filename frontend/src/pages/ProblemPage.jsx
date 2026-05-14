@@ -4,6 +4,7 @@ import Editor from '@monaco-editor/react';
 import { useParams } from 'react-router';
 import axiosClient from "../utils/axiosClient"
 import SubmissionHistory from '../components/SubmissionHistory';
+import Editorial from '../components/Editorial';
 
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Sora:wght@400;500;600;700&display=swap');
@@ -312,6 +313,8 @@ const styles = `
 
 const ProblemPage = () => {
   const [problem, setProblem] = useState(null);
+  console.log(problem);
+
   const [selectedLanguage, setSelectedLanguage] = useState('javascript');
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -488,11 +491,16 @@ const ProblemPage = () => {
                   </div>
                 )}
 
+                {/* {activeLeftTab === 'editorial' && (
+                  <Editorial problem={problem}/>
+                )} */}
+
                 {activeLeftTab === 'editorial' && (
-                  <div>
-                    <p className="section-title">Editorial</p>
-                    <p className="desc-text">Editorial will appear here.</p>
-                  </div>
+                  <Editorial
+                    secureUrl={problem.secureUrl}
+                    thumbnailUrl={problem.thumbnailUrl}
+                    duration={problem.duration}
+                  />
                 )}
 
                 {activeLeftTab === 'solutions' && (

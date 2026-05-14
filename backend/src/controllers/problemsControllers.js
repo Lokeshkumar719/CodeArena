@@ -2,6 +2,8 @@ const {getLanguageById,submitBatch,submitToken} = require('../utils/problemUtili
 const Problem=require('../models/problems');
 const User = require('../models/user');
 const Submission=require('../models/submission');
+const SolutionVideo = require("../models/solutionVideo");
+
 
 const createProblem=async (req,res)=>{
   const {title,description,difficulty,tags,visibleTestCases,hiddenTestCases,startCode,problemCreater,referenceSolution}=req.body;
@@ -12,8 +14,8 @@ const createProblem=async (req,res)=>{
       if(!languageId){
         return res.status(400).json({error:`Unsupported language: ${language}`});
       }
-      console.log('lanhuageId:',languageId);
-      console.log(visibleTestCases);
+      // console.log('languageId:',languageId);
+      // console.log(visibleTestCases);
       // batch submission to judge0 for reference solution and store the results
       const submission=visibleTestCases.map((testCase)=>({
         source_code: completeCode,
@@ -125,8 +127,20 @@ const getProblemById=async(req,res)=>{
       return res.status(400).json({error:"Problem id is required"});
 
     const reqdProblem=await Problem.findById(id).select('_id title description difficulty tags visibleTestCases startCode referenceSolution');
+
     if(!reqdProblem)
       return res.status(404).json({error:"Problem not found"});
+
+    const videos = await SolutionVideo.findOne({problemId:id});
+    if(videos){   
+      const responseData = {
+        ...reqdProblem.toObject(),
+      secureUrl:videos.secureUrl,
+      thumbnailUrl : videos.thumbnailUrl,
+      duration : videos.duration,
+      } 
+      return res.status(200).send(responseData);
+    }
 
     return res.status(200).send(reqdProblem);
   }catch(err){
@@ -162,11 +176,9 @@ const solvedProblems=async(req,res)=>{
 
 const submittedProblem = async(req,res)=>{
   try{
-    console.log("I am here");
     const userId=req.result._id;
     const problemId=req.params.id;
     const ans=await Submission.find({userId,problemId});
-    console.log(ans);
     
     if(ans.length==0)
       return res.status(200).json([]);
