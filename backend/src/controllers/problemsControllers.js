@@ -4,11 +4,11 @@ const User = require('../models/user');
 const Submission=require('../models/submission');
 const SolutionVideo = require("../models/solutionVideo");
 
-
 const createProblem=async (req,res)=>{
   const {title,description,difficulty,tags,visibleTestCases,hiddenTestCases,startCode,problemCreater,referenceSolution}=req.body;
 
   try{
+    console.log('i am inside create problem');
     for(const {language,completeCode} of referenceSolution){
       const languageId=getLanguageById(language);
       if(!languageId){
@@ -24,9 +24,10 @@ const createProblem=async (req,res)=>{
         expected_output: testCase.output,
       }));
 
-      // console.log(submission);
+      console.log(submission);
 
       const submitResult=await submitBatch(submission);
+      console.log(submitResult);
       // get the tokens from the subminResult
       const resultTokens=submitResult.map(result=>result.token);
 

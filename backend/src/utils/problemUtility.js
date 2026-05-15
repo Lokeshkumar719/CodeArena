@@ -17,7 +17,7 @@ const getLanguageById = (lang) => {
 
 
 const submitBatch=async (submissions)=>{
-  
+  console.log('i am inside batch submision');
   const options = {
     method: 'POST',
     url: 'https://judge0-ce.p.rapidapi.com/submissions/batch',
