@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 import axiosClient from "../utils/axiosClient";
 
-const AdminDelete = () => {
+const AdminUpdateList = () => {
+  const navigate = useNavigate();
+
   const [problems, setProblems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     fetchProblems();
@@ -24,30 +26,6 @@ const AdminDelete = () => {
       console.error(err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this problem?",
-    );
-
-    if (!confirmDelete) {
-      return;
-    }
-
-    try {
-      setDeletingId(id);
-
-      await axiosClient.delete(`/problem/delete/${id}`);
-
-      setProblems(problems.filter((problem) => problem._id !== id));
-    } catch (err) {
-      setError("Failed to delete problem");
-
-      console.error(err);
-    } finally {
-      setDeletingId(null);
     }
   };
 
@@ -102,10 +80,10 @@ const AdminDelete = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-4xl font-bold mb-2">Delete Problems</h1>
+          <h1 className="text-4xl font-bold mb-2">Update Problems</h1>
 
           <p className="text-base-content/70">
-            Manage and remove coding problems from the platform
+            Edit and manage coding problems on the platform
           </p>
         </div>
       </div>
@@ -163,18 +141,10 @@ const AdminDelete = () => {
                   {/* Actions */}
                   <td>
                     <button
-                      onClick={() => handleDelete(problem._id)}
-                      disabled={deletingId === problem._id}
-                      className="btn btn-sm btn-error"
+                      onClick={() => navigate(`/admin/update/${problem._id}`)}
+                      className="btn btn-sm btn-warning"
                     >
-                      {deletingId === problem._id ? (
-                        <>
-                          <span className="loading loading-spinner loading-xs"></span>
-                          Deleting...
-                        </>
-                      ) : (
-                        "Delete"
-                      )}
+                      Update
                     </button>
                   </td>
                 </tr>
@@ -187,4 +157,4 @@ const AdminDelete = () => {
   );
 };
 
-export default AdminDelete;
+export default AdminUpdateList;

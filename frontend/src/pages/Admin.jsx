@@ -1,104 +1,110 @@
-import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Home, RefreshCw, Zap,Video  } from 'lucide-react';
-import { NavLink } from 'react-router';
+import { Plus, Edit, Trash2, Video, ArrowRight } from "lucide-react";
+
+import { NavLink } from "react-router";
 
 function Admin() {
-  const [selectedOption, setSelectedOption] = useState(null);
-
   const adminOptions = [
     {
-      id: 'create',
-      title: 'Create Problem',
-      description: 'Add a new coding problem to the platform',
+      id: "create",
+      title: "Create Problem",
+      description:
+        "Add new coding problems, test cases and starter templates to the platform.",
       icon: Plus,
-      color: 'btn-success',
-      bgColor: 'bg-success/10',
-      route: '/admin/create'
+      color: "btn-success",
+      bgColor: "bg-success/10",
+      route: "/admin/create",
     },
     {
-      id: 'update',
-      title: 'Update Problem',
-      description: 'Edit existing problems and their details',
+      id: "update",
+      title: "Update Problem",
+      description:
+        "Edit existing problems, modify solutions and manage problem details.",
       icon: Edit,
-      color: 'btn-warning',
-      bgColor: 'bg-warning/10',
-      route: '/admin/update'
+      color: "btn-warning",
+      bgColor: "bg-warning/10",
+      route: "/admin/update-list",
     },
     {
-      id: 'delete',
-      title: 'Delete Problem',
-      description: 'Remove problems from the platform',
+      id: "delete",
+      title: "Delete Problem",
+      description:
+        "Remove outdated or invalid coding problems from the platform.",
       icon: Trash2,
-      color: 'btn-error',
-      bgColor: 'bg-error/10',
-      route: '/admin/delete'
+      color: "btn-error",
+      bgColor: "bg-error/10",
+      route: "/admin/delete",
     },
     {
-      id: 'video',
-      title: 'Video Problem',
-      description: 'Upload And Delete Videos',
+      id: "video",
+      title: "Video Problem",
+      description: "Upload and manage editorial videos for coding problems.",
       icon: Video,
-      color: 'btn-success',
-      bgColor: 'bg-success/10',
-      route: '/admin/video'
-    }
+      color: "btn-info",
+      bgColor: "bg-info/10",
+      route: "/admin/video",
+    },
   ];
 
   return (
     <div className="min-h-screen bg-base-200">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-6 py-10">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-base-content mb-4">
-            Admin Panel
+        <div className="text-center mb-14">
+          <h1 className="text-5xl font-extrabold text-base-content mb-4">
+            Admin Dashboard
           </h1>
-          <p className="text-base-content/70 text-lg">
-            Manage coding problems on your platform
+
+          <p className="text-lg text-base-content/70 max-w-2xl mx-auto leading-relaxed">
+            Manage coding problems, editorial videos and platform content from
+            one central dashboard.
           </p>
         </div>
 
-        {/* Admin Options Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        {/* Admin Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8 max-w-7xl mx-auto">
           {adminOptions.map((option) => {
             const IconComponent = option.icon;
+
             return (
               <div
                 key={option.id}
-                className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer"
+                className="group relative overflow-hidden rounded-3xl bg-base-100 border border-base-300 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
               >
-                <div className="card-body items-center text-center p-8">
+                {/* Glow Effect */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
+
+                <div className="card-body items-center text-center p-10 relative z-10">
                   {/* Icon */}
-                  <div className={`${option.bgColor} p-4 rounded-full mb-4`}>
-                    <IconComponent size={32} className="text-base-content" />
+                  <div
+                    className={`${option.bgColor} p-5 rounded-2xl mb-6 transition-transform duration-500 group-hover:scale-110`}
+                  >
+                    <IconComponent size={36} className="text-base-content" />
                   </div>
-                  
+
                   {/* Title */}
-                  <h2 className="card-title text-xl mb-2">
+                  <h2 className="card-title text-2xl font-bold mb-3">
                     {option.title}
                   </h2>
-                  
+
                   {/* Description */}
-                  <p className="text-base-content/70 mb-6">
+                  <p className="text-base-content/70 mb-8 leading-relaxed">
                     {option.description}
                   </p>
-                  
-                  {/* Action Button */}
-                  <div className="card-actions">
-                    <div className="card-actions">
-                    <NavLink 
+
+                  {/* Button */}
+                  <NavLink
                     to={option.route}
-                   className={`btn ${option.color} btn-wide`}
-                   >
-                   {option.title}
-                   </NavLink>
-                   </div>
-                  </div>
+                    className={`btn ${option.color} btn-wide group-hover:scale-105 transition-transform duration-300`}
+                  >
+                    {option.title}
+
+                    <ArrowRight size={18} />
+                  </NavLink>
                 </div>
               </div>
             );
           })}
         </div>
-
       </div>
     </div>
   );

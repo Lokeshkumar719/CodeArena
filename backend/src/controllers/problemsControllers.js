@@ -3,6 +3,7 @@ const Problem=require('../models/problems');
 const User = require('../models/user');
 const Submission=require('../models/submission');
 const SolutionVideo = require("../models/solutionVideo");
+const mongoose = require('mongoose');
 
 const createProblem=async (req,res)=>{
   const {title,description,difficulty,tags,visibleTestCases,hiddenTestCases,startCode,problemCreater,referenceSolution}=req.body;
@@ -42,6 +43,7 @@ const createProblem=async (req,res)=>{
       }
     }
     // if all the reference solutions are correct then we will create the problem in the database
+    console.log('creating problem');
     await Problem.create({
       ... req.body,
       // we will get the problemCreater from the adminMiddleware(stored in request itself) and it will be the id of the admin who is creating the problem
@@ -55,52 +57,77 @@ const createProblem=async (req,res)=>{
 }
 
 const updateProblem=async(req,res)=>{
+  console.log('i am inside update problem');
   const {id}=req.params;
-  const {title,description,difficulty,tags,visibleTestcases,hiddenTestcases,startCode,problemCreater,referenceSolution}=req.body;
-
+  const {
+    referenceSolution,
+    visibleTestCases
+  }=req.body;
   try{
-    if(!id) 
-      return res.status(400).json({error:"Problem id is required"});
-
+    if(!id){
+      return res.status(400).json({
+        error:"Problem id is required"
+      });
+    }
+    if(!mongoose.Types.ObjectId.isValid(id)){
+      return res.status(400).json({
+        error:"Invalid problem id"
+      });
+    }
+    if(!Array.isArray(referenceSolution)){
+      return res.status(400).json({
+        error:"Reference solution is required"
+      });
+    }
+    if(!Array.isArray(visibleTestCases)){
+      return res.status(400).json({
+        error:"Visible testcases are required"
+      });
+    }
     const dsaProblem=await Problem.findById(id);
-    if(!dsaProblem)
-      return res.status(404).json({error:"Problem not found"});
-
-
+    if(!dsaProblem){
+      return res.status(404).json({
+        error:"Problem not found"
+      });
+    }
     for(const {language,completeCode} of referenceSolution){
-      console.log("Reading refernce solution");
+      console.log("Reading reference solution");
       const languageId=getLanguageById(language);
       if(!languageId){
-        return res.status(400).json({error:`Unsupported language: ${language}`});
+        return res.status(400).json({
+          error:`Unsupported language: ${language}`
+        });
       }
-
-      // batch submission to judge0 for reference solution and store the results
-      const submission=visibleTestcases.map((testCase)=>({
+      const submission=visibleTestCases.map((testCase)=>({
         source_code: completeCode,
         language_id: languageId,
         stdin: testCase.input,
         expected_output: testCase.output,
       }));
-
-
       const submitResult=await submitBatch(submission);
-      // get the tokens from the subminResult
-      const resultTokens=submitResult.map(result=>result.token);
-
+      const resultTokens=submitResult.map((result)=>result.token);
       const testResult=await submitToken(resultTokens);
-
       for(const test of testResult){
         if(test.status_id!==3){
-          return res.status(400).send("Error Occured");
+          return res.status(400).json({
+            error:`Reference solution failed for ${language}`
+          });
         }
       }
     }
-
-    // if all the reference solutions are correct then we will update the problem in the database;
-    const newProblem=await Problem.findByIdAndUpdate(id,{...req.body},{runValidators:true,new:true});
-    res.status(200).send(newProblem);
+    const newProblem=await Problem.findByIdAndUpdate(
+      id,
+      {...req.body},
+      {
+        runValidators:true,
+        new:true
+      }
+    );
+    res.status(200).json(newProblem);
   }catch(err){
-    res.status(500).json({error:"Error Occured: "+err.message});
+    res.status(500).json({
+      error:"Error Occured: "+err.message
+    });
   }
 };
 
@@ -116,6 +143,34 @@ const deleteProblem=async(req,res)=>{
     
     await Problem.findByIdAndDelete(id);
     return res.status(200).send('problem deleted successfully');
+  }catch(err){
+    return res.status(500).send("Error Occured: "+err.message);
+  }
+};
+
+const getProblemByIdAdmin=async(req,res)=>{
+  const {id}=req.params;
+  try{
+    if(!id)
+      return res.status(400).json({error:"Problem id is required"});
+
+    const reqdProblem=await Problem.findById(id).select('_id title description difficulty tags visibleTestCases hiddenTestCases startCode referenceSolution');
+
+    if(!reqdProblem)
+      return res.status(404).json({error:"Problem not found"});
+
+    const videos = await SolutionVideo.findOne({problemId:id});
+    if(videos){   
+      const responseData = {
+        ...reqdProblem.toObject(),
+      secureUrl:videos.secureUrl,
+      thumbnailUrl : videos.thumbnailUrl,
+      duration : videos.duration,
+      } 
+      return res.status(200).send(responseData);
+    }
+
+    return res.status(200).send(reqdProblem);
   }catch(err){
     return res.status(500).send("Error Occured: "+err.message);
   }
@@ -190,4 +245,4 @@ const submittedProblem = async(req,res)=>{
   }
 };
 
-module.exports={createProblem,updateProblem,deleteProblem,getProblemById,getAllProblems,solvedProblems,submittedProblem};
+module.exports={createProblem,updateProblem,deleteProblem,getProblemById,getProblemByIdAdmin,getAllProblems,solvedProblems,submittedProblem};

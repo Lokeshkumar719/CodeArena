@@ -6,11 +6,13 @@ import { useDispatch, useSelector } from "react-redux";
 import { checkAuth } from "./authSlice";
 import { useEffect } from "react";
 import AdminPanel from "./components/AdminPanel";
+import AdminUpdate from "./components/AdminUpdate";
+import AdminUpdateList from "./components/AdminUpdateList";
 import ProblemPage from "./pages/ProblemPage";
 import Admin from "./pages/Admin";
-import AdminVideo from "./components/AdminVideo"
-import AdminDelete from "./components/AdminDelete"
-import AdminUpload from "./components/AdminUpload"
+import AdminVideo from "./components/AdminVideo";
+import AdminDelete from "./components/AdminDelete";
+import AdminUpload from "./components/AdminUpload";
 
 function App() {
   const dispatch = useDispatch();
@@ -67,6 +69,17 @@ function App() {
           }
         />
 
+        <Route
+          path="/admin/update-list"
+          element={
+            isAuthenticated && isAdmin ? (
+              <AdminUpdateList />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+
         <Route path="/problem/:problemId" element={<ProblemPage />} />
 
         <Route
@@ -90,6 +103,15 @@ function App() {
             )
           }
         />
+
+        <Route
+          path="/admin/update/:id"
+          element={
+            isAuthenticated && isAdmin ? <AdminUpdate /> : <Navigate to="/" />
+          }
+        />
+
+        
       </Routes>
     </>
   );

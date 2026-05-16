@@ -1,12 +1,11 @@
-import { useEffect, useState } from 'react';
-import axiosClient from '../utils/axiosClient'
-import { NavLink } from 'react-router';
+import { useEffect, useState } from "react";
+import axiosClient from "../utils/axiosClient";
+import { NavLink } from "react-router";
 
 const AdminVideo = () => {
   const [problems, setProblems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
 
   useEffect(() => {
     fetchProblems();
@@ -15,10 +14,13 @@ const AdminVideo = () => {
   const fetchProblems = async () => {
     try {
       setLoading(true);
-      const { data } = await axiosClient.get('/problem/getAllProblems');
+
+      const { data } = await axiosClient.get("/problem/getAllProblems");
+
       setProblems(data);
     } catch (err) {
-      setError('Failed to fetch problems');
+      setError("Failed to fetch problems");
+
       console.error(err);
     } finally {
       setLoading(false);
@@ -26,21 +28,40 @@ const AdminVideo = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this problem?')) return;
-    
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this video?",
+    );
+
+    if (!confirmDelete) {
+      return;
+    }
+
     try {
       await axiosClient.delete(`/video/delete/${id}`);
-      setProblems(problems.filter(problem => problem._id !== id));
+
+      fetchProblems();
     } catch (err) {
       setError(err);
-      console.log(err);
+
+      console.error(err);
     }
   };
 
+  const getDifficultyBadge = (difficulty) => {
+    if (difficulty === "easy") {
+      return "badge-success";
+    }
+
+    if (difficulty === "medium") {
+      return "badge-warning";
+    }
+
+    return "badge-error";
+  };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="flex justify-center items-center min-h-screen">
         <span className="loading loading-spinner loading-lg"></span>
       </div>
     );
@@ -48,79 +69,119 @@ const AdminVideo = () => {
 
   if (error) {
     return (
-      <div className="alert alert-error shadow-lg my-4">
-        <div>
-          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span>{error.response.data.error}</span>
+      <div className="container mx-auto p-6">
+        <div className="alert alert-error shadow-lg">
+          <div>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="stroke-current shrink-0 h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+
+            <span>{error.response?.data?.error || "Something went wrong"}</span>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Video Upload and Delete</h1>
+    <div className="container mx-auto p-6">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-4xl font-bold mb-2">Video Upload and Delete</h1>
+
+          <p className="text-base-content/70">
+            Upload and manage editorial videos for coding problems
+          </p>
+        </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="table table-zebra w-full">
-          <thead>
-            <tr>
-              <th className="w-1/12">#</th>
-              <th className="w-4/12">Title</th>
-              <th className="w-2/12">Difficulty</th>
-              <th className="w-3/12">Tags</th>
-              <th className="w-2/12">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {problems.map((problem, index) => (
-              <tr key={problem._id}>
-                <th>{index + 1}</th>
-                <td>{problem.title}</td>
-                <td>
-                  <span className={`badge ${
-                    problem.difficulty === 'Easy' 
-                      ? 'badge-success' 
-                      : problem.difficulty === 'Medium' 
-                        ? 'badge-warning' 
-                        : 'badge-error'
-                  }`}>
-                    {problem.difficulty}
-                  </span>
-                </td>
-                <td>
-                  <span className="badge badge-outline">
-                    {problem.tags}
-                  </span>
-                </td>
-                <td>
-                  <div className="flex space-x-1">
-                     <NavLink 
-                        to={`/admin/upload/${problem._id}`}
-                        className={`btn bg-blue-600`}
+      {/* Table */}
+      <div className="bg-base-100 rounded-2xl shadow-xl border border-base-300 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="table w-full">
+            <thead className="bg-base-200">
+              <tr>
+                <th>#</th>
+
+                <th>Title</th>
+
+                <th>Difficulty</th>
+
+                <th>Tags</th>
+
+                <th>Upload</th>
+
+                <th>Delete</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {problems.map((problem, index) => (
+                <tr key={problem._id} className="hover">
+                  {/* Index */}
+                  <th className="font-semibold">{index + 1}</th>
+
+                  {/* Title */}
+                  <td className="font-medium">{problem.title}</td>
+
+                  {/* Difficulty */}
+                  <td>
+                    <span
+                      className={`badge ${getDifficultyBadge(problem.difficulty)} badge-md capitalize`}
+                    >
+                      {problem.difficulty}
+                    </span>
+                  </td>
+
+                  {/* Tags */}
+                  <td>
+                    <div className="flex flex-wrap gap-2 max-w-sm">
+                      {problem.tags.map((tag, index) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1 rounded-full bg-base-300 text-sm font-medium text-base-content border border-base-100 shadow-sm"
                         >
-                        Upload
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+
+                  {/* Upload */}
+                  <td>
+                    <NavLink
+                      to={`/admin/upload/${problem._id}`}
+                      className="btn btn-sm bg-blue-600 hover:bg-blue-700 text-white border-none"
+                    >
+                      Upload
                     </NavLink>
-                  </div>
-                </td>
-                <td>
-                  <div className="flex space-x-2">
-                    <button 
+                  </td>
+
+                  {/* Delete */}
+                  <td>
+                    <button
                       onClick={() => handleDelete(problem._id)}
                       className="btn btn-sm btn-error"
                     >
                       Delete
                     </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
