@@ -6,23 +6,28 @@ const AdminUpdateList = () => {
   const navigate = useNavigate();
 
   const [problems, setProblems] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchProblems();
-  }, []);
+    fetchProblems(currentPage);
+  }, [currentPage]);
 
-  const fetchProblems = async () => {
+  const fetchProblems = async (page = 1) => {
     try {
       setLoading(true);
 
-      const { data } = await axiosClient.get("/problem/getAllProblems");
+      const { data } = await axiosClient.get(
+        `/problem/getAllProblems?page=${page}&limit=5`,
+      );
 
-      setProblems(data);
+      setProblems(data.problems);
+      setCurrentPage(data.currentPage);
+      setTotalPages(data.totalPages);
     } catch (err) {
       setError("Failed to fetch problems");
-
       console.error(err);
     } finally {
       setLoading(false);
@@ -110,7 +115,9 @@ const AdminUpdateList = () => {
               {problems.map((problem, index) => (
                 <tr key={problem._id} className="hover">
                   {/* Index */}
-                  <th className="font-semibold">{index + 1}</th>
+                  <th className="font-semibold">
+                    {(currentPage - 1) * 5 + index + 1}
+                  </th>
 
                   {/* Title */}
                   <td className="font-medium">{problem.title}</td>
@@ -152,6 +159,29 @@ const AdminUpdateList = () => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex justify-center items-center gap-4 mt-8">
+        <button
+          className="btn btn-outline btn-sm"
+          disabled={currentPage === 1}
+          onClick={() => setCurrentPage((prev) => prev - 1)}
+        >
+          Previous
+        </button>
+
+        <span className="font-semibold">
+          Page {currentPage} of {totalPages}
+        </span>
+
+        <button
+          className="btn btn-outline btn-sm"
+          disabled={currentPage === totalPages}
+          onClick={() => setCurrentPage((prev) => prev + 1)}
+        >
+          Next
+        </button>
       </div>
     </div>
   );

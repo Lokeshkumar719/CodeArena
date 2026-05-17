@@ -9,7 +9,6 @@ import toast from "react-hot-toast";
 const tagOptions = [
   "array",
   "string",
-  "linkedList",
   "stack",
   "queue",
   "hashing",
@@ -21,9 +20,6 @@ const tagOptions = [
   "backtracking",
   "greedy",
   "heap",
-  "tree",
-  "binaryTree",
-  "bst",
   "trie",
   "graph",
   "dfs",

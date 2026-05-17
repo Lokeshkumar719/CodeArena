@@ -20,6 +20,8 @@ const ProblemPage = () => {
   const [selectedLanguage, setSelectedLanguage] = useState("javascript");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [runResult, setRunResult] = useState(null);
   const [submitResult, setSubmitResult] = useState(null);
 
@@ -78,7 +80,8 @@ const ProblemPage = () => {
   };
 
   const handleRun = async () => {
-    setLoading(true);
+    setIsRunning(true);
+
     setRunResult(null);
 
     try {
@@ -88,6 +91,7 @@ const ProblemPage = () => {
       });
 
       setRunResult(response.data);
+
       setActiveRightTab("testcase");
     } catch (error) {
       setRunResult({
@@ -96,13 +100,14 @@ const ProblemPage = () => {
       });
 
       setActiveRightTab("testcase");
+    } finally {
+      setIsRunning(false);
     }
-
-    setLoading(false);
   };
 
   const handleSubmitCode = async () => {
-    setLoading(true);
+    setIsSubmitting(true);
+
     setSubmitResult(null);
 
     try {
@@ -115,13 +120,15 @@ const ProblemPage = () => {
       );
 
       setSubmitResult(response.data);
+
       setActiveRightTab("result");
     } catch (error) {
       setSubmitResult(null);
-      setActiveRightTab("result");
-    }
 
-    setLoading(false);
+      setActiveRightTab("result");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getLanguageForMonaco = (lang) => {
@@ -259,10 +266,10 @@ const ProblemPage = () => {
             code={code}
             handleEditorChange={handleEditorChange}
             handleEditorDidMount={handleEditorDidMount}
-            loading={loading}
+            isRunning={isRunning}
+            isSubmitting={isSubmitting}
             handleRun={handleRun}
             handleSubmitCode={handleSubmitCode}
-            setActiveRightTab={setActiveRightTab}
           />
 
           {activeRightTab === "testcase" && (

@@ -1,25 +1,33 @@
 import { useEffect, useState } from "react";
 import axiosClient from "../utils/axiosClient";
+import toast from "react-hot-toast";
 
 const AdminDelete = () => {
   const [problems, setProblems] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
-    fetchProblems();
-  }, []);
+    fetchProblems(currentPage);
+  }, [currentPage]);
 
-  const fetchProblems = async () => {
+  const fetchProblems = async (page = 1) => {
     try {
       setLoading(true);
 
-      const { data } = await axiosClient.get("/problem/getAllProblems");
+      const { data } = await axiosClient.get(
+        `/problem/getAllProblems?page=${page}&limit=5`,
+      );
 
-      setProblems(data);
+      setProblems(data.problems);
+      setCurrentPage(data.currentPage);
+      setTotalPages(data.totalPages);
     } catch (err) {
-      setError("Failed to fetch problems");
+      toast.error(
+        err.response?.data?.message || "Failed to fetch problems",
+      );
 
       console.error(err);
     } finally {
@@ -41,9 +49,15 @@ const AdminDelete = () => {
 
       await axiosClient.delete(`/problem/delete/${id}`);
 
-      setProblems(problems.filter((problem) => problem._id !== id));
+      setProblems((prev) =>
+        prev.filter((problem) => problem._id !== id),
+      );
+
+      toast.success("Problem deleted successfully");
     } catch (err) {
-      setError("Failed to delete problem");
+      toast.error(
+        err.response?.data?.message || "Failed to delete problem",
+      );
 
       console.error(err);
     } finally {
@@ -67,32 +81,6 @@ const AdminDelete = () => {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <span className="loading loading-spinner loading-lg"></span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="alert alert-error shadow-lg">
-          <div>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="stroke-current shrink-0 h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-
-            <span>{error}</span>
-          </div>
-        </div>
       </div>
     );
   }
@@ -132,7 +120,9 @@ const AdminDelete = () => {
               {problems.map((problem, index) => (
                 <tr key={problem._id} className="hover">
                   {/* Index */}
-                  <th className="font-semibold">{index + 1}</th>
+                  <th className="font-semibold">
+                    {(currentPage - 1) * 5 + index + 1}
+                  </th>
 
                   {/* Title */}
                   <td className="font-medium">{problem.title}</td>
@@ -181,6 +171,29 @@ const AdminDelete = () => {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="flex justify-center items-center gap-4 py-6">
+          <button
+            className="btn btn-outline btn-sm"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((prev) => prev - 1)}
+          >
+            Previous
+          </button>
+
+          <span className="font-semibold">
+            Page {currentPage} of {totalPages}
+          </span>
+
+          <button
+            className="btn btn-outline btn-sm"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((prev) => prev + 1)}
+          >
+            Next
+          </button>
         </div>
       </div>
     </div>

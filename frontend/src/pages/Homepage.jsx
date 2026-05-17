@@ -7,7 +7,6 @@ import { logoutUser } from "../authSlice";
 const tagOptions = [
   "array",
   "string",
-  "linkedList",
   "stack",
   "queue",
   "hashing",
@@ -19,9 +18,6 @@ const tagOptions = [
   "backtracking",
   "greedy",
   "heap",
-  "tree",
-  "binaryTree",
-  "bst",
   "trie",
   "graph",
   "dfs",
@@ -42,6 +38,9 @@ function Homepage() {
   const { user } = useSelector((state) => state.auth);
   const [problems, setProblems] = useState([]);
   const [solvedProblems, setSolvedProblems] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProblems, setTotalProblems] = useState(0);
   const [filters, setFilters] = useState({
     difficulty: "all",
     tag: "all",
@@ -50,8 +49,14 @@ function Homepage() {
   useEffect(() => {
     const fetchProblems = async () => {
       try {
-        const { data } = await axiosClient.get("/problem/getAllProblems");
-        setProblems(data);
+        const { data } = await axiosClient.get(
+          `/problem/getAllProblems?page=${currentPage}&limit=5`,
+        );
+
+        setProblems(data.problems);
+
+        setTotalPages(data.totalPages);
+        setTotalProblems(data.totalProblems);
       } catch (error) {
         console.error("Error fetching problems:", error);
       }
@@ -68,7 +73,7 @@ function Homepage() {
     if (user) {
       fetchSolvedProblems();
     }
-  }, [user]);
+  }, [user, currentPage]);
 
   const handleLogout = () => {
     dispatch(logoutUser());
@@ -232,6 +237,41 @@ function Homepage() {
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="text-center text-sm text-base-content/70 mt-6">
+          Showing {(currentPage - 1) * 5 + 1}-
+          {Math.min(currentPage * 5, totalProblems)} of {totalProblems} problems
+        </div>
+
+        <div className="flex justify-center items-center gap-2 mt-8">
+          <button
+            className="btn btn-sm"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(currentPage - 1)}
+          >
+            Previous
+          </button>
+
+          {[...Array(totalPages)].map((_, index) => (
+            <button
+              key={index}
+              className={`btn btn-sm ${
+                currentPage === index + 1 ? "btn-primary" : "btn-outline"
+              }`}
+              onClick={() => setCurrentPage(index + 1)}
+            >
+              {index + 1}
+            </button>
+          ))}
+
+          <button
+            className="btn btn-sm"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage(currentPage + 1)}
+          >
+            Next
+          </button>
         </div>
       </div>
     </div>

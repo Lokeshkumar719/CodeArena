@@ -16,6 +16,7 @@ import AdminUpload from "./components/AdminUpload";
 
 function App() {
   const dispatch = useDispatch();
+
   const { isAuthenticated, user, loading } = useSelector((state) => state.auth);
 
   useEffect(() => {
@@ -85,22 +86,14 @@ function App() {
         <Route
           path="/admin/video"
           element={
-            isAuthenticated && user?.role === "admin" ? (
-              <AdminVideo />
-            ) : (
-              <Navigate to="/" />
-            )
+            isAuthenticated && isAdmin ? <AdminVideo /> : <Navigate to="/" />
           }
         />
 
         <Route
           path="/admin/upload/:problemId"
           element={
-            isAuthenticated && user?.role === "admin" ? (
-              <AdminUpload />
-            ) : (
-              <Navigate to="/" />
-            )
+            isAuthenticated && isAdmin ? <AdminUpload /> : <Navigate to="/" />
           }
         />
 
@@ -110,8 +103,6 @@ function App() {
             isAuthenticated && isAdmin ? <AdminUpdate /> : <Navigate to="/" />
           }
         />
-
-        
       </Routes>
     </>
   );

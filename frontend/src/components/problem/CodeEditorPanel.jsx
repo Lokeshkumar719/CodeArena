@@ -11,12 +11,14 @@ const CodeEditorPanel = ({
   code,
   handleEditorChange,
   handleEditorDidMount,
-  loading,
+  isRunning,
+  isSubmitting,
   handleRun,
   handleSubmitCode,
-  setActiveRightTab,
 }) => {
-  if (activeRightTab !== "code") return null;
+  if (activeRightTab !== "code") {
+    return null;
+  }
 
   return (
     <div
@@ -66,10 +68,10 @@ const CodeEditorPanel = ({
 
       <div className="action-bar justify-end">
         <ActionBar
-          loading={loading}
+          isRunning={isRunning}
+          isSubmitting={isSubmitting}
           handleRun={handleRun}
           handleSubmitCode={handleSubmitCode}
-          setActiveRightTab={setActiveRightTab}
         />
       </div>
     </div>
