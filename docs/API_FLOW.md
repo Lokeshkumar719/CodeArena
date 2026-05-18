@@ -79,18 +79,19 @@ SubmissionHistory.jsx
 
 ```
 AdminPanel.jsx
-  → POST /problem/create (adminMiddleware)
+  → POST /problem/create (userMiddleware, adminMiddleware)
+       body includes inputFormat, outputFormat, constraints, test cases, startCode, referenceSolution
        → validates reference solutions against visible tests via Judge0
-       → Problem.create
+       → Problem.create({ ...req.body, problemCreator: req.user._id })
 ```
 
 ### 9. Admin video upload
 
 ```
 AdminUpload.jsx
-  → GET /video/create/:problemId → signature + Cloudinary params
+  → GET /video/create/:problemId (userMiddleware, adminMiddleware)
   → POST to Cloudinary (plain axios, not axiosClient)
-  → POST /video/save { problemId, cloudinaryPublicId, secureUrl, duration }
+  → POST /video/save (userMiddleware, adminMiddleware)
 ```
 
 ## Complete Endpoint Reference
@@ -103,7 +104,7 @@ AdminUpload.jsx
 | POST | `/login` | — | `login` |
 | POST | `/logout` | `userMiddleware` | `logout` |
 | GET | `/check` | `userMiddleware` | inline JSON |
-| POST | `/admin/Register` | `adminMiddleware` | `adminRegister` |
+| POST | `/admin/Register` | `userMiddleware`, `adminMiddleware` | `adminRegister` |
 | DELETE | `/profile` | `userMiddleware` | `deleteProfile` |
 
 ### `/problem`
@@ -130,9 +131,9 @@ AdminUpload.jsx
 
 | Method | Path | Middleware | Handler |
 |--------|------|------------|---------|
-| GET | `/create/:problemId` | `adminMiddleware` | `generateUploadSignature` |
-| POST | `/save` | `adminMiddleware` | `saveVideoMetadata` |
-| DELETE | `/delete/:problemId` | `adminMiddleware` | `deleteVideo` |
+| GET | `/create/:problemId` | `userMiddleware`, `adminMiddleware` | `generateUploadSignature` |
+| POST | `/save` | `userMiddleware`, `adminMiddleware` | `saveVideoMetadata` |
+| DELETE | `/delete/:problemId` | `userMiddleware`, `adminMiddleware` | `deleteVideo` |
 
 ## External API: Judge0
 

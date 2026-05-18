@@ -11,6 +11,7 @@ Render problem title, difficulty/tags badges, description text, and visible test
 
 - Display `problem.title`, `problem.description`.
 - Map `problem.tags` to badge chips.
+- Render **`inputFormat`**, **`outputFormat`**, and **`constraints`** when present (monospace cards).
 - Render each `problem.visibleTestCases` entry as an example card (input, output, optional explanation).
 
 # Main Functions / Components / Classes
@@ -22,9 +23,12 @@ Render problem title, difficulty/tags badges, description text, and visible test
 
 # Internal Logic
 
-- Difficulty badge: `getDifficultyBadge(problem.difficulty)` + capitalized difficulty string.
-- Examples: `visibleTestCases.map` with `example-card`, `example-row` structure.
-- Assumes `visibleTestCases` is always an array (no optional chaining on map).
+1. Title + difficulty badge + tag chips.
+2. Description paragraph (`whitespace-pre-wrap`).
+3. Conditional sections for `inputFormat`, `outputFormat`, `constraints` (each in `example-card`).
+4. Examples heading + `visibleTestCases.map` for input/output/explanation rows.
+
+Assumes `visibleTestCases` is always an array (no optional chaining on `.map`).
 
 # Inputs and Outputs
 

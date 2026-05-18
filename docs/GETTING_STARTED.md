@@ -80,7 +80,8 @@ Quick link: [DOC_INDEX.md](./DOC_INDEX.md) for the full file catalog.
 
 | Symptom | Likely cause |
 |---------|----------------|
-| 401 on all API calls after login | `userMiddleware` admin-only bug; CORS/credentials mismatch |
+| 401 on all API calls after login | Missing/invalid cookie, Redis blocklist, or CORS/`withCredentials` mismatch |
+| 403 on admin routes | User is not `role: admin` or `adminMiddleware` used without `userMiddleware` |
 | Judge0 errors | Invalid `RAPID_API_KEY` or rate limits |
 | Cookie not sent | Frontend not using `withCredentials`; wrong origin in CORS |
 | Problem page empty | Not authenticated while API requires cookie |
