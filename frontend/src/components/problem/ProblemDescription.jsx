@@ -23,11 +23,50 @@ function ProblemDescription({
         ))}
       </div>
 
-      <p className="desc-text">
+      <p className="desc-text whitespace-pre-wrap">
         {problem.description}
       </p>
 
-      <p className="examples-heading">
+      {/* Input Format */}
+      {problem.inputFormat && (
+        <div className="mt-6">
+          <p className="examples-heading">
+            Input Format
+          </p>
+
+          <div className="example-card font-mono whitespace-pre-wrap">
+            {problem.inputFormat}
+          </div>
+        </div>
+      )}
+
+      {/* Output Format */}
+      {problem.outputFormat && (
+        <div className="mt-6">
+          <p className="examples-heading">
+            Output Format
+          </p>
+
+          <div className="example-card font-mono whitespace-pre-wrap">
+            {problem.outputFormat}
+          </div>
+        </div>
+      )}
+
+      {/* Constraints */}
+      {problem.constraints && (
+        <div className="mt-6">
+          <p className="examples-heading">
+            Constraints
+          </p>
+
+          <div className="example-card font-mono whitespace-pre-wrap">
+            {problem.constraints}
+          </div>
+        </div>
+      )}
+
+      <p className="examples-heading mt-6">
         Examples
       </p>
 
@@ -45,7 +84,7 @@ function ProblemDescription({
               Input:
             </span>
 
-            <span className="example-val">
+            <span className="example-val font-mono whitespace-pre-wrap">
               {ex.input}
             </span>
           </div>
@@ -55,7 +94,7 @@ function ProblemDescription({
               Output:
             </span>
 
-            <span className="example-val">
+            <span className="example-val font-mono whitespace-pre-wrap">
               {ex.output}
             </span>
           </div>
@@ -66,7 +105,7 @@ function ProblemDescription({
                 Explanation:
               </span>
 
-              <span className="example-val">
+              <span className="example-val whitespace-pre-wrap">
                 {ex.explanation}
               </span>
             </div>

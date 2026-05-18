@@ -21,8 +21,6 @@ const createProblem = asyncHandler(async (req, res) => {
     referenceSolution,
   } = req.body;
 
-  console.log("i am inside create problem");
-
   for (const { language, completeCode } of referenceSolution) {
     const languageId = getLanguageById(language);
 
@@ -39,17 +37,12 @@ const createProblem = asyncHandler(async (req, res) => {
       expected_output: testCase.output,
     }));
 
-    console.log(submission);
 
     const submitResult = await submitBatch(submission);
-
-    console.log(submitResult);
 
     const resultTokens = submitResult.map((result) => result.token);
 
     const testResult = await submitToken(resultTokens);
-
-    console.log(testResult);
 
     for (const test of testResult) {
       if (test.status_id !== JUDGE0_STATUS.ACCEPTED) {
@@ -58,19 +51,16 @@ const createProblem = asyncHandler(async (req, res) => {
     }
   }
 
-  console.log("creating problem");
 
   await Problem.create({
     ...req.body,
-    problemCreator: req.result._id,
+    problemCreator: req.user._id,
   });
 
   res.send("Problem Created Successfully");
 });
 
 const updateProblem = asyncHandler(async (req, res) => {
-  console.log("i am inside update problem");
-
   const { id } = req.params;
   const { referenceSolution, visibleTestCases } = req.body;
 
@@ -107,7 +97,6 @@ const updateProblem = asyncHandler(async (req, res) => {
   }
 
   for (const { language, completeCode } of referenceSolution) {
-    console.log("Reading reference solution");
 
     const languageId = getLanguageById(language);
 
@@ -177,16 +166,14 @@ const getProblemByIdAdmin = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   if (!id) {
-    console.log("i am inside admin get id");
-
     return res.status(400).json({
       error: "Problem id is required",
     });
   }
 
   const reqdProblem = await Problem.findById(id).select(
-    "_id title description difficulty tags visibleTestCases hiddenTestCases startCode referenceSolution",
-  );
+  "_id title description inputFormat outputFormat constraints difficulty tags visibleTestCases hiddenTestCases startCode referenceSolution",
+);
 
   if (!reqdProblem) {
     return res.status(404).json({
@@ -220,8 +207,8 @@ const getProblemById = asyncHandler(async (req, res) => {
   }
 
   const reqdProblem = await Problem.findById(id).select(
-    "_id title description difficulty tags visibleTestCases startCode referenceSolution",
-  );
+  "_id title description inputFormat outputFormat constraints difficulty tags visibleTestCases startCode referenceSolution",
+);
 
   if (!reqdProblem) {
     return res.status(404).json({
@@ -274,7 +261,7 @@ const getAllProblems = asyncHandler(async (req, res) => {
 });
 
 const solvedProblems = asyncHandler(async (req, res) => {
-  const userId = req.result._id;
+  const userId = req.user._id;
 
   const user = await User.findById(userId).populate({
     path: "problemSolved",
@@ -285,7 +272,7 @@ const solvedProblems = asyncHandler(async (req, res) => {
 });
 
 const submittedProblem = asyncHandler(async (req, res) => {
-  const userId = req.result._id;
+  const userId = req.user._id;
 
   const problemId = req.params.id;
 

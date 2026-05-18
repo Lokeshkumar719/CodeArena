@@ -7,7 +7,7 @@ const { JUDGE0_STATUS } = require("../constants/judgeStatus");
 
 const submitCode = asyncHandler(async (req, res) => {
   // as middleware added the user(it's id and all info) so we can extract that to use here
-  const userId = req.result._id;
+  const userId = req.user._id;
   const problemId = req.params.id;
   const { code, language } = req.body;
   if (!userId || !problemId || !code || !language) {
@@ -81,7 +81,7 @@ const submitCode = asyncHandler(async (req, res) => {
 
   // add the solved problem in user data if not solved earlier only if it is accepted
   if (status === "accepted") {
-    await req.result.updateOne({
+    await req.user.updateOne({
       // prevent duplicate
       $addToSet: { problemSolved: problemId },
     });
@@ -100,7 +100,7 @@ const submitCode = asyncHandler(async (req, res) => {
 
 
 const runCode = asyncHandler(async (req, res) => {
-  const userId = req.result._id;
+  const userId = req.user._id;
   const problemId = req.params.id;
   const { code, language } = req.body;
   if (!userId || !problemId || !code || !language) {

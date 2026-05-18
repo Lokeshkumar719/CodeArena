@@ -1,103 +1,184 @@
 # File Purpose
 
-Controller for running user code against visible test cases and submitting against full test suites (visible + hidden), persisting results and updating solve progress.
+Controller for running user code against visible test cases and submitting code against complete test suites (visible + hidden test cases), while persisting submission history and updating solved-problem progress.
 
 # Responsibilities
 
-- Validate request body (`code`, `language`) and problem existence
-- Map languages to Judge0 IDs
-- Orchestrate Judge0 batch submit + poll
-- Persist submission records (submit only)
-- Update `User.problemSolved` on full accept
-- Aggregate runtime, memory, pass count, status
+- Validate request body (code, language) and problem existence
+- Map platform languages to Judge0 language IDs
+- Orchestrate Judge0 batch submission + polling workflow
+- Persist submission records during full submissions
+- Update User.problemSolved on accepted submissions
+- Aggregate runtime, memory usage, testcase counts, and final status
+
+# Authentication Flow
+
+All routes using this controller require:
+
+js userMiddleware 
+
+which:
+- verifies JWT
+- validates Redis token blocklist
+- fetches authenticated user document
+- attaches:
+  js   req.user   
+
+This controller depends on authenticated user context for:
+- submission ownership
+- solved-problem tracking
+- user-specific submission history
 
 # Main Functions / Components / Classes
 
 | Export | Behavior |
 |--------|----------|
-| `submitCode` | All test cases → `Submission.create` → Judge0 → update doc → maybe `$addToSet problemSolved` |
-| `runCode` | Visible tests only → Judge0 → JSON response, no submission row |
+| submitCode | Full testcase evaluation + Submission.create + solved-problem update |
+| runCode | Visible testcase execution only, no DB persistence |
+
+All controllers are wrapped using asyncHandler.
 
 # Internal Logic
 
-### Shared evaluation loop
+## Shared Evaluation Loop
 
-After `submitToken` returns:
+After Judge0 polling returns results:
 
-```text
-status = "accepted"
-for each test in testResult:
-  if test.status.id !== JUDGE0_STATUS.ACCEPTED:
-    status = COMPILE_ERROR ? "error" : "wrong"
-    errorMessage = test.stderr
-    break
-  else increment testCasesPassed, sum runtime, max memory
-```
+txt status = "accepted"  for each test in testResult:   if test.status.id !== JUDGE0_STATUS.ACCEPTED:     status = COMPILE_ERROR ? "error" : "wrong"     errorMessage = test.stderr     break   else:     increment passed count     accumulate runtime     track peak memory 
 
-### submitCode
+The loop:
+- aggregates testcase statistics
+- determines final submission status
+- exits immediately on first failing testcase
 
-1. `allTestcases = visible + hidden`
-2. Create `Submission` with `status: "pending"`, `testCasesTotal: allTestcases.length`
-3. Run Judge0 on all cases
-4. Update submission fields: `status`, `testCasesPassed`, `runtime`, `memory`, `errorMessage`
-5. If `status === "accepted"`: `req.result.updateOne({ $addToSet: { problemSolved: problemId } })`
-6. Response: `{ accepted, error, totalTestCases, passedTestCases, runtime, memory }`
+# submitCode
 
-### runCode
+## Workflow
 
-- Maps only `problem.visibleTestCases`
-- Returns raw `testCases: testResult` plus summary fields
-- No `Submission` document
+1. Merge:
+   js    visibleTestCases + hiddenTestCases    
+
+2. Create initial Submission document:
+   js    status: "pending"    
+
+3. Execute all testcases using Judge0
+
+4. Poll Judge0 until execution completes
+
+5. Update submission document with:
+   - status
+   - passed testcase count
+   - runtime
+   - memory
+   - error information
+
+6. On full acceptance:
+   js    req.user.updateOne({      $addToSet: {        problemSolved: problemId      }    })    
+
+7. Return summarized execution response
+
+## Response Shape
+
+js id="eok6p7" {   accepted,   error,   totalTestCases,   passedTestCases,   runtime,   memory } 
+
+# runCode
+
+## Behavior
+
+- Executes only:
+  js   problem.visibleTestCases   
+
+- Returns:
+  - raw Judge0 testcase results
+  - aggregated runtime/memory data
+  - pass/fail summary
+
+- Does NOT create Submission documents
+
+## Response Includes
+
+js id="8mvrv3" {   testCases,   runtime,   memory,   accepted,   passedTestCases } 
 
 # Inputs and Outputs
 
-| Handler | Params/Body | Response `201` |
-|---------|-------------|----------------|
-| `submitCode` | `:id` problemId, `{ code, language }` | Pass/fail summary |
-| `runCode` | same | Includes full `testCases` array from Judge0 |
+| Handler | Params / Body | Response |
+|---------|----------------|----------|
+| submitCode | problemId, { code, language } | Submission summary |
+| runCode | problemId, { code, language } | Judge0 testcase results + summary |
 
-Missing fields → `400` `{ success: false, message }`.
+Missing or invalid fields return:
+
+js id="c1mk1u" {   success: false,   message } 
+
+with 400 status.
 
 # Dependencies
 
-**Internal:** `../models/problems`, `../models/submission`, `../utils/problemUtility`, `../services/judge0Service`, `../utils/asyncHandler`, `../constants/judgeStatus`
+## Internal
+
+- ../models/problems
+- ../models/submission
+- ../utils/problemUtility
+- ../services/judge0Service
+- ../utils/asyncHandler
+- ../constants/judgeStatus
 
 # Used By
 
-- [../routes/submit.md](../routes/submit.md)
+- ../routes/submit.md
 
 # API Connections
 
-Judge0 via [../services/judge0Service.md](../services/judge0Service.md).
+Judge0 CE integration via:
+
+- ../services/judge0Service.md
 
 # Database Connections
 
-- `Problem.findById`
-- `Submission.create` / `save` (submit)
-- `req.result.updateOne` on User (mongoose document method)
+## MongoDB Collections
 
-# State/Context Dependencies
+### Problem
+- fetch testcase data
+- validate problem existence
 
-- `req.result._id` and full user doc for `$addToSet`
-- `language` enum in schema: `cpp`, `java`, `javascript`
+### Submission
+- create pending submission
+- update final execution results
+
+### User
+- update solved-problem progress using:
+  js   $addToSet   
+
+# State / Context Dependencies
+
+- req.user
+- Judge0 execution service
+- platform language mappings
+- JUDGE0_STATUS constants
+
+Supported language values currently include:
+- cpp
+- java
+- javascript
 
 # Related Files
 
-- [../routes/submit.md](../routes/submit.md)
-- [../database/submission.md](../database/submission.md)
-- [../services/judge0Service.md](../services/judge0Service.md)
-- [../constants/judgeStatus.md](../constants/judgeStatus.md)
+- ../routes/submit.md
+- ../database/submission.md
+- ../services/judge0Service.md
+- ../constants/judgeStatus.md
 
 # Next Files To Read
 
-1. [../services/judge0Service.md](../services/judge0Service.md)
-2. [../database/submission.md](../database/submission.md)
+1. ../services/judge0Service.md
+2. ../database/submission.md
 
 # Common Risks / Notes
 
-- Assigns `submittedResult.errorMessage` but **submission schema has no `errorMessage` field** — value may be stripped under strict schema.
-- First failing test stops evaluation; remaining cases not run (by design in loop).
-- `req.result.updateOne` requires middleware to attach Mongoose document (not plain object).
-- Long Judge0 polling blocks HTTP worker thread.
+- submittedResult.errorMessage may not persist if Submission schema does not define an errorMessage field.
+- Evaluation loop stops on first failing testcase by design.
+- req.user.updateOne() requires middleware to attach a full Mongoose document rather than a plain object.
+- Long Judge0 polling can keep HTTP requests open for extended durations.
+- Runtime aggregation logic depends on Judge0 response consistency.
 
 # Last Reviewed: 2026-05-18
