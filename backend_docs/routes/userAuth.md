@@ -2,11 +2,7 @@
 
 Express router responsible for authentication, session validation, admin registration, logout, and profile-management routes.
 
-Mounted at:
-
-txt id="9bjlwm" /user 
-
-inside index.js.
+Mounted at **`/user`** in `backend/src/index.js`.
 
 # Responsibilities
 
@@ -52,7 +48,7 @@ because:
 | POST /register | none | register |
 | POST /login | none | login |
 | POST /logout | userMiddleware | logout |
-| POST /admin/register | userMiddleware, adminMiddleware | adminRegister |
+| POST /admin/Register | userMiddleware, adminMiddleware | adminRegister |
 | DELETE /profile | userMiddleware | deleteProfile |
 | GET /check | userMiddleware | inline session validation handler |
 

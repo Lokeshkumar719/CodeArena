@@ -22,7 +22,8 @@ index.js
 ```mermaid
 flowchart LR
   R[Route] --> M{Middleware?}
-  M -->|user/admin| JWT + Redis + User lookup → req.result
+  M -->|userMiddleware| JWT + Redis + User lookup → req.user
+  M -->|adminMiddleware| req.user.role === admin → 403 if not
   M -->|none| C[Controller asyncHandler]
   M --> C
   C --> DB[(Mongoose)]

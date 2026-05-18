@@ -37,12 +37,14 @@ erDiagram
 
 ## Problem Schema Highlights
 
+- `description`: problem statement (required)
+- `inputFormat`, `outputFormat`, `constraints`: required strings (shown in UI and returned by `getProblemById` / admin GET)
 - `visibleTestCases`: input, output, explanation
 - `hiddenTestCases`: input, output (no explanation)
 - `startCode[]`: per-language starter templates
-- `referenceSolution[]`: admin-only validation on create/update
+- `referenceSolution[]`: validated via Judge0 on admin create/update
 - `tags`: fixed enum list (array)
-- `problemCreator`: ref User
+- `problemCreator`: ref User (set from `req.user._id` on create)
 
 ## Submission Schema Highlights
 
