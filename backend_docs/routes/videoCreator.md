@@ -1,77 +1,200 @@
 # File Purpose
 
-Express router for admin editorial video workflows (Cloudinary signed upload + metadata persistence). Mounted at `/video` in `index.js`.
+Express router responsible for admin editorial-video workflows including:
+- signed Cloudinary upload generation
+- video metadata persistence
+- editorial video deletion
+
+Mounted at:
+
+txt id="jlwm2" /video 
+
+inside index.js.
 
 # Responsibilities
 
-- Restrict all routes to `adminMiddleware`
-- Expose signature generation, metadata save, and video delete by problem id
+- Restrict all routes to authenticated admin users
+- Route upload/signature requests to controller layer
+- Route video metadata persistence requests
+- Route editorial video deletion requests
+- Maintain separation between routing and business logic
+
+# Authentication Architecture
+
+All routes require:
+
+js id="zjlwm" userMiddleware, adminMiddleware 
+
+## userMiddleware
+
+Responsible for:
+- JWT verification
+- Redis token blocklist validation
+- Fetching authenticated user document
+- Attaching:
+  js   req.user   
+
+## adminMiddleware
+
+Responsible only for authorization:
+
+js id="8jlwm" req.user.role === "admin" 
+
+Only authenticated admins can:
+- upload editorial videos
+- save video metadata
+- delete editorial videos
 
 # Main Functions / Components / Classes
 
 | Route | Middleware | Handler |
 |-------|------------|---------|
-| `GET /create/:problemId` | `adminMiddleware` | `generateUploadSignature` |
-| `POST /save` | `adminMiddleware` | `saveVideoMetadata` |
-| `DELETE /delete/:problemId` | `adminMiddleware` | `deleteVideo` |
+| GET /create/:problemId | userMiddleware, adminMiddleware | generateUploadSignature |
+| POST /save | userMiddleware, adminMiddleware | saveVideoMetadata |
+| DELETE /delete/:problemId | userMiddleware, adminMiddleware | deleteVideo |
 
-Export: `videoRouter`.
+Exports:
+
+js id="jlwm4" videoRouter 
 
 # Internal Logic
 
-No business logic in router file. Flow:
+This router intentionally contains no business logic.
 
-1. Admin gets signed upload params from `GET /video/create/:problemId`
-2. Browser uploads directly to Cloudinary
-3. Admin posts metadata to `POST /video/save`
-4. Optional `DELETE /video/delete/:problemId` removes DB row and Cloudinary asset
+All upload orchestration lives inside:
+
+- ../controllers/videoSection.md
+
+# Upload Workflow
+
+## Step 1 — Generate Signed Upload Parameters
+
+Frontend requests:
+
+txt id="jlwm5" GET /video/create/:problemId 
+
+Backend:
+- validates problem existence
+- generates signed Cloudinary upload parameters
+- returns upload metadata
+
+## Step 2 — Direct Browser Upload
+
+Frontend uploads video directly to Cloudinary.
+
+This avoids:
+- backend file buffering
+- large server uploads
+- unnecessary backend bandwidth usage
+
+## Step 3 — Save Metadata
+
+Frontend sends uploaded video metadata to:
+
+txt id="jlwm6" POST /video/save 
+
+Backend:
+- verifies uploaded Cloudinary resource
+- creates SolutionVideo document
+- stores thumbnail/video metadata
+
+## Step 4 — Optional Delete
+
+Admins may remove editorial videos through:
+
+txt id="jlwm7" DELETE /video/delete/:problemId 
 
 # Inputs and Outputs
 
 | Endpoint | Input | Output |
 |----------|-------|--------|
-| `GET /video/create/:problemId` | param `problemId` | signature, timestamp, `public_id`, api_key, cloud_name, `upload_url` |
-| `POST /video/save` | body: `problemId`, `cloudinaryPublicId`, `secureUrl`, `duration` | `201` + video summary |
-| `DELETE /video/delete/:problemId` | param `problemId` | JSON message |
+| GET /video/create/:problemId | problemId param | Signature + upload metadata |
+| POST /video/save | Video metadata body | Created video summary |
+| DELETE /video/delete/:problemId | problemId param | Success message |
+
+Typical upload response includes:
+- signature
+- timestamp
+- public_id
+- api_key
+- cloud_name
+- upload_url
 
 # Dependencies
 
-**Internal:** `../controllers/videoSection`, `../middlewares/adminMiddleware`
+## Internal Modules
+
+- ../controllers/videoSection
+- ../middlewares/userMiddleware
+- ../middlewares/adminMiddleware
 
 # Used By
 
-- [../config/index.md](../config/index.md)
-- `frontend/src/components/AdminUpload.jsx`
+## Backend
+
+- ../config/index.md
+
+## Frontend
+
+- frontend/src/components/AdminUpload.jsx
 
 # API Connections
 
-- **Cloudinary** REST (via controller): resource verify, destroy, signed upload URL
-- Not Judge0
+## Cloudinary
+
+Indirect integration through controller layer:
+- signed uploads
+- resource verification
+- asset deletion
+- thumbnail generation
+
+Judge0 is NOT used in this flow.
 
 # Database Connections
 
-`SolutionVideo`, `Problem` (existence check) via controller.
+Handled through controller layer:
 
-# State/Context Dependencies
+## MongoDB Collections
 
-- `req.result._id` used when building `public_id` for uploads
-- Cloudinary env vars required in controller
+- SolutionVideo
+- Problem
+
+# State / Context Dependencies
+
+- req.user
+- Cloudinary environment variables
+- authentication middleware chain
+
+Authenticated admin ID is used for:
+- upload path generation
+- metadata ownership
+- duplicate validation
 
 # Related Files
 
-- [../controllers/videoSection.md](../controllers/videoSection.md)
-- [../database/solutionVideo.md](../database/solutionVideo.md)
-- [../middleware/adminMiddleware.md](../middleware/adminMiddleware.md)
+- ../controllers/videoSection.md
+- ../database/solutionVideo.md
+- ../middleware/adminMiddleware.md
 
 # Next Files To Read
 
-1. [../controllers/videoSection.md](../controllers/videoSection.md)
-2. [../database/solutionVideo.md](../database/solutionVideo.md)
+1. ../controllers/videoSection.md
+2. ../database/solutionVideo.md
 
 # Common Risks / Notes
 
-- `deleteVideo` finds by `problemId` only (not `userId`) — deletes first matching video for problem.
-- `saveVideoMetadata` duplicate check includes `userId` + `cloudinaryPublicId`.
-- `User` model is imported in controller but unused in current `videoSection.js` source.
+- deleteVideo currently deletes using only:
+  js   problemId   
+  and may delete unintended records if multiple videos exist.
+
+- Direct browser uploads depend on Cloudinary API availability.
+
+- Admin routes rely on correct middleware ordering:
+  js   userMiddleware,   adminMiddleware   
+
+- saveVideoMetadata duplicate validation includes:
+  js   userId + cloudinaryPublicId   
+
+- User model import may still exist unused inside controller source.
 
 # Last Reviewed: 2026-05-18

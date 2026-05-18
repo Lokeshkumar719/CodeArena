@@ -6,10 +6,12 @@ const problemSchema = new Schema({
   title: {
     type: String,
     required: true,
+    trim: true,
   },
   description: {
     type: String,
     required: true,
+    trim: true,
   },
   difficulty: {
     type: String,
@@ -47,6 +49,21 @@ const problemSchema = new Schema({
     ],
     type: [String],
     required: true,
+  },
+  inputFormat: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  outputFormat: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  constraints: {
+    type: String,
+    required: true,
+    trim: true,
   },
   visibleTestCases: [
     {
@@ -108,4 +125,5 @@ const problemSchema = new Schema({
 });
 
 const Problem = mongoose.model("Problem", problemSchema);
+
 module.exports = Problem;

@@ -1,102 +1,175 @@
 # File Purpose
 
-**Intended:** Express middleware to authenticate any logged-in user (JWT cookie + Redis blocklist + DB user lookup).
+Express middleware responsible for authenticating logged-in users using JWT cookies, Redis token blocklisting, and MongoDB user verification.
 
-**Actual (critical bug):** This file implements **admin-only** authentication logic, identical in checks to [adminMiddleware.md](./adminMiddleware.md).
+This middleware is the primary authentication layer for all protected user and admin routes.
 
 # Responsibilities
 
-What the file **should** do (per route comments in `userAuth.js`):
+- Verify JWT token from cookies
+- Reject requests without authentication token
+- Reject blocklisted/logout tokens using Redis
+- Fetch authenticated user from MongoDB
+- Attach authenticated user document to:
+  js   req.user   
+- Pass authenticated requests to downstream middleware/controllers
 
-- Verify `token` cookie JWT
-- Reject blocklisted tokens in Redis
-- Attach user document to `req.result` for any valid `user` or `admin` role
+# Authentication Architecture
 
-What the file **currently** does:
+Authentication and authorization are intentionally separated.
 
-- Require `payload.role === 'admin'`
-- Require `result.role === 'admin'` in MongoDB
-- Reject all non-admin users with `401 Invalid Token-Not an admin`
+## userMiddleware
+
+Responsible for:
+- authentication
+- JWT verification
+- Redis token validation
+- user lookup
+
+## adminMiddleware
+
+Responsible only for authorization:
+
+js id="0n7hsk" req.user.role === "admin" 
+
+This separation avoids duplicated authentication logic and keeps middleware responsibilities clean.
 
 # Main Functions / Components / Classes
 
-| Export name in file | Exported as module |
-|---------------------|-------------------|
-| Internal const named `adminMiddleware` | `module.exports = adminMiddleware` |
-
-Wrapped with [../utils/asyncHandler.md](../utils/asyncHandler.md) (unlike `adminMiddleware.js`).
+| Export | Type |
+|--------|------|
+| userMiddleware | Express middleware wrapped with asyncHandler |
 
 # Internal Logic
 
-1. Read `req.cookies.token`; missing → `401 Unauthorized Access`
-2. `jwt.verify(token, process.env.JWT_KEY)`
-3. Validate `payload.id` exists
-4. **`if (payload.role !== 'admin')` → `401 Invalid Token-Not an admin`**
-5. `User.findById(id)`; missing → `401 Admin Not Found`
-6. **`if (result.role !== 'admin')` → `401 Invalid Token-User is not an admin`**
-7. `redisClient.exists('token:${token}')` → blocked → `401 Invalid Token`
-8. `req.result = result`; `next()`
+## Authentication Flow
 
-No branch allows `role: "user"`.
+1. Read JWT token from:
+   js    req.cookies.token    
+
+2. Reject missing token:
+   js    401 Unauthorized Access    
+
+3. Verify JWT:
+   js    jwt.verify(token, process.env.JWT_KEY)    
+
+### Important Note
+
+jwt.verify():
+- returns decoded payload if token is valid
+- throws immediately if token is invalid or expired
+
+Therefore no additional:
+js if(!payload) 
+check is required.
+
+4. Extract:
+   js    payload.id    
+
+5. Fetch authenticated user:
+   js    User.findById(id)    
+
+6. Reject missing/deleted users
+
+7. Check Redis token blocklist:
+   js    redisClient.exists(`token:${token}`)    
+
+8. Attach authenticated user:
+   js    req.user = user    
+
+9. Continue request lifecycle:
+   js    next()    
 
 # Inputs and Outputs
 
-| Input | Output |
-|-------|--------|
-| `req.cookies.token` | On success: `req.result` = Mongoose user doc, `next()` |
-| — | On failure: `401` plain text body (various messages) |
+| Input | Success |
+|-------|---------|
+| Valid JWT cookie | req.user, next() |
+
+| Failure | Status | Response |
+|---------|--------|-----------|
+| Missing token | 401 | "Unauthorized Access" |
+| Invalid token | 401 | "Invalid Token" |
+| Deleted user | 401 | "User Doesn't Exist" |
+| Blocklisted token | 401 | "Invalid Token" |
 
 # Dependencies
 
-**npm:** `jsonwebtoken`
+## npm Packages
 
-**Internal:** `../models/user`, `../config/redis`, `../utils/asyncHandler`
+- jsonwebtoken
+
+## Internal Modules
+
+- ../models/user
+- ../config/redis
+- ../utils/asyncHandler
 
 # Used By
 
-Imported as `userMiddleware` in:
+## Protected User Routes
 
-- [../routes/userAuth.md](../routes/userAuth.md) — `/logout`, `/profile`, `/check`
-- [../routes/problemCreator.md](../routes/problemCreator.md) — all user read routes
-- [../routes/submit.md](../routes/submit.md) — submit and run
+### ../routes/userAuth.md
+- /logout
+- /profile
+- /check
+
+### ../routes/problemCreator.md
+- problem reads
+- solved problems
+- submission history
+
+### ../routes/submit.md
+- run code
+- submit code
+
+### ../routes/videoCreator.md
+- admin video routes (before adminMiddleware)
 
 # API Connections
 
-None directly. Gates access to most authenticated REST endpoints.
+None directly.
+
+Acts as authentication gatekeeper for protected REST endpoints.
 
 # Database Connections
 
-- `User.findById`
-- Redis `exists` on blocklist key
+## MongoDB
 
-# State/Context Dependencies
+js id="f0d3ha" User.findById() 
 
-- `process.env.JWT_KEY`
-- Redis connected
-- Misnamed export: file exports admin middleware under wrong import path
+used for authenticated user validation.
+
+## Redis
+
+js id="p7mnct" redisClient.exists() 
+
+used for JWT blocklist validation.
+
+# State / Context Dependencies
+
+- process.env.JWT_KEY
+- req.cookies.token
+- Redis connection availability
+- MongoDB connection availability
 
 # Related Files
 
-- [adminMiddleware.md](./adminMiddleware.md) — duplicate logic without `asyncHandler`
-- [../routes/userAuth.md](../routes/userAuth.md)
-- [../docs/AUTH_FLOW.md](../docs/AUTH_FLOW.md) — documents this issue
+- adminMiddleware.md
+- ../routes/userAuth.md
+- ../docs/AUTH_FLOW.md
 
 # Next Files To Read
 
-1. [adminMiddleware.md](./adminMiddleware.md) — compare implementations
-2. [../auth/userAuthenticate.md](../auth/userAuthenticate.md) — JWT issuance for users vs admins
+1. adminMiddleware.md
+2. ../auth/userAuthenticate.md
 
 # Common Risks / Notes
 
-### Critical bug (verified 2026-05-18)
-
-- **Symptom:** Regular users with valid `role: "user"` JWT receive `401` on `/user/check`, `/problem/*` reads, and `/submission/*`.
-- **Root cause:** File content is admin middleware; variable inside file is even named `adminMiddleware`.
-- **Fix direction:** Replace admin checks with: verify JWT, load user, ensure user exists, check Redis blocklist, **do not** require admin role. Keep admin checks only in `adminMiddleware.js`.
-
-### Other notes
-
-- Uses `asyncHandler`; rejected promises go to `errorMiddleware` (unlike sync returns in admin file).
-- `jwt.verify` throws on invalid token — caught by `asyncHandler` → `500` unless error middleware distinguishes (currently generic 500).
+- Middleware assumes Redis connection is active for token blocklist checks.
+- JWT payload stores role information at login/register time and does not auto-update if DB role changes later.
+- jwt.verify() errors are forwarded through asyncHandler into centralized errorMiddleware.
+- Middleware attaches full Mongoose user document, enabling downstream usage like:
+  js   req.user.updateOne()   
 
 # Last Reviewed: 2026-05-18
