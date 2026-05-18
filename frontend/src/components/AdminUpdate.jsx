@@ -54,6 +54,9 @@ const problemSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
   difficulty: z.enum(["easy", "medium", "hard"]),
+  inputFormat: z.string().min(1, "Input format is required"),
+  outputFormat: z.string().min(1, "Output format is required"),
+  constraints: z.string().min(1, "Constraints are required"),
 
   tags: z
     .array(z.string().refine((tag) => tagOptions.includes(tag), "Invalid tag"))
@@ -119,6 +122,9 @@ function AdminUpdate() {
       difficulty: "easy",
 
       tags: [],
+      inputFormat: "",
+      outputFormat: "",
+      constraints: "",
 
       visibleTestCases: [
         {
@@ -273,6 +279,61 @@ function AdminUpdate() {
                 <span className="text-error">{errors.description.message}</span>
               )}
             </div>
+            {/* Input Format */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Input Format</span>
+              </label>
+
+              <textarea
+                {...register("inputFormat")}
+                className={`textarea textarea-bordered h-24 ${
+                  errors.inputFormat && "textarea-error"
+                }`}
+              />
+
+              {errors.inputFormat && (
+                <span className="text-error">{errors.inputFormat.message}</span>
+              )}
+            </div>
+
+            {/* Output Format */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Output Format</span>
+              </label>
+
+              <textarea
+                {...register("outputFormat")}
+                className={`textarea textarea-bordered h-24 ${
+                  errors.outputFormat && "textarea-error"
+                }`}
+              />
+
+              {errors.outputFormat && (
+                <span className="text-error">
+                  {errors.outputFormat.message}
+                </span>
+              )}
+            </div>
+
+            {/* Constraints */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Constraints</span>
+              </label>
+
+              <textarea
+                {...register("constraints")}
+                className={`textarea textarea-bordered h-24 ${
+                  errors.constraints && "textarea-error"
+                }`}
+              />
+
+              {errors.constraints && (
+                <span className="text-error">{errors.constraints.message}</span>
+              )}
+            </div>
 
             <div className="flex gap-4">
               {/* Difficulty */}
@@ -364,7 +425,7 @@ function AdminUpdate() {
             </div>
 
             {visibleFields.map((field, index) => (
-              <div key={field.id} className="border p-4 rounded-lg space-y-2">
+              <div key={field.id} className="border p-4 rounded-lg space-y-3">
                 <div className="flex justify-end">
                   <button
                     type="button"
@@ -375,22 +436,25 @@ function AdminUpdate() {
                   </button>
                 </div>
 
-                <input
+                <textarea
                   {...register(`visibleTestCases.${index}.input`)}
                   placeholder="Input"
-                  className="input input-bordered w-full"
+                  className="textarea textarea-bordered w-full font-mono"
+                  rows={4}
                 />
 
-                <input
+                <textarea
                   {...register(`visibleTestCases.${index}.output`)}
                   placeholder="Output"
-                  className="input input-bordered w-full"
+                  className="textarea textarea-bordered w-full font-mono"
+                  rows={3}
                 />
 
                 <textarea
                   {...register(`visibleTestCases.${index}.explanation`)}
                   placeholder="Explanation"
                   className="textarea textarea-bordered w-full"
+                  rows={3}
                 />
               </div>
             ))}
@@ -418,7 +482,7 @@ function AdminUpdate() {
             {hiddenFields.map((field, index) => (
               <div
                 key={field.fieldId}
-                className="border p-4 rounded-lg space-y-2"
+                className="border p-4 rounded-lg space-y-3"
               >
                 <div className="flex justify-end">
                   <button
@@ -430,16 +494,18 @@ function AdminUpdate() {
                   </button>
                 </div>
 
-                <input
+                <textarea
                   {...register(`hiddenTestCases.${index}.input`)}
                   placeholder="Input"
-                  className="input input-bordered w-full"
+                  className="textarea textarea-bordered w-full font-mono"
+                  rows={4}
                 />
 
-                <input
+                <textarea
                   {...register(`hiddenTestCases.${index}.output`)}
                   placeholder="Output"
-                  className="input input-bordered w-full"
+                  className="textarea textarea-bordered w-full font-mono"
+                  rows={3}
                 />
               </div>
             ))}

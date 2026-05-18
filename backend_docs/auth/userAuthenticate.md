@@ -1,115 +1,170 @@
 # File Purpose
 
-Controller module for user registration, login, logout, admin registration, and account deletion. Implements JWT-in-cookie auth and Redis logout blocklisting.
+Controller module for user registration, login, logout, admin registration, and account deletion. Implements JWT-in-cookie authentication with Redis-based token blocklisting for logout handling.
 
 # Responsibilities
 
-- Validate registration/admin bodies via `utils/validate`
-- Hash passwords with bcrypt (cost 10)
-- Issue JWT cookies (`httpOnly`, `sameSite: 'strict'`, 1 hour)
-- Block revoked tokens in Redis on logout
-- Delete user document on profile delete
+- Validate incoming request bodies using utils/validate
+- Hash passwords securely using bcrypt (salt rounds: 10)
+- Generate JWT tokens with identity and authorization data
+- Store JWT inside secure HTTP-only cookies
+- Block revoked tokens in Redis during logout
+- Delete authenticated user accounts
 
 # Main Functions / Components / Classes
 
-| Export | Wrapped in `asyncHandler` | Role |
+| Export | Wrapped in asyncHandler | Role |
 |--------|---------------------------|------|
-| `register` | yes | Public signup, role forced to `"user"` |
-| `login` | yes | Email/password verify, JWT role from DB |
-| `logout` | yes | Redis blocklist + clear cookie |
-| `adminRegister` | yes | Admin-only creation, role `"admin"` |
-| `deleteProfile` | yes | `User.findByIdAndDelete(req.result._id)` |
+| register | yes | Public signup, role forced to "user" |
+| login | yes | Email/password authentication |
+| logout | yes | Redis blocklist + cookie clear |
+| adminRegister | yes | Admin-only user creation |
+| deleteProfile | yes | Deletes authenticated user account |
 
 # Internal Logic
 
 ### Register
 
-1. `validate(req.body)` — mandatory fields, email, strong password, firstName length
-2. `req.body.role = "user"`
-3. `bcrypt.hash(password, 10)`
-4. `User.create(req.body)`
-5. `jwt.sign({ id, emailId, role: "user" }, JWT_KEY, { expiresIn: 3600 })` — **JWT role hardcoded `"user"`**, not `user.role`
-6. Set cookie + `201` with sanitized `reply` object
+1. validate(req.body) validates required fields and password rules
+2. req.body.role = "user" prevents self-registration as admin
+3. Password hashed using bcrypt.hash(password, 10)
+4. User.create(req.body)
+5. JWT payload stores:
+   js    {      id,      emailId,      role: user.role    }    
+6. JWT stored inside secure HTTP-only cookie
+7. Returns sanitized user object
 
 ### Login
 
-1. Requires `emailId` and `password` or throws `"Invalid Credentials"`
-2. `User.findOne({ emailId })`, `bcrypt.compare`
-3. JWT payload uses `user.role` from database
-4. Cookie + `201`
+1. Requires emailId and password
+2. User.findOne({ emailId })
+3. Password verified using bcrypt.compare
+4. JWT payload stores role directly from database
+5. Cookie returned with authenticated user data
 
 ### Logout
 
-1. Read `req.cookies.token`, `jwt.decode` for `exp`
-2. `redisClient.set('token:${token}', 'blocked')` + `expireAt` at JWT exp
-3. Clear cookie (`token: null`, immediate expiry)
+1. Read JWT token from cookies
+2. jwt.decode(token) extracts expiration timestamp
+3. Token added to Redis blocklist:
+   js    redisClient.set(`token:${token}`,"blocked")    
+4. Redis key expires automatically when JWT expires
+5. Cookie cleared immediately
 
-### Admin register
+### Admin Register
 
-Same as register but `role: "admin"` in body and JWT payload.
+1. Validates incoming body
+2. Forces:
+   js    req.body.role = "admin"    
+3. Password hashed using bcrypt
+4. JWT payload stores admin role from DB
+5. Secure JWT cookie returned
 
-### Delete profile
+### Delete Profile
 
-Deletes user by `req.result._id`; submission cleanup relies on User model post-hook.
+Deletes authenticated user using:
+
+js req.user._id 
+
+Submission cleanup is handled through User model middleware/hooks.
+
+# Authentication Architecture
+
+Authentication and authorization are separated:
+
+## userMiddleware
+
+Responsible for:
+- JWT verification
+- Redis blocklist validation
+- Fetching authenticated user from DB
+- Attaching authenticated user to:
+  js   req.user   
+
+## adminMiddleware
+
+Responsible only for authorization:
+
+js req.user.role === "admin" 
 
 # Inputs and Outputs
 
 | Handler | Input | Output |
 |---------|-------|--------|
-| `register` | `{ firstName, emailId, password, ... }` | Cookie + `{ user, message }` |
-| `login` | `{ emailId, password }` | Cookie + user |
-| `logout` | cookie | `"Logged Out Successfully"` |
-| `adminRegister` | validated body | `"Admin Registered Successfully"` |
-| `deleteProfile` | `req.result` | `"User deleted Successfully"` |
+| register | { firstName, emailId, password, ... } | Cookie + { user, message } |
+| login | { emailId, password } | Cookie + authenticated user |
+| logout | JWT cookie | "Logged Out Successfully" |
+| adminRegister | validated admin body | "Admin Registered Successfully" |
+| deleteProfile | req.user | "User deleted Successfully" |
 
-Errors throw `Error` → [../middleware/errorMiddleware.md](../middleware/errorMiddleware.md) → `500` with message.
+Errors propagate through:
+
+txt errorMiddleware 
+
+which returns standardized error responses.
 
 # Dependencies
 
-**npm:** `bcrypt`, `jsonwebtoken`
+## npm Packages
 
-**Internal:** `../config/redis`, `../models/user`, `../utils/validate`, `../utils/asyncHandler`
+- bcrypt
+- jsonwebtoken
 
-**Note:** `../models/submission` is imported in source but **not used** in this file.
+## Internal Modules
 
-# Used By
-
-- [../routes/userAuth.md](../routes/userAuth.md)
+- ../config/redis
+- ../models/user
+- ../utils/validate
+- ../utils/asyncHandler
 
 # API Connections
 
-None external except Redis. JWT is local.
+No external APIs used.
+
+JWT signing and verification are handled locally using:
+
+js process.env.JWT_KEY 
+
+Redis is used for token revocation/blocklisting.
 
 # Database Connections
 
-- **MongoDB:** `User` collection create/find/delete
-- **Redis:** token blocklist on logout
+## MongoDB
 
-# State/Context Dependencies
+Uses User collection for:
+- create
+- find
+- delete operations
 
-- `process.env.JWT_KEY`
-- `req.result` for logout/delete (set by middleware)
-- `req.cookies.token` for logout
+## Redis
+
+Stores revoked JWT tokens until their original expiry time.
+
+# State / Context Dependencies
+
+- process.env.JWT_KEY
+- req.user
+- req.cookies.token
 
 # Related Files
 
-- [../routes/userAuth.md](../routes/userAuth.md)
-- [../utils/validate.md](../utils/validate.md)
-- [../database/user.md](../database/user.md)
-- [../config/redis.md](../config/redis.md)
-- [../docs/AUTH_FLOW.md](../docs/AUTH_FLOW.md)
+- ../routes/userAuth.md
+- ../utils/validate.md
+- ../database/user.md
+- ../config/redis.md
+- ../docs/AUTH_FLOW.md
 
 # Next Files To Read
 
-1. [../middleware/userMiddleware.md](../middleware/userMiddleware.md)
-2. [../utils/validate.md](../utils/validate.md)
+1. ../middleware/userMiddleware.md
+2. ../middleware/adminMiddleware.md
+3. ../utils/validate.md
 
 # Common Risks / Notes
 
-- `login` / `register` contain `console.log` of credentials and user objects (security risk in production).
-- Register JWT always says `role: "user"` even if DB role differed.
-- `logout` uses `jwt.decode` not `verify` (acceptable after middleware already verified on protected route).
-- `deleteProfile` does not explicitly clear Redis/cookie (caller typically logs out separately).
-- Imported `submission` model is dead code.
+- console.log statements still exist in auth handlers and should be removed before production deployment.
+- JWT payload is generated during login/register and does not auto-update if DB role changes later.
+- logout uses jwt.decode() instead of jwt.verify() because token validity is already ensured through protected middleware flow.
+- Imported submission model is currently unused inside this file.
 
 # Last Reviewed: 2026-05-18

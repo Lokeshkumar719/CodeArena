@@ -1,119 +1,214 @@
 # File Purpose
 
-Business logic for DSA problem lifecycle: admin CRUD with reference-solution validation, paginated listing, user-facing reads, solved-problem tracking, and submission history per problem.
+Business logic for DSA problem lifecycle: admin CRUD with Judge0-based reference-solution validation, paginated listing, user-facing reads, solved-problem tracking, and submission history per problem.
 
 # Responsibilities
 
-- Validate reference solutions against visible test cases via Judge0 before create/update
-- Persist and update `Problem` documents
-- Return problem payloads with optional `SolutionVideo` fields
-- Paginate all problems for homepage
-- Populate user's `problemSolved` array
-- Query submissions by user + problem
+- Validate reference solutions against visible test cases before create/update
+- Persist and update Problem documents
+- Return problem payloads with optional SolutionVideo metadata
+- Paginate all problems for homepage rendering
+- Populate solved problems for authenticated users
+- Query submission history for a specific problem
+
+# Authentication Flow
+
+All protected controllers depend on middleware-driven authentication and authorization.
+
+## userMiddleware
+
+Responsible for:
+- JWT verification
+- Redis blocklist validation
+- Fetching authenticated user from database
+- Attaching authenticated user document to:
+  js   req.user   
+
+## adminMiddleware
+
+Responsible only for authorization:
+
+js id="v4c0hj" req.user.role === "admin" 
+
+Admin-only controllers:
+- createProblem
+- updateProblem
+- deleteProblem
+- getProblemByIdAdmin
+
+require both:
+js userMiddleware, adminMiddleware 
 
 # Main Functions / Components / Classes
 
 | Export | Purpose |
 |--------|---------|
-| `createProblem` | Judge0-validate each reference solution → `Problem.create` |
-| `updateProblem` | Validate id + arrays → Judge0 → `findByIdAndUpdate` |
-| `deleteProblem` | `findById` + `findByIdAndDelete` |
-| `getProblemByIdAdmin` | Full admin fields + hidden tests + video |
-| `getProblemById` | User view (no `hiddenTestCases` in select) + video |
-| `getAllProblems` | Paginated `_id title difficulty tags` |
-| `solvedProblems` | `User.populate('problemSolved')` |
-| `submittedProblem` | `Submission.find({ userId, problemId })` |
+| createProblem | Judge0-validate each reference solution → Problem.create |
+| updateProblem | Validate id + arrays → Judge0 → findByIdAndUpdate |
+| deleteProblem | findById + findByIdAndDelete |
+| getProblemByIdAdmin | Full admin fields + hidden tests + video |
+| getProblemById | User view (no hidden tests) + video |
+| getAllProblems | Paginated _id title difficulty tags |
+| solvedProblems | User.populate('problemSolved') |
+| submittedProblem | Submission.find({ userId, problemId }) |
 
-All wrapped with `asyncHandler`.
+All controllers are wrapped with asyncHandler.
 
 # Internal Logic
 
-### Reference solution validation (create/update)
+## Reference Solution Validation (Create / Update)
 
-For each `{ language, completeCode }` in `referenceSolution`:
+For each:
 
-1. `getLanguageById(language)` → Judge0 `language_id`
-2. Build batch submissions from `visibleTestCases` only
-3. `submitBatch` → tokens → `submitToken` poll
-4. Loop results: **`test.status_id !== JUDGE0_STATUS.ACCEPTED`** → reject
+js { language, completeCode } 
 
-**Note:** `userSubmission.js` compares `test.status.id`; this file uses `test.status_id`. Judge0 batch GET with `fields: *` typically returns nested `status.id` — verify at runtime; mismatch may cause false failures or skipped checks.
+inside referenceSolution:
 
-### createProblem
+1. getLanguageById(language) maps platform language to Judge0 language_id
+2. Batch submissions are created from visibleTestCases
+3. submitBatch() sends submissions to Judge0
+4. submitToken() polls Judge0 results
+5. Each testcase result is validated:
+   js    test.status_id === JUDGE0_STATUS.ACCEPTED    
 
-- Sets `problemCreator: req.result._id` in `Problem.create({ ...req.body, problemCreator })`
-- Destructures unused `problemCreater` from body (typo, ignored)
-- On Judge0 failure returns `400` with `"Error Occured"` (generic)
+Validation failure rejects problem creation/update.
 
-### getProblemById vs admin
+### Important Runtime Note
+
+userSubmission.js compares:
+
+js test.status.id 
+
+while this file uses:
+
+js test.status_id 
+
+Judge0 response shape may vary depending on requested fields and API response structure.
+
+This inconsistency should be verified carefully during runtime testing.
+
+# createProblem
+
+- Validates every reference solution before persistence
+- Stores authenticated admin as:
+  js   problemCreator: req.user._id   
+- Uses:
+  js   Problem.create({     ...req.body,     problemCreator   })   
+- Returns generic 400 response on Judge0 validation failure
+
+### Note
+
+problemCreater typo may still exist in request destructuring but is ignored.
+
+# getProblemById vs getProblemByIdAdmin
 
 | Field | User | Admin |
 |-------|------|-------|
-| `hiddenTestCases` | omitted | included |
-| `referenceSolution` | included in select | included |
+| hiddenTestCases | omitted | included |
+| referenceSolution | included | included |
 
-Both merge Cloudinary video fields when `SolutionVideo` exists.
+Both controllers optionally merge SolutionVideo metadata when available.
 
-### getAllProblems
+# getAllProblems
 
-- Defaults: `page=1`, `limit=5`
-- Returns `404` if zero problems (including empty DB)
+Defaults:
+js page = 1 limit = 5 
+
+Returns:
+js {   problems,   currentPage,   totalPages,   totalProblems } 
+
+### Behavior Note
+
+Returns 404 when no problems exist.
+
+Some APIs instead prefer:
+js 200 + [] 
+
+Frontend expectations should remain consistent with backend behavior.
 
 # Inputs and Outputs
 
-| Handler | Key inputs | Response |
-|---------|------------|----------|
-| `createProblem` | Full problem body | `200` text or `400` |
-| `updateProblem` | `req.params.id`, body | `200` updated doc or errors |
-| `deleteProblem` | `id` | `200` text |
-| `getProblemById*` | `id` | Problem object ± video |
-| `getAllProblems` | `page`, `limit` | `{ problems, currentPage, totalPages, totalProblems }` |
-| `solvedProblems` | `req.result._id` | Array of problems |
-| `submittedProblem` | `req.params.id` (problem) | Submission array or `[]` |
+| Handler | Key Inputs | Response |
+|---------|-------------|-----------|
+| createProblem | Full problem body | 200 text or 400 |
+| updateProblem | req.params.id, body | Updated problem |
+| deleteProblem | Problem id | Success message |
+| getProblemById* | Problem id | Problem object ± video |
+| getAllProblems | page, limit | Paginated response |
+| solvedProblems | req.user._id | Solved problem array |
+| submittedProblem | problemId | Submission history |
 
 # Dependencies
 
-**Internal:** `../utils/problemUtility`, `../services/judge0Service`, `../constants/judgeStatus`, `../models/problems`, `../models/user`, `../models/submission`, `../models/solutionVideo`, `../utils/asyncHandler`
+## Internal
 
-**npm:** `mongoose`
+- ../utils/problemUtility
+- ../services/judge0Service
+- ../constants/judgeStatus
+- ../models/problems
+- ../models/user
+- ../models/submission
+- ../models/solutionVideo
+- ../utils/asyncHandler
+
+## npm Packages
+
+- mongoose
 
 # Used By
 
-- [../routes/problemCreator.md](../routes/problemCreator.md)
+- ../routes/problemCreator.md
 
 # API Connections
 
-Judge0 CE via [../services/judge0Service.md](../services/judge0Service.md).
+Judge0 CE via:
+
+- ../services/judge0Service.md
 
 # Database Connections
 
-- `Problem` — CRUD
-- `SolutionVideo` — read by `problemId`
-- `User` — read/populate for solved list
-- `Submission` — read for history
+## MongoDB Collections
 
-# State/Context Dependencies
+### Problem
+- create
+- update
+- delete
+- pagination
+- fetch by id
 
-- `req.result` from admin or user middleware
-- Admin create uses `req.result._id` as creator
+### SolutionVideo
+- fetch associated editorial video metadata
+
+### User
+- populate solved problems
+
+### Submission
+- fetch submission history
+
+# State / Context Dependencies
+
+- req.user
+- Judge0 service layer
+- JUDGE0_STATUS constants
 
 # Related Files
 
-- [../routes/problemCreator.md](../routes/problemCreator.md)
-- [../database/problems.md](../database/problems.md)
-- [../services/judge0Service.md](../services/judge0Service.md)
-- [../constants/judgeStatus.md](../constants/judgeStatus.md)
+- ../routes/problemCreator.md
+- ../database/problems.md
+- ../services/judge0Service.md
+- ../constants/judgeStatus.md
 
 # Next Files To Read
 
-1. [../database/problems.md](../database/problems.md)
-2. [../services/judge0Service.md](../services/judge0Service.md)
+1. ../database/problems.md
+2. ../services/judge0Service.md
 
 # Common Risks / Notes
 
-- `status_id` vs `status.id` inconsistency with Judge0 response shape.
-- `createProblem` does not validate required body fields before Judge0 (may throw).
-- No transaction if Judge0 passes but `Problem.create` fails.
-- `getAllProblems` 404 on empty list may surprise clients expecting `200` + empty array.
+- status_id vs status.id inconsistency with Judge0 response shape may cause incorrect validation logic.
+- createProblem does not fully validate request body before Judge0 processing.
+- No MongoDB transaction exists if Judge0 succeeds but DB write fails afterward.
+- Generic "Error Occured" responses reduce debugging clarity.
+- Empty-problem 404 behavior should remain consistent with frontend assumptions.
 
 # Last Reviewed: 2026-05-18

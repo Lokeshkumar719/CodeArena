@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -53,6 +53,9 @@ const languageOptions = [
 const problemSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
+  inputFormat: z.string().min(1, "Input format is required"),
+  outputFormat: z.string().min(1, "Output format is required"),
+  constraints: z.string().min(1, "Constraints are required"),
   difficulty: z.enum(["easy", "medium", "hard"]),
   tags: z
     .array(z.string().refine((tag) => tagOptions.includes(tag), "Invalid tag"))
@@ -102,12 +105,17 @@ function AdminPanel() {
     register,
     control,
     handleSubmit,
+    watch,
+    reset,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(problemSchema),
     defaultValues: {
       difficulty: "easy",
       tags: [],
+      inputFormat: "",
+      outputFormat: "",
+      constraints: "",
       visibleTestCases: [
         {
           input: "",
@@ -163,6 +171,22 @@ function AdminPanel() {
     name: "visibleTestCases",
   });
 
+  useEffect(() => {
+    const savedForm = localStorage.getItem("createProblemDraft");
+
+    if (savedForm) {
+      reset(JSON.parse(savedForm));
+    }
+  }, []);
+
+  const watchedData = watch();
+
+  useEffect(() => {
+    if (watchedData.title || watchedData.description) {
+      localStorage.setItem("createProblemDraft", JSON.stringify(watchedData));
+    }
+  }, [watchedData]);
+
   const {
     fields: hiddenFields,
     append: appendHidden,
@@ -177,6 +201,8 @@ function AdminPanel() {
       setIsSubmitting(true);
 
       await axiosClient.post("/problem/create", data);
+
+      localStorage.removeItem("createProblemDraft");
 
       toast.success("Problem created successfully!");
 
@@ -220,6 +246,57 @@ function AdminPanel() {
               />
               {errors.description && (
                 <span className="text-error">{errors.description.message}</span>
+              )}
+            </div>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Input Format</span>
+              </label>
+
+              <textarea
+                {...register("inputFormat")}
+                className={`textarea textarea-bordered h-24 ${
+                  errors.inputFormat && "textarea-error"
+                }`}
+              />
+
+              {errors.inputFormat && (
+                <span className="text-error">{errors.inputFormat.message}</span>
+              )}
+            </div>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Output Format</span>
+              </label>
+
+              <textarea
+                {...register("outputFormat")}
+                className={`textarea textarea-bordered h-24 ${
+                  errors.outputFormat && "textarea-error"
+                }`}
+              />
+
+              {errors.outputFormat && (
+                <span className="text-error">
+                  {errors.outputFormat.message}
+                </span>
+              )}
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Constraints</span>
+              </label>
+
+              <textarea
+                {...register("constraints")}
+                className={`textarea textarea-bordered h-24 ${
+                  errors.constraints && "textarea-error"
+                }`}
+              />
+
+              {errors.constraints && (
+                <span className="text-error">{errors.constraints.message}</span>
               )}
             </div>
             <div className="flex gap-4">
@@ -299,7 +376,7 @@ function AdminPanel() {
               </button>
             </div>
             {visibleFields.map((field, index) => (
-              <div key={field.id} className="border p-4 rounded-lg space-y-2">
+              <div key={field.id} className="border p-4 rounded-lg space-y-3">
                 <div className="flex justify-end">
                   <button
                     type="button"
@@ -309,20 +386,26 @@ function AdminPanel() {
                     Remove
                   </button>
                 </div>
-                <input
+
+                <textarea
                   {...register(`visibleTestCases.${index}.input`)}
                   placeholder="Input"
-                  className="input input-bordered w-full"
+                  className="textarea textarea-bordered w-full font-mono whitespace-pre"
+                  rows={4}
                 />
-                <input
+
+                <textarea
                   {...register(`visibleTestCases.${index}.output`)}
                   placeholder="Output"
-                  className="input input-bordered w-full"
+                  className="textarea textarea-bordered w-full font-mono whitespace-pre"
+                  rows={3}
                 />
+
                 <textarea
                   {...register(`visibleTestCases.${index}.explanation`)}
                   placeholder="Explanation"
                   className="textarea textarea-bordered w-full"
+                  rows={3}
                 />
               </div>
             ))}
@@ -345,7 +428,7 @@ function AdminPanel() {
               </button>
             </div>
             {hiddenFields.map((field, index) => (
-              <div key={field.id} className="border p-4 rounded-lg space-y-2">
+              <div key={field.id} className="border p-4 rounded-lg space-y-3">
                 <div className="flex justify-end">
                   <button
                     type="button"
@@ -355,15 +438,19 @@ function AdminPanel() {
                     Remove
                   </button>
                 </div>
-                <input
+
+                <textarea
                   {...register(`hiddenTestCases.${index}.input`)}
                   placeholder="Input"
-                  className="input input-bordered w-full"
+                  className="textarea textarea-bordered w-full font-mono whitespace-pre"
+                  rows={4}
                 />
-                <input
+
+                <textarea
                   {...register(`hiddenTestCases.${index}.output`)}
                   placeholder="Output"
-                  className="input input-bordered w-full"
+                  className="textarea textarea-bordered w-full font-mono whitespace-pre"
+                  rows={3}
                 />
               </div>
             ))}

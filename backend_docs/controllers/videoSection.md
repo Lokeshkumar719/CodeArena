@@ -1,98 +1,200 @@
 # File Purpose
 
-Controller for Cloudinary-backed solution video uploads: signed upload parameters, post-upload metadata persistence, and deletion.
+Controller for Cloudinary-backed solution video uploads, metadata persistence, and deletion for coding problem editorial videos.
 
 # Responsibilities
 
-- Configure Cloudinary SDK from environment
-- Verify problem exists before signing upload
-- Generate signed upload credentials for direct browser upload
-- Verify Cloudinary resource exists before DB insert
-- Create `SolutionVideo` records with thumbnail URL
-- Delete DB record and Cloudinary video with CDN invalidation
+- Configure Cloudinary SDK using environment variables
+- Verify problem existence before generating upload credentials
+- Generate signed upload parameters for direct browser uploads
+- Validate uploaded Cloudinary resources before DB persistence
+- Create SolutionVideo metadata records
+- Delete Cloudinary resources with CDN invalidation
+- Manage thumbnail URL generation for uploaded videos
+
+# Authentication Flow
+
+All routes using this controller require:
+
+js id="4ycvfh" userMiddleware, adminMiddleware 
+
+## userMiddleware
+
+Responsible for:
+- JWT verification
+- Redis token blocklist validation
+- Fetching authenticated user document
+- Attaching:
+  js   req.user   
+
+## adminMiddleware
+
+Responsible only for authorization:
+
+js id="yr7l2x" req.user.role === "admin" 
+
+Only authenticated admins can:
+- upload editorial videos
+- save metadata
+- delete videos
 
 # Main Functions / Components / Classes
 
 | Export | Purpose |
 |--------|---------|
-| `generateUploadSignature` | Signed params for `leetcode-solutions/{problemId}/{userId}_{timestamp}` |
-| `saveVideoMetadata` | Verify resource, dedupe, create `SolutionVideo` |
-| `deleteVideo` | `findOneAndDelete` by `problemId`, destroy Cloudinary asset |
+| generateUploadSignature | Generate signed Cloudinary upload parameters |
+| saveVideoMetadata | Verify uploaded resource and persist metadata |
+| deleteVideo | Delete DB record + Cloudinary video resource |
+
+All controllers are wrapped with asyncHandler.
 
 # Internal Logic
 
-### generateUploadSignature
+# generateUploadSignature
 
-1. Load `Problem` by `req.params.problemId`
-2. `timestamp = round(now/1000)`
-3. `publicId = leetcode-solutions/${problemId}/${userId}_${timestamp}`
-4. `cloudinary.utils.api_sign_request(uploadParams, CLOUDINARY_API_SECRET)`
-5. Return signature, keys, and `upload_url` for video upload API
+## Workflow
 
-### saveVideoMetadata
+1. Verify problem exists using:
+   js    Problem.findById(problemId)    
 
-1. `cloudinary.api.resource(cloudinaryPublicId, { resource_type: 'video' })`
-2. Check duplicate `(problemId, userId, cloudinaryPublicId)`
-3. `thumbnailUrl = cloudinary.image(public_id, { resource_type: 'video' })`
-4. `SolutionVideo.create` with duration from resource or body
+2. Generate timestamp:
+   js    Math.round(Date.now() / 1000)    
 
-### deleteVideo
+3. Create Cloudinary public ID:
+   txt    leetcode-solutions/{problemId}/{userId}_{timestamp}    
 
-1. `SolutionVideo.findOneAndDelete({ problemId })` — **not filtered by userId**
-2. `cloudinary.uploader.destroy(publicId, { resource_type: 'video', invalidate: true })`
+4. Generate signed upload parameters:
+   js    cloudinary.utils.api_sign_request()    
+
+5. Return:
+   - signature
+   - api_key
+   - cloud_name
+   - timestamp
+   - public_id
+   - upload URL
+
+## Upload Strategy
+
+Frontend uploads directly to Cloudinary using signed upload parameters instead of proxying large video files through backend servers.
+
+# saveVideoMetadata
+
+## Workflow
+
+1. Verify uploaded Cloudinary resource exists:
+   js    cloudinary.api.resource()    
+
+2. Check duplicate entries using:
+   js    problemId,    userId,    cloudinaryPublicId    
+
+3. Generate thumbnail URL:
+   js    cloudinary.image(public_id,{      resource_type:"video"    })    
+
+4. Create SolutionVideo document
+
+5. Store:
+   - public ID
+   - secure video URL
+   - thumbnail URL
+   - duration
+   - uploader info
+
+# deleteVideo
+
+## Workflow
+
+1. Delete associated DB record:
+   js    SolutionVideo.findOneAndDelete({ problemId })    
+
+2. Delete Cloudinary asset:
+   js    cloudinary.uploader.destroy()    
+
+3. CDN invalidation enabled:
+   js    invalidate: true    
 
 # Inputs and Outputs
 
 | Handler | Input | Output |
 |---------|-------|--------|
-| `generateUploadSignature` | `problemId` param | JSON with signature, keys, URLs |
-| `saveVideoMetadata` | body fields | `201` + video summary |
-| `deleteVideo` | `problemId` param | success message |
+| generateUploadSignature | problemId param | Signature + upload metadata |
+| saveVideoMetadata | Video metadata body | Created video response |
+| deleteVideo | problemId param | Success message |
 
 # Dependencies
 
-**npm:** `cloudinary`
+## npm Packages
 
-**Internal:** `../models/problems`, `../models/solutionVideo`, `../utils/asyncHandler`
+- cloudinary
 
-**Note:** `User` is imported but unused in current source.
+## Internal Modules
+
+- ../models/problems
+- ../models/solutionVideo
+- ../utils/asyncHandler
+
+### Note
+
+User model import currently appears unused.
 
 # Used By
 
-- [../routes/videoCreator.md](../routes/videoCreator.md)
+- ../routes/videoCreator.md
 
 # API Connections
 
-| Service | Usage |
-|---------|--------|
-| Cloudinary | `utils.api_sign_request`, `api.resource`, `uploader.destroy`, `image` thumbnail |
+## Cloudinary
+
+Used APIs:
+
+| API | Purpose |
+|-----|---------|
+| utils.api_sign_request | Generate signed upload parameters |
+| api.resource | Verify uploaded resource |
+| uploader.destroy | Delete uploaded video |
+| image | Generate thumbnail URL |
 
 # Database Connections
 
-- `Problem` — existence check
-- `SolutionVideo` — create/delete/find
+## MongoDB Collections
 
-# State/Context Dependencies
+### Problem
+- validate problem existence
 
-- `process.env.CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
-- `req.result._id` for public_id path and metadata
+### SolutionVideo
+- create metadata
+- delete metadata
+- fetch duplicates
+
+# State / Context Dependencies
+
+- process.env.CLOUDINARY_CLOUD_NAME
+- process.env.CLOUDINARY_API_KEY
+- process.env.CLOUDINARY_API_SECRET
+- req.user._id
+
+Authenticated user ID is used for:
+- upload path generation
+- uploader tracking
+- duplicate validation
 
 # Related Files
 
-- [../routes/videoCreator.md](../routes/videoCreator.md)
-- [../database/solutionVideo.md](../database/solutionVideo.md)
-- [../database/problems.md](../database/problems.md)
+- ../routes/videoCreator.md
+- ../database/solutionVideo.md
+- ../database/problems.md
 
 # Next Files To Read
 
-1. [../database/solutionVideo.md](../database/solutionVideo.md)
-2. Frontend `AdminUpload.jsx` (client upload flow)
+1. ../database/solutionVideo.md
+2. Frontend upload flow (AdminUpload.jsx)
 
 # Common Risks / Notes
 
-- API secret returned only for signing; `api_key` and `cloud_name` sent to client (expected for signed upload).
-- Delete by `problemId` only may remove wrong video if multiple exist.
-- `userId` in `deleteVideo` is read but not used in query.
-- No authorization check that admin owns the problem beyond `adminMiddleware`.
+- api_key and cloud_name are intentionally exposed to frontend for signed uploads.
+- deleteVideo currently deletes by problemId only and may remove unintended records if multiple videos exist.
+- userId may be read during deletion flow but not used inside DB query.
+- Authorization currently depends only on adminMiddleware; ownership-based authorization is not enforced.
+- Cloudinary upload verification depends on external API availability.
 
 # Last Reviewed: 2026-05-18

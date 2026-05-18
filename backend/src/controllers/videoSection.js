@@ -13,7 +13,7 @@ cloudinary.config({
 const generateUploadSignature = asyncHandler(async (req, res) => {
   const { problemId } = req.params;
 
-  const userId = req.result._id;
+  const userId = req.user._id;
 
   // Verify problem exists
   const problem = await Problem.findById(problemId);
@@ -54,7 +54,7 @@ const generateUploadSignature = asyncHandler(async (req, res) => {
 const saveVideoMetadata = asyncHandler(async (req, res) => {
   const { problemId, cloudinaryPublicId, secureUrl, duration } = req.body;
 
-  const userId = req.result._id;
+  const userId = req.user._id;
 
   // Verify the upload with Cloudinary
   const cloudinaryResource = await cloudinary.api.resource(cloudinaryPublicId, {
@@ -108,7 +108,7 @@ const saveVideoMetadata = asyncHandler(async (req, res) => {
 const deleteVideo = asyncHandler(async (req, res) => {
   const { problemId } = req.params;
 
-  const userId = req.result._id;
+  const userId = req.user._id;
 
   //    * invalidate:false (default)
   //     * File deleted from storage

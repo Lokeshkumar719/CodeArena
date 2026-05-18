@@ -1,82 +1,197 @@
 # File Purpose
 
-Express router for problem CRUD (admin) and problem reads / user progress (authenticated). Mounted at `/problem` in `index.js`.
+Express router responsible for problem CRUD operations, problem retrieval, solved-problem tracking, and submission-history routes.
+
+Mounted at:
+
+txt id="l6yv17" /problem 
+
+inside index.js.
 
 # Responsibilities
 
-- Bind admin-only create/update/delete and admin detail fetch
-- Bind user-facing problem list, detail, solved list, and per-problem submission history
-- Separate middleware: `adminMiddleware` vs `userMiddleware`
+- Bind admin-only problem management routes
+- Bind authenticated user-facing problem routes
+- Apply middleware-based authentication and authorization
+- Route requests to appropriate controller handlers
+
+# Authentication Architecture
+
+Authentication and authorization are intentionally separated.
+
+## userMiddleware
+
+Responsible for:
+- JWT verification
+- Redis token blocklist validation
+- Fetching authenticated user document
+- Attaching:
+  js   req.user   
+
+## adminMiddleware
+
+Responsible only for authorization:
+
+js id="j43e6s" req.user.role === "admin" 
+
+## Middleware Order
+
+Admin routes always require:
+
+js id="z4b9j9" userMiddleware, adminMiddleware 
+
+because:
+- adminMiddleware depends on req.user
+- req.user is attached by userMiddleware
 
 # Main Functions / Components / Classes
 
 | Route | Middleware | Controller |
 |-------|------------|------------|
-| `POST /create` | `adminMiddleware` | `createProblem` |
-| `PUT /update/:id` | `adminMiddleware` | `updateProblem` |
-| `DELETE /delete/:id` | `adminMiddleware` | `deleteProblem` |
-| `GET /admin/problemById/:id` | `adminMiddleware` | `getProblemByIdAdmin` |
-| `GET /problemById/:id` | `userMiddleware` | `getProblemById` |
-| `GET /getAllProblems` | `userMiddleware` | `getAllProblems` |
-| `GET /problemSolvedByUser` | `userMiddleware` | `solvedProblems` |
-| `GET /problemSubmmision/:id` | `userMiddleware` | `submittedProblem` |
+| POST /create | userMiddleware, adminMiddleware | createProblem |
+| PUT /update/:id | userMiddleware, adminMiddleware | updateProblem |
+| DELETE /delete/:id | userMiddleware, adminMiddleware | deleteProblem |
+| GET /admin/problemById/:id | userMiddleware, adminMiddleware | getProblemByIdAdmin |
+| GET /problemById/:id | userMiddleware | getProblemById |
+| GET /getAllProblems | userMiddleware | getAllProblems |
+| GET /problemSolvedByUser | userMiddleware | solvedProblems |
+| GET /problemSubmmision/:id | userMiddleware | submittedProblem |
 
-Export: `problemRouter`.
+Exports:
+
+js id="wdr7c4" problemRouter 
 
 # Internal Logic
 
-- Admin routes validate reference solutions via Judge0 before persisting (in controller).
-- User routes omit `hiddenTestCases` in `getProblemById` select (controller-level).
-- Submission history route param `:id` is **problem** id (not submission id); path typo: `problemSubmmision`.
+## Admin Routes
+
+Admin controllers:
+- validate reference solutions through Judge0
+- persist/update/delete Problem documents
+- access hidden testcases
+- manage problem metadata
+
+Authentication and authorization happen before controller execution.
+
+## User Routes
+
+Authenticated users can:
+- fetch problem details
+- view paginated problem lists
+- access solved-problem history
+- view submission history
+
+getProblemById intentionally omits:
+
+js id="t6jbf7" hiddenTestCases 
+
+from user-facing responses.
+
+# Route Behavior Notes
+
+## problemSubmmision
+
+The route:
+
+txt id="jlwmx" /problemSubmmision/:id 
+
+uses:
+- problem ID
+- NOT submission ID
+
+Current route contains a typo:
+
+txt id="jlwm1" Submmision 
+
+Clients must currently match the exact existing route name.
 
 # Inputs and Outputs
 
-| Endpoint | Query/Params | Notes |
-|----------|--------------|-------|
-| `GET /getAllProblems` | `page`, `limit` (default 5) | Paginated list |
-| `GET /problemById/:id` | problem id | May include video URLs |
-| `GET /problemSolvedByUser` | — | Uses `req.result._id` |
-| `GET /problemSubmmision/:id` | problem id | Returns submission array |
+| Endpoint | Query / Params | Notes |
+|----------|----------------|------|
+| GET /getAllProblems | page, limit | Paginated response |
+| GET /problemById/:id | Problem ID | Includes optional video metadata |
+| GET /problemSolvedByUser | — | Uses authenticated user context |
+| GET /problemSubmmision/:id | Problem ID | Returns submission history |
 
 # Dependencies
 
-**Internal:** `../controllers/problemsControllers`, `../middlewares/adminMiddleware`, `../middlewares/userMiddleware`
+## Internal Modules
+
+- ../controllers/problemsControllers
+- ../middlewares/adminMiddleware
+- ../middlewares/userMiddleware
 
 # Used By
 
-- [../config/index.md](../config/index.md)
-- Frontend: `Homepage.jsx`, `ProblemPage.jsx`, `SubmissionHistory.jsx`, admin components
+## Backend
+
+- ../config/index.md
+
+## Frontend Components
+
+- Homepage.jsx
+- ProblemPage.jsx
+- SubmissionHistory.jsx
+- Admin dashboard/problem-management components
 
 # API Connections
 
-See [../docs/API_FLOW.md](../docs/API_FLOW.md) sections 4, 6, 7, 8.
+Indirectly connects to Judge0 through controller/service layer.
+
+See:
+- ../docs/API_FLOW.md
 
 # Database Connections
 
-`Problem`, `Submission`, `SolutionVideo`, `User` (via controllers).
+Handled through controllers:
 
-# State/Context Dependencies
+- Problem
+- Submission
+- SolutionVideo
+- User
 
-- `req.result` from middleware (admin or broken user middleware)
-- Admin writes set `problemCreator` from `req.result._id` in controller
+# State / Context Dependencies
+
+- req.user
+- Judge0 service layer
+- authentication middleware chain
+
+Admin write operations use:
+
+js id="jlwm2" req.user._id 
+
+for:
+- problemCreator
+- ownership metadata
+- audit tracking
 
 # Related Files
 
-- [../controllers/problemsControllers.md](../controllers/problemsControllers.md)
-- [../middleware/adminMiddleware.md](../middleware/adminMiddleware.md)
-- [../middleware/userMiddleware.md](../middleware/userMiddleware.md)
-- [../database/problems.md](../database/problems.md)
-- [../database/submission.md](../database/submission.md)
+- ../controllers/problemsControllers.md
+- ../middleware/adminMiddleware.md
+- ../middleware/userMiddleware.md
+- ../database/problems.md
+- ../database/submission.md
 
 # Next Files To Read
 
-1. [../controllers/problemsControllers.md](../controllers/problemsControllers.md)
-2. [../database/problems.md](../database/problems.md)
+1. ../controllers/problemsControllers.md
+2. ../database/problems.md
 
 # Common Risks / Notes
 
-- Typo in route: `problemSubmmision` (three m's) — clients must match exactly.
-- User routes blocked for non-admins if `userMiddleware` bug unfixed.
-- `createProblem` body includes typo field `problemCreater` in controller destructuring but schema uses `problemCreator`.
+- Route typo:
+  txt   problemSubmmision   
+  should ideally become:
+  txt   problemSubmission   
+  in future refactors.
+
+- Middleware ordering is important:
+  js   userMiddleware,   adminMiddleware   
+
+- Admin controllers depend on req.user populated by authentication middleware.
+
+- Some route names are not fully REST-style yet and may be improved later for cleaner API conventions.
 
 # Last Reviewed: 2026-05-18
