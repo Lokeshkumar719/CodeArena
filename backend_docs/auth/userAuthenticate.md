@@ -31,7 +31,7 @@ Controller module for user registration, login, logout, admin registration, and 
 4. User.create(req.body)
 5. JWT payload stores:
    js    {      id,      emailId,      role: user.role    }    
-6. JWT stored inside secure HTTP-only cookie
+6. JWT `expiresIn: "1d"`; cookie `maxAge: 24 * 60 * 60 * 1000`
 7. Returns sanitized user object
 
 ### Login
@@ -162,9 +162,9 @@ Stores revoked JWT tokens until their original expiry time.
 
 # Common Risks / Notes
 
-- console.log statements still exist in auth handlers and should be removed before production deployment.
-- JWT payload is generated during login/register and does not auto-update if DB role changes later.
-- logout uses jwt.decode() instead of jwt.verify() because token validity is already ensured through protected middleware flow.
-- Imported submission model is currently unused inside this file.
+- JWT payload is generated during login/register and does not auto-update if DB role changes later (re-login required).
+- Logout uses `jwt.decode()` for `exp` (route is behind `userMiddleware`, which already verified the token).
+- Unused import: `submission` model is required but not referenced in this file.
+- `adminRegister` route requires `userMiddleware` + `adminMiddleware` (see [../routes/userAuth.md](../routes/userAuth.md)).
 
 # Last Reviewed: 2026-05-18

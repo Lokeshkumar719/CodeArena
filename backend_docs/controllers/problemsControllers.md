@@ -102,12 +102,15 @@ problemCreater typo may still exist in request destructuring but is ignored.
 
 # getProblemById vs getProblemByIdAdmin
 
-| Field | User | Admin |
-|-------|------|-------|
-| hiddenTestCases | omitted | included |
-| referenceSolution | included | included |
+Both select: `_id`, `title`, `description`, **`inputFormat`**, **`outputFormat`**, **`constraints`**, `difficulty`, `tags`, `visibleTestCases`, `startCode`, `referenceSolution`.
 
-Both controllers optionally merge SolutionVideo metadata when available.
+| Field | User GET | Admin GET |
+|-------|----------|-----------|
+| `hiddenTestCases` | omitted | included |
+| `referenceSolution` | included | included |
+| Video fields | merged if `SolutionVideo` exists | same |
+
+Both controllers optionally merge `secureUrl`, `thumbnailUrl`, `duration` from `SolutionVideo`.
 
 # getAllProblems
 

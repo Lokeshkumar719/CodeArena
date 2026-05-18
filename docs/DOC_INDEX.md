@@ -2,7 +2,7 @@
 
 **Hub for CodeArena / LeetLab (`coding-platform/`)**  
 **Start here:** [recommended_visit.md](./recommended_visit.md) (entry points & first-read path) · [GETTING_STARTED.md](./GETTING_STARTED.md) (run locally)  
-**Last reviewed:** 2026-05-18
+**Last reviewed:** 2026-05-18 (architecture docs synced with auth + problem schema changes)
 
 ---
 

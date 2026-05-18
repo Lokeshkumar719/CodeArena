@@ -17,11 +17,13 @@ Mongoose schema and model for coding problems: metadata, visible/hidden test cas
 
 ### Notable schema structure
 
+- `description`: required string (problem statement)
+- `inputFormat`, `outputFormat`, `constraints`: required strings (LeetCode-style sections)
 - `visibleTestCases[]`: `{ input, output, explanation }` (all required)
 - `hiddenTestCases[]`: `{ input, output }` (no explanation field)
 - `startCode[]`: `{ language, initialCode }`
 - `referenceSolution[]`: `{ language, completeCode }`
-- `problemCreator`: ObjectId ref `"User"` (ref string; model registered as `user`)
+- `problemCreator`: ObjectId ref `"User"` (set from `req.user._id` on create)
 
 ### Tags enum
 

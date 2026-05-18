@@ -77,13 +77,31 @@ No `.env` files are committed. Backend expects (from code references):
 Frontend hardcodes API base URL: `http://localhost:3000` in `axiosClient.js`.  
 CORS on backend allows `http://localhost:5173` only.
 
+## Authentication model (current)
+
+- **`userMiddleware`** — JWT cookie verify, Redis blocklist, `User.findById`, attaches **`req.user`** (full Mongoose document).
+- **`adminMiddleware`** — authorization only; requires `userMiddleware` first; checks `req.user.role === "admin"` → `403` if not.
+- Admin routes use **`userMiddleware, adminMiddleware`** (not `adminMiddleware` alone).
+
+See [AUTH_FLOW.md](./AUTH_FLOW.md).
+
 ## Known Architectural Risks
 
-1. **`userMiddleware.js` appears to export admin-only logic** (same as `adminMiddleware.js`). All “user” protected routes may incorrectly require `role === 'admin'`. See [AUTH_FLOW.md](./AUTH_FLOW.md) and [backend_docs/middleware/userMiddleware.md](../backend_docs/middleware/userMiddleware.md).
-2. **Route vs UI auth mismatch:** `/problem/:problemId` is not gated in `App.jsx`, but APIs require authentication.
+1. **Route vs UI auth mismatch:** `/problem/:problemId` is not gated in `App.jsx`, but APIs require authentication.
+2. **JWT role staleness:** Token payload role does not update if DB role changes until re-login.
 3. **Judge0 status field inconsistency:** `problemsControllers` uses `status_id`; `userSubmission` uses `status.id`.
 4. **Unused dependencies:** `helmet`, `morgan`, `rate-limiter-flexible` listed in `package.json` but not wired in `index.js`.
 5. **`submission` schema** has no `errorMessage` field; controller assigns it anyway (may be stripped by Mongoose strict mode).
+
+## Changelog
+
+### 2026-05-18 — Authentication improved (`d3cfb37`)
+
+- Fixed `userMiddleware` to authenticate any user; `req.result` renamed to **`req.user`** across controllers.
+- `adminMiddleware` simplified to role check only (depends on `userMiddleware`).
+- Admin routes now chain `userMiddleware` + `adminMiddleware`.
+- JWT cookie expiry **1 day** (`expiresIn: "1d"`).
+- Problem schema: required **`inputFormat`**, **`outputFormat`**, **`constraints`**; exposed in GET problem APIs and admin forms/UI.
 
 ## Related Documentation
 

@@ -18,13 +18,13 @@ Admin form to create a new coding problem with metadata, visible/hidden test cas
 | Symbol | Type | Role |
 |--------|------|------|
 | `AdminPanel` | default export | Form page |
-| `problemSchema` | Zod | Title, description, difficulty enum, tags, test cases, 3× startCode, 3× referenceSolution |
+| `problemSchema` | Zod | Title, description, **inputFormat**, **outputFormat**, **constraints**, difficulty, tags, test cases, 3× startCode, 3× referenceSolution |
 | `tagOptions` | array | Allowed tags (27 values) |
 | `languageOptions` | array | cpp, java, javascript labels |
 
 # Internal Logic
 
-- `useForm` defaultValues include one visible/hidden case and three language slots each for `startCode` / `referenceSolution`.
+- `useForm` defaultValues include empty `inputFormat` / `outputFormat` / `constraints`, one visible/hidden case, and three language slots each for `startCode` / `referenceSolution`.
 - Tags: `Controller` + multi-select; values must be in `tagOptions`.
 - `onSubmit`: `setIsSubmitting(true)` → `POST /problem/create` with form `data` → `toast.success` → `navigate("/admin")`; errors via `toast.error`.
 

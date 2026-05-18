@@ -79,7 +79,8 @@ Frontend ──► Cloudinary upload URL (direct)
 2. **Cookie auth** — frontend must use `withCredentials`; backend CORS origin must match Vite port.
 3. **Language IDs** — duplicated concept in `constants/judge0.js`; frontend hardcodes `javascript|java|cpp` in multiple files.
 4. **Tag enums** — duplicated between `problems.js` schema and frontend `tagOptions` arrays.
-5. **userMiddleware bug** — breaks entire authenticated surface if file content is wrong.
+5. **Middleware ordering** — `adminMiddleware` alone does not authenticate; must follow `userMiddleware`.
+6. **JWT role staleness** — payload role fixed until re-login after DB role change.
 
 ## Maintenance: File → Doc Path Convention
 
