@@ -8,21 +8,19 @@ const asyncHandler = require("../utils/asyncHandler");
 
 // REGISTER
 const register = asyncHandler(async (req, res) => {
-  // validate the request body
+  // validate incoming user data before processing
   validate(req.body);
 
-  // important to set the role before creating the user because admin will not be registered through this route and we are not allowing users to set their role by themselves so we will set the role as "user" by default
+  // prevent users from self-registering as admin
   req.body.role = "user";
 
-  // extract the password from request body and hash it before saving to database
+  // hash password before storing in database
   const { password } = req.body;
-
-  // hash the password
   req.body.password = await bcrypt.hash(password, 10);
 
   const user = await User.create(req.body);
 
-  // This is info that we will send to frontend when user register
+  // user data sent back to frontend
   const reply = {
     firstName: user.firstName,
     emailId: user.emailId,
@@ -30,21 +28,22 @@ const register = asyncHandler(async (req, res) => {
     role: user.role,
   };
 
-  // send the JWT and assign the role to the user in the JWT payload so that we can use it in the future for authorization
+  // JWT payload stores identity and authorization-related data
   const token = jwt.sign(
     {
       id: user._id,
       emailId: user.emailId,
-      role: "user",
+      role: user.role,
     },
     process.env.JWT_KEY,
     {
-      expiresIn: 60 * 60,
+      expiresIn: "1d",
     },
   );
 
+  // store JWT securely inside HTTP-only cookie
   res.cookie("token", token, {
-    maxAge: 60 * 60 * 1000,
+    maxAge: 24 * 60 * 60 * 1000,
     httpOnly: true,
     sameSite: "strict",
   });
@@ -58,29 +57,26 @@ const register = asyncHandler(async (req, res) => {
 // LOGIN
 const login = asyncHandler(async (req, res) => {
   const { emailId, password } = req.body;
-  console.log(emailId);
-  console.log(password);
 
   if (!emailId || !password) {
     throw new Error("Invalid Credentials");
   }
 
-  // match the password
+  // find user using email
   const user = await User.findOne({ emailId });
-  console.log(user);
 
   if (!user) {
     throw new Error("Invalid Credentials");
   }
 
+  // compare entered password with hashed password stored in DB
   const match = await bcrypt.compare(password, user.password);
-  console.log(match);
-  
+
   if (!match) {
     throw new Error("Invalid Credentials");
   }
 
-  // This is info that we will send to frontend when user login
+  // user data sent back to frontend
   const reply = {
     firstName: user.firstName,
     emailId: user.emailId,
@@ -88,9 +84,7 @@ const login = asyncHandler(async (req, res) => {
     role: user.role,
   };
 
-  console.log(reply);
-
-  // send the JWT and assign the role to the user in the JWT payload so that we can use it in the future for authorization
+  // JWT payload stores identity and authorization-related data
   const token = jwt.sign(
     {
       id: user._id,
@@ -99,13 +93,13 @@ const login = asyncHandler(async (req, res) => {
     },
     process.env.JWT_KEY,
     {
-      expiresIn: 60 * 60,
+      expiresIn: "1d",
     },
   );
 
-  // Always add these two to ensure frontend don't access JWT and Cookie is sent ONLY when request comes from your own site.
+  // HTTP-only cookie prevents frontend JS from accessing JWT
   res.cookie("token", token, {
-    maxAge: 60 * 60 * 1000,
+    maxAge: 24 * 60 * 60 * 1000,
     httpOnly: true,
     sameSite: "strict",
   });
@@ -172,7 +166,7 @@ const adminRegister = asyncHandler(async (req, res) => {
 });
 
 const deleteProfile = asyncHandler(async (req, res) => {
-  const userId = req.result._id;
+  const userId = req.user._id;
 
   // delete From userSchema
   await User.findByIdAndDelete(userId);

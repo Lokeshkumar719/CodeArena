@@ -1,60 +1,97 @@
 # File Purpose
 
-Express middleware that restricts routes to authenticated **admin** users. Verifies JWT cookie, confirms admin role in token and database, checks Redis logout blocklist, and sets `req.result`.
+Express middleware responsible for authorization of authenticated admin users.
+
+This middleware assumes authentication has already been completed by:
+
+js userMiddleware 
+
+and only verifies whether the authenticated user has admin privileges.
 
 # Responsibilities
 
-- Reject requests without `token` cookie
-- Verify JWT with `JWT_KEY`
-- Enforce `payload.role === 'admin'`
-- Load user and enforce `result.role === 'admin'`
-- Reject blocklisted tokens
-- Attach full user document to `req.result`
+- Restrict protected routes to admin users only
+- Verify:
+  js   req.user.role === "admin"   
+- Return authorization failure response for non-admin users
+- Pass authorized admin requests to next middleware/controller
+
+# Authentication Architecture
+
+Authentication and authorization are intentionally separated.
+
+## userMiddleware
+
+Responsible for:
+- JWT verification
+- Redis blocklist validation
+- Fetching authenticated user from database
+- Attaching:
+  js   req.user   
+
+## adminMiddleware
+
+Responsible only for authorization logic.
+
+This middleware depends on:
+
+js req.user 
+
+already being attached by userMiddleware.
 
 # Main Functions / Components / Classes
 
 | Export | Type |
 |--------|------|
-| `adminMiddleware` | `async (req, res, next) => { ... }` — **not** wrapped in `asyncHandler` |
+| adminMiddleware | Express middleware wrapped with asyncHandler |
 
 # Internal Logic
 
-Same step sequence as [userMiddleware.md](./userMiddleware.md) (which incorrectly duplicates this logic):
+## Authorization Flow
 
-1. Cookie present
-2. `jwt.verify`
-3. `payload.id` present
-4. `payload.role === 'admin'`
-5. `User.findById(id)`
-6. `result.role === 'admin'`
-7. `redisClient.exists('token:${token}')`
-8. `req.result = result`; `next()`
+1. Assumes request already passed through:
+   js    userMiddleware    
 
-Returns `401` with plain text for all failures (no `next(err)`).
+2. Verifies:
+   js    req.user.role === "admin"    
+
+3. If user is not admin:
+   js    return res.status(403).send("Access Denied")    
+
+4. Otherwise:
+   js    next()    
 
 # Inputs and Outputs
 
 | Input | Success |
 |-------|---------|
-| Valid admin JWT + active token | `req.result`, `next()` |
+| Authenticated admin user | next() |
 
-| Failure | Status | Message (examples) |
-|---------|--------|-------------------|
-| No cookie | 401 | Unauthorized Access |
-| Wrong role | 401 | Invalid Token-Not an admin |
-| Blocklisted | 401 | Invalid Token |
+| Failure | Status | Response |
+|---------|--------|-----------|
+| Non-admin authenticated user | 403 | "Access Denied" |
 
 # Dependencies
 
-**npm:** `jsonwebtoken`
+## Internal Modules
 
-**Internal:** `../models/user`, `../config/redis`
+- ../utils/asyncHandler
 
 # Used By
 
-- [../routes/userAuth.md](../routes/userAuth.md) — `POST /admin/Register`
-- [../routes/problemCreator.md](../routes/problemCreator.md) — admin CRUD routes
-- [../routes/videoCreator.md](../routes/videoCreator.md) — all video routes
+## Admin Routes
+
+### ../routes/userAuth.md
+- POST /admin/register
+
+### ../routes/problemCreator.md
+- Problem create/update/delete routes
+- Admin problem fetch routes
+
+### ../routes/videoCreator.md
+- Video upload routes
+- Video metadata routes
+- Video deletion routes
 
 # API Connections
 
@@ -62,28 +99,42 @@ None.
 
 # Database Connections
 
-`User.findById`; Redis blocklist check.
+None directly.
 
-# State/Context Dependencies
+Database validation is handled earlier by:
 
-- `process.env.JWT_KEY`
-- Admin JWT must be obtained via `adminRegister` or login as admin user
+js userMiddleware 
+
+during authentication.
+
+# State / Context Dependencies
+
+Depends on:
+
+js req.user 
+
+being populated by userMiddleware.
+
+Expected user shape:
+
+js {   _id,   firstName,   emailId,   role } 
 
 # Related Files
 
-- [userMiddleware.md](./userMiddleware.md) — erroneous duplicate
-- [../auth/userAuthenticate.md](../auth/userAuthenticate.md)
-- [../docs/AUTH_FLOW.md](../docs/AUTH_FLOW.md)
+- userMiddleware.md
+- ../auth/userAuthenticate.md
+- ../docs/AUTH_FLOW.md
 
 # Next Files To Read
 
-1. [userMiddleware.md](./userMiddleware.md) — understand duplication bug
-2. [../routes/problemCreator.md](../routes/problemCreator.md) — admin route map
+1. userMiddleware.md
+2. ../routes/problemCreator.md
 
 # Common Risks / Notes
 
-- Not wrapped in `asyncHandler`: `jwt.verify` throw or `User.findById` rejection may become unhandled rejection.
-- Plain-text 401 bodies (not JSON) — frontend must not assume JSON on auth errors.
-- No check that JWT `emailId` still matches DB email (immutable in schema).
+- adminMiddleware must always execute after userMiddleware.
+- If req.user is missing, middleware ordering is incorrect.
+- Authorization logic is intentionally separated from authentication logic for cleaner architecture and maintainability.
+- Middleware returns plain-text responses rather than JSON error objects.
 
 # Last Reviewed: 2026-05-18

@@ -1,53 +1,43 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/user');
-const redisClient = require('../config/redis');
-const asyncHandler = require('../utils/asyncHandler');
+const jwt = require("jsonwebtoken");
+const User = require("../models/user");
+const redisClient = require("../config/redis");
+const asyncHandler = require("../utils/asyncHandler");
 
-// this middleware will check whether the user is authenticated or not by verifying the JWT token and also check whether the token is blocked or not by checking in redis
-const adminMiddleware = asyncHandler(async(req,res,next)=>{
-
+// this middleware checks whether the user is authenticated or not
+const userMiddleware = asyncHandler(async (req, res, next) => {
   const { token } = req.cookies;
 
-  if(!token){
+  if (!token) {
     return res.status(401).send("Unauthorized Access");
   }
 
-  const payload = jwt.verify(token,process.env.JWT_KEY);
+  // jwt.verify() either returns the decoded payload if token is valid
+  // OR throws an error immediately if token is invalid/expired.
+  // So no need to check if payload exists separately.
 
-  if(!payload){
-    return res.status(401).send("Invalid Token-No Payload");
-  }
+  const payload = jwt.verify(token, process.env.JWT_KEY);
 
   const { id } = payload;
 
-  if(!id){
-    return res.status(401).send("Invalid Token-No ID");
+  if (!id) {
+    return res.status(401).send("Invalid Token");
   }
 
-  if(payload.role !== 'admin'){
-    return res.status(401).send("Invalid Token-Not an admin");
-  }
+  const user = await User.findById(id);
 
-  const result = await User.findById(id);
-
-  if(!result){
-    return res.status(401).send("Admin Not Found");
-  }
-
-  if(result.role !== 'admin'){
-    return res.status(401).send("Invalid Token-User is not an admin");
+  if (!user) {
+    return res.status(401).send("User Doesn't Exist");
   }
 
   const isBlocked = await redisClient.exists(`token:${token}`);
 
-  if(isBlocked){
+  if (isBlocked) {
     return res.status(401).send("Invalid Token");
   }
 
-  // if the token is valid and not blocked then we will allow the user to access the admin routes and also we will pass the user details in the request object for further use in the controllers
-  req.result = result;
+  req.user = user;
 
   next();
 });
 
-module.exports = adminMiddleware;
+module.exports = userMiddleware;

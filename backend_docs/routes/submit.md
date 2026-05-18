@@ -1,77 +1,184 @@
 # File Purpose
 
-Express router for code execution against test cases (run vs full submit). Mounted at `/submission` in `index.js`.
+Express router responsible for code execution and code submission endpoints for coding problems.
+
+Mounted at:
+
+txt id="1msj3n" /submission 
+
+inside index.js.
 
 # Responsibilities
 
-- Protect both endpoints with `userMiddleware`
-- Map `POST /submit/:id` and `POST /run/:id` to `userSubmission` controller
-- `:id` is the problem MongoDB ObjectId
+- Protect execution routes using authentication middleware
+- Route code execution requests to submission controllers
+- Separate:
+  - visible testcase execution (run)
+  - full testcase evaluation (submit)
+- Pass problem ID parameters into controller layer
+
+# Authentication Architecture
+
+All submission routes require:
+
+js id="jlwm4" userMiddleware 
+
+## userMiddleware
+
+Responsible for:
+- JWT verification
+- Redis token blocklist validation
+- Fetching authenticated user document
+- Attaching:
+  js   req.user   
+
+This authenticated user context is required for:
+- submission ownership
+- solve tracking
+- submission history
+- user-specific DB updates
 
 # Main Functions / Components / Classes
 
 | Route | Middleware | Handler |
 |-------|------------|---------|
-| `POST /submit/:id` | `userMiddleware` | `submitCode` |
-| `POST /run/:id` | `userMiddleware` | `runCode` |
+| POST /submit/:id | userMiddleware | submitCode |
+| POST /run/:id | userMiddleware | runCode |
 
-Export: `submitRouter`.
+Exports:
+
+js id="xjlwm" submitRouter 
 
 # Internal Logic
 
-Thin router: no inline logic. All Judge0 orchestration lives in [../controllers/userSubmission.md](../controllers/userSubmission.md).
+This router intentionally contains no business logic.
 
-- **submit:** visible + hidden test cases, persists `Submission`, updates `problemSolved` on accept
-- **run:** visible test cases only, no DB submission record
+All execution orchestration lives inside:
+
+- ../controllers/userSubmission.md
+
+## submit
+
+Performs:
+- visible + hidden testcase evaluation
+- Submission persistence
+- solved-problem updates
+- Judge0 orchestration
+
+## run
+
+Performs:
+- visible testcase execution only
+- no DB submission persistence
+- lightweight execution preview
+
+# Route Parameters
+
+## :id
+
+Represents:
+
+txt id="x4jlwm" Problem MongoDB ObjectId 
+
+used for:
+- testcase retrieval
+- submission association
+- solve tracking
 
 # Inputs and Outputs
 
 | Endpoint | Body | Response |
 |----------|------|----------|
-| `POST /submission/submit/:id` | `{ code, language }` | `201` — `accepted`, counts, `runtime`, `memory`, `error` |
-| `POST /submission/run/:id` | `{ code, language }` | `201` — `success`, `testCases`, `runtime`, `memory`, etc. |
+| POST /submission/submit/:id | { code, language } | Submission summary |
+| POST /submission/run/:id | { code, language } | Judge0 testcase results + summary |
 
-`language` must be one supported by [../utils/problemUtility.md](../utils/problemUtility.md) (`cpp`, `java`, `javascript`).
+Typical response fields include:
+- accepted
+- runtime
+- memory
+- passedTestCases
+- totalTestCases
+- testCases
+- error
+
+# Supported Languages
+
+Language values are mapped using:
+
+- ../utils/problemUtility.md
+
+Currently supported:
+- cpp
+- java
+- javascript
 
 # Dependencies
 
-**Internal:** `../controllers/userSubmission`, `../middlewares/userMiddleware`
+## Internal Modules
+
+- ../controllers/userSubmission
+- ../middlewares/userMiddleware
 
 # Used By
 
-- [../config/index.md](../config/index.md)
-- `frontend/src/pages/ProblemPage.jsx`
+## Backend
+
+- ../config/index.md
+
+## Frontend
+
+- frontend/src/pages/ProblemPage.jsx
 
 # API Connections
 
-Judge0 via [../services/judge0Service.md](../services/judge0Service.md). Documented in [../docs/API_FLOW.md](../docs/API_FLOW.md) §5–6.
+Indirect Judge0 integration through controller/service layer.
+
+See:
+- ../services/judge0Service.md
+- ../docs/API_FLOW.md
 
 # Database Connections
 
-Submit path: `Problem`, `Submission`, `User.problemSolved` update.
+## Submit Flow
 
-Run path: `Problem` read only.
+Uses:
+- Problem
+- Submission
+- User.problemSolved
 
-# State/Context Dependencies
+## Run Flow
 
-- `req.result` (user document) required for `userId` and `$addToSet` on solve
+Uses:
+- Problem read operations only
+
+# State / Context Dependencies
+
+- req.user
+- Judge0 service layer
+- language mapping utilities
+
+Authenticated user document is required for:
+- userId
+- submission ownership
+- $addToSet solved-problem updates
 
 # Related Files
 
-- [../controllers/userSubmission.md](../controllers/userSubmission.md)
-- [../services/judge0Service.md](../services/judge0Service.md)
-- [../middleware/userMiddleware.md](../middleware/userMiddleware.md)
-- [../database/submission.md](../database/submission.md)
+- ../controllers/userSubmission.md
+- ../services/judge0Service.md
+- ../middleware/userMiddleware.md
+- ../database/submission.md
 
 # Next Files To Read
 
-1. [../controllers/userSubmission.md](../controllers/userSubmission.md)
-2. [../services/judge0Service.md](../services/judge0Service.md)
+1. ../controllers/userSubmission.md
+2. ../services/judge0Service.md
 
 # Common Risks / Notes
 
-- Same `userMiddleware` admin-only bug blocks non-admin submit/run.
-- Synchronous Judge0 polling in request thread — long-running requests under load.
-- No rate limiting on expensive judge calls.
+- Judge0 polling currently happens during active HTTP request lifecycle and may increase response latency under load.
+- No rate limiting currently exists for expensive Judge0 execution routes.
+- Runtime performance depends on Judge0 API responsiveness.
+- Long-running submissions may keep Node.js request workers occupied.
 
 # Last Reviewed: 2026-05-18
