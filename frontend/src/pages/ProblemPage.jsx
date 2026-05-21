@@ -27,8 +27,11 @@ const ProblemPage = () => {
 
   const [activeLeftTab, setActiveLeftTab] = useState("description");
   const [activeRightTab, setActiveRightTab] = useState("code");
+  const [leftWidth, setLeftWidth] = useState(50);
+  const [isDragging, setIsDragging] = useState(false);
 
   const editorRef = useRef(null);
+  const splitLayoutRef = useRef(null);
 
   const { problemId } = useParams();
 
@@ -58,6 +61,32 @@ const ProblemPage = () => {
   }, [problemId]);
 
   useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDragging) return;
+      if (!splitLayoutRef.current) return;
+
+      const rect = splitLayoutRef.current.getBoundingClientRect();
+      const newLeftWidth = ((e.clientX - rect.left) / rect.width) * 100;
+
+      if (newLeftWidth >= 20 && newLeftWidth <= 80) {
+        setLeftWidth(newLeftWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging]);
+
+  useEffect(() => {
     if (problem) {
       const initialCode =
         problem.startCode.find((sc) => sc.language === selectedLanguage)
@@ -66,6 +95,16 @@ const ProblemPage = () => {
       setCode(initialCode);
     }
   }, [selectedLanguage, problem]);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      if (editorRef.current && typeof editorRef.current.layout === "function") {
+        editorRef.current.layout();
+      }
+    });
+
+    return () => cancelAnimationFrame(id);
+  }, [leftWidth, activeRightTab]);
 
   const handleEditorChange = (value) => {
     setCode(value || "");
@@ -180,15 +219,23 @@ const ProblemPage = () => {
     return <LoadingScreen />;
   }
 
+  const startDragging = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
   return (
     <div className="problem-page">
       <div className="top-bar">
         <div className="top-title">LeetLab · Problem Solver</div>
       </div>
 
-      <div className="split-layout">
-        {/* ══ LEFT PANEL ══ */}
-        <div className="panel panel-left">
+      <div className="split-layout" ref={splitLayoutRef}>
+        {/* LEFT PANEL */}
+        <div
+          className="panel panel-left"
+          style={{ width: `${leftWidth}%` }}
+        >
           <ProblemTabs
             tabs={LEFT_TABS}
             activeTab={activeLeftTab}
@@ -217,19 +264,21 @@ const ProblemPage = () => {
                   <div>
                     <p className="section-title">Solutions</p>
 
-                    {problem.referenceSolution?.map((sol, i) => (
-                      <div key={i} className="solution-card">
-                        <div className="solution-header">
-                          {problem.title} — {sol.language}
-                        </div>
+                    {problem.referenceSolution?.length > 0 ? (
+                      problem.referenceSolution.map((sol, i) => (
+                        <div key={i} className="solution-card">
+                          <div className="solution-header">
+                            {problem.title} — {sol.language}
+                          </div>
 
-                        <div className="solution-body">
-                          <pre>
-                            <code>{sol.completeCode}</code>
-                          </pre>
+                          <div className="solution-body">
+                            <pre>
+                              <code>{sol.completeCode}</code>
+                            </pre>
+                          </div>
                         </div>
-                      </div>
-                    )) || (
+                      ))
+                    ) : (
                       <p className="desc-text">
                         Solutions visible after solving the problem.
                       </p>
@@ -240,7 +289,6 @@ const ProblemPage = () => {
                 {activeLeftTab === "submissions" && (
                   <div>
                     <p className="section-title">My Submissions</p>
-
                     <SubmissionHistory problemId={problemId} />
                   </div>
                 )}
@@ -249,8 +297,19 @@ const ProblemPage = () => {
           </div>
         </div>
 
-        {/* ══ RIGHT PANEL ══ */}
-        <div className="panel panel-right">
+        {/* DRAGGABLE DIVIDER */}
+        <div
+          className="divider"
+          onMouseDown={startDragging}
+          onMouseDownCapture={startDragging}
+          onDragStart={(e) => e.preventDefault()}
+        />
+
+        {/* RIGHT PANEL */}
+        <div
+          className="panel panel-right"
+          style={{ width: `${100 - leftWidth}%` }}
+        >
           <ProblemTabs
             tabs={RIGHT_TABS}
             activeTab={activeRightTab}
