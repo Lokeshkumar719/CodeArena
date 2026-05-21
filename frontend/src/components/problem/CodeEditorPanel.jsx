@@ -1,6 +1,5 @@
 import Editor from "@monaco-editor/react";
 import LanguageSelector from "./LanguageSelector";
-import ActionBar from "./ActionBar";
 
 const CodeEditorPanel = ({
   activeRightTab,
@@ -11,22 +10,15 @@ const CodeEditorPanel = ({
   code,
   handleEditorChange,
   handleEditorDidMount,
-  isRunning,
-  isSubmitting,
-  handleRun,
-  handleSubmitCode,
 }) => {
-  if (activeRightTab !== "code") {
-    return null;
-  }
-
   return (
     <div
       style={{
-        display: "flex",
+        display: activeRightTab === "code" ? "flex" : "none",
         flexDirection: "column",
         flex: 1,
         overflow: "hidden",
+        background: "#0d1117",
       }}
     >
       <LanguageSelector
@@ -35,14 +27,33 @@ const CodeEditorPanel = ({
         handleLanguageChange={handleLanguageChange}
       />
 
-      <div className="editor-wrap">
+      <div className="editor-wrap" style={{ flex: 1, overflow: "hidden" }}>
         <Editor
           height="100%"
           language={getLanguageForMonaco(selectedLanguage)}
           value={code}
           onChange={handleEditorChange}
-          onMount={handleEditorDidMount}
-          theme="vs-dark"
+          onMount={(editor, monaco) => {
+            handleEditorDidMount(editor, monaco);
+            monaco.editor.defineTheme("custom-dark", {
+              base: "vs-dark",
+              inherit: true,
+              rules: [],
+              colors: {
+                "editor.background": "#0d1117",
+                "editor.lineHighlightBackground": "#161b22",
+              },
+            });
+            monaco.editor.setTheme("custom-dark");
+            monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+              noSemanticValidation: true,
+              noSyntaxValidation: true,
+            });
+            monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+              noSemanticValidation: true,
+              noSyntaxValidation: true,
+            });
+          }}
           options={{
             fontSize: 13,
             fontFamily: "'JetBrains Mono', monospace",
@@ -63,15 +74,6 @@ const CodeEditorPanel = ({
             mouseWheelZoom: true,
             padding: { top: 12 },
           }}
-        />
-      </div>
-
-      <div className="action-bar justify-end">
-        <ActionBar
-          isRunning={isRunning}
-          isSubmitting={isSubmitting}
-          handleRun={handleRun}
-          handleSubmitCode={handleSubmitCode}
         />
       </div>
     </div>
