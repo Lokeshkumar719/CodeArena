@@ -17,7 +17,7 @@ import "./ProblemPage.css";
 const ProblemPage = () => {
   const [problem, setProblem] = useState(null);
   const [selectedLanguage, setSelectedLanguage] = useState("javascript");
-  const [code, setCode] = useState("");
+  const [codeMap, setCodeMap] = useState({});   // ← har language ka code alag
   const [loading, setLoading] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,10 +37,15 @@ const ProblemPage = () => {
       setLoading(true);
       try {
         const response = await axiosClient.get(`/problem/problemById/${problemId}`);
-        const initialCode =
-          response.data.startCode.find((sc) => sc.language === selectedLanguage)?.initialCode || "";
+
+        // sabhi languages ka initial code ek saath store karo
+        const initialCodeMap = {};
+        response.data.startCode.forEach((sc) => {
+          initialCodeMap[sc.language] = sc.initialCode || "";
+        });
+
         setProblem(response.data);
-        setCode(initialCode);
+        setCodeMap(initialCodeMap);
       } catch (error) {
         console.error("Error fetching problem:", error);
       }
@@ -48,6 +53,14 @@ const ProblemPage = () => {
     };
     fetchProblem();
   }, [problemId]);
+
+  // ← ye useEffect hataya — yahi code reset ka root cause tha
+  // useEffect(() => {
+  //   if (problem) {
+  //     const initialCode = problem.startCode.find(...)
+  //     setCode(initialCode);
+  //   }
+  // }, [selectedLanguage, problem]);
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -69,14 +82,6 @@ const ProblemPage = () => {
   }, [isDragging]);
 
   useEffect(() => {
-    if (problem) {
-      const initialCode =
-        problem.startCode.find((sc) => sc.language === selectedLanguage)?.initialCode || "";
-      setCode(initialCode);
-    }
-  }, [selectedLanguage, problem]);
-
-  useEffect(() => {
     const id = requestAnimationFrame(() => {
       if (editorRef.current && typeof editorRef.current.layout === "function") {
         editorRef.current.layout();
@@ -85,7 +90,17 @@ const ProblemPage = () => {
     return () => cancelAnimationFrame(id);
   }, [leftWidth, activeRightTab]);
 
-  const handleEditorChange = (value) => setCode(value || "");
+  // current language ka code
+  const currentCode = codeMap[selectedLanguage] || "";
+
+  // editor change hone pe sirf us language ka code update karo
+  const handleEditorChange = (value) => {
+    setCodeMap((prev) => ({
+      ...prev,
+      [selectedLanguage]: value || "",
+    }));
+  };
+
   const handleEditorDidMount = (editor) => { editorRef.current = editor; };
   const handleLanguageChange = (language) => setSelectedLanguage(language);
 
@@ -94,7 +109,7 @@ const ProblemPage = () => {
     setRunResult(null);
     try {
       const response = await axiosClient.post(`/submission/run/${problemId}`, {
-        code,
+        code: currentCode,
         language: selectedLanguage,
       });
       setRunResult(response.data);
@@ -112,7 +127,7 @@ const ProblemPage = () => {
     setSubmitResult(null);
     try {
       const response = await axiosClient.post(`/submission/submit/${problemId}`, {
-        code,
+        code: currentCode,
         language: selectedLanguage,
       });
       setSubmitResult(response.data);
@@ -234,14 +249,12 @@ const ProblemPage = () => {
             flexDirection: "column",
           }}
         >
-          {/* Tab Bar */}
           <ProblemTabs
             tabs={RIGHT_TABS}
             activeTab={activeRightTab}
             setActiveTab={setActiveRightTab}
           />
 
-          {/* Tab Content */}
           <div
             style={{
               flex: 1,
@@ -250,14 +263,13 @@ const ProblemPage = () => {
               flexDirection: "column",
             }}
           >
-            {/* Editor — display:none se space nahi lega, state preserve rahegi */}
             <CodeEditorPanel
               activeRightTab={activeRightTab}
               selectedLanguage={selectedLanguage}
               handleLanguageChange={handleLanguageChange}
               LANGS={LANGS}
               getLanguageForMonaco={getLanguageForMonaco}
-              code={code}
+              code={currentCode}
               handleEditorChange={handleEditorChange}
               handleEditorDidMount={handleEditorDidMount}
             />
@@ -271,7 +283,7 @@ const ProblemPage = () => {
             )}
           </div>
 
-          {/* Action Bar — hamesha neeche fixed */}
+          {/* Action Bar */}
           <div
             style={{
               padding: "12px 16px",
@@ -284,18 +296,10 @@ const ProblemPage = () => {
               flexShrink: 0,
             }}
           >
-            <button
-              className="run-btn"
-              onClick={handleRun}
-              disabled={isRunning}
-            >
+            <button className="run-btn" onClick={handleRun} disabled={isRunning}>
               {isRunning ? "Running..." : "▶ Run"}
             </button>
-            <button
-              className="submit-btn"
-              onClick={handleSubmitCode}
-              disabled={isSubmitting}
-            >
+            <button className="submit-btn" onClick={handleSubmitCode} disabled={isSubmitting}>
               {isSubmitting ? "Submitting..." : "↗ Submit"}
             </button>
           </div>
