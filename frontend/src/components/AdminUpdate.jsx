@@ -5,6 +5,7 @@ import { z } from "zod";
 import axiosClient from "../utils/axiosClient";
 import { useNavigate, useParams } from "react-router";
 import toast from "react-hot-toast";
+import { getErrorMessage } from "../utils/errorHandler";
 
 const tagOptions = [
   "array",
@@ -199,16 +200,20 @@ function AdminUpdate() {
           `/problem/admin/problemById/${id}`,
         );
 
-        reset(response.data);
+        reset(response.data.data);
       } catch (error) {
-        toast.error("Failed to fetch problem");
+        toast.error(getErrorMessage(error));
+
+        if (import.meta.env.DEV) {
+          console.error(error);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchProblem();
-  }, []);
+  }, [id, reset]);
 
   const onSubmit = async (data) => {
     try {
@@ -220,7 +225,11 @@ function AdminUpdate() {
 
       navigate("/admin/update-list");
     } catch (error) {
-      toast.error(error.response?.data?.error || error.message);
+      toast.error(getErrorMessage(error));
+
+      if (import.meta.env.DEV) {
+        console.error(error);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -238,7 +247,12 @@ function AdminUpdate() {
     <div className="container mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">Update Problem</h1>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form
+        onSubmit={handleSubmit(onSubmit, () => {
+          toast.error("Please fix validation errors");
+        })}
+        className="space-y-6"
+      >
         {/* Basic Information */}
         <div className="card bg-base-100 shadow-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Basic Information</h2>
@@ -439,25 +453,60 @@ function AdminUpdate() {
                 <textarea
                   {...register(`visibleTestCases.${index}.input`)}
                   placeholder="Input"
-                  className="textarea textarea-bordered w-full font-mono"
+                  className={`textarea textarea-bordered w-full font-mono whitespace-pre ${
+                    errors.visibleTestCases?.[index]?.input
+                      ? "textarea-error"
+                      : ""
+                  }`}
                   rows={4}
                 />
+
+                {errors.visibleTestCases?.[index]?.input && (
+                  <span className="text-error text-sm">
+                    {errors.visibleTestCases[index].input.message}
+                  </span>
+                )}
 
                 <textarea
                   {...register(`visibleTestCases.${index}.output`)}
                   placeholder="Output"
-                  className="textarea textarea-bordered w-full font-mono"
+                  className={`textarea textarea-bordered w-full font-mono whitespace-pre ${
+                    errors.visibleTestCases?.[index]?.output
+                      ? "textarea-error"
+                      : ""
+                  }`}
                   rows={3}
                 />
+
+                {errors.visibleTestCases?.[index]?.output && (
+                  <span className="text-error text-sm">
+                    {errors.visibleTestCases[index].output.message}
+                  </span>
+                )}
 
                 <textarea
                   {...register(`visibleTestCases.${index}.explanation`)}
                   placeholder="Explanation"
-                  className="textarea textarea-bordered w-full"
+                  className={`textarea textarea-bordered w-full whitespace-pre ${
+                    errors.visibleTestCases?.[index]?.explanation
+                      ? "textarea-error"
+                      : ""
+                  }`}
                   rows={3}
                 />
+
+                {errors.visibleTestCases?.[index]?.explanation && (
+                  <span className="text-error text-sm">
+                    {errors.visibleTestCases[index].explanation.message}
+                  </span>
+                )}
               </div>
             ))}
+            {errors.visibleTestCases?.message && (
+              <span className="text-error">
+                {errors.visibleTestCases.message}
+              </span>
+            )}
           </div>
 
           {/* Hidden Test Cases */}
@@ -497,18 +546,43 @@ function AdminUpdate() {
                 <textarea
                   {...register(`hiddenTestCases.${index}.input`)}
                   placeholder="Input"
-                  className="textarea textarea-bordered w-full font-mono"
+                  className={`textarea textarea-bordered w-full font-mono whitespace-pre ${
+                    errors.hiddenTestCases?.[index]?.input
+                      ? "textarea-error"
+                      : ""
+                  }`}
                   rows={4}
                 />
+
+                {errors.hiddenTestCases?.[index]?.input && (
+                  <span className="text-error text-sm">
+                    {errors.hiddenTestCases[index].input.message}
+                  </span>
+                )}
 
                 <textarea
                   {...register(`hiddenTestCases.${index}.output`)}
                   placeholder="Output"
-                  className="textarea textarea-bordered w-full font-mono"
+                  className={`textarea textarea-bordered w-full font-mono whitespace-pre ${
+                    errors.hiddenTestCases?.[index]?.output
+                      ? "textarea-error"
+                      : ""
+                  }`}
                   rows={3}
                 />
+
+                {errors.hiddenTestCases?.[index]?.output && (
+                  <span className="text-error text-sm">
+                    {errors.hiddenTestCases[index].output.message}
+                  </span>
+                )}
               </div>
             ))}
+            {errors.hiddenTestCases?.message && (
+              <span className="text-error">
+                {errors.hiddenTestCases.message}
+              </span>
+            )}
           </div>
         </div>
 
@@ -522,6 +596,7 @@ function AdminUpdate() {
                 <h3 className="font-medium">{language.label}</h3>
 
                 {/* Initial Code */}
+                {/* Initial Code */}
                 <div className="form-control">
                   <label className="label">
                     <span className="label-text">Initial Code</span>
@@ -530,12 +605,23 @@ function AdminUpdate() {
                   <pre className="bg-base-300 p-4 rounded-lg">
                     <textarea
                       {...register(`startCode.${index}.initialCode`)}
-                      className="w-full bg-transparent font-mono"
+                      className={`w-full bg-transparent font-mono whitespace-pre ${
+                        errors.startCode?.[index]?.initialCode
+                          ? "textarea-error"
+                          : ""
+                      }`}
                       rows={6}
                     />
                   </pre>
+
+                  {errors.startCode?.[index]?.initialCode && (
+                    <span className="text-error text-sm">
+                      {errors.startCode[index].initialCode.message}
+                    </span>
+                  )}
                 </div>
 
+                {/* Reference Solution */}
                 {/* Reference Solution */}
                 <div className="form-control">
                   <label className="label">
@@ -545,10 +631,20 @@ function AdminUpdate() {
                   <pre className="bg-base-300 p-4 rounded-lg">
                     <textarea
                       {...register(`referenceSolution.${index}.completeCode`)}
-                      className="w-full bg-transparent font-mono"
+                      className={`w-full bg-transparent font-mono whitespace-pre ${
+                        errors.referenceSolution?.[index]?.completeCode
+                          ? "textarea-error"
+                          : ""
+                      }`}
                       rows={6}
                     />
                   </pre>
+
+                  {errors.referenceSolution?.[index]?.completeCode && (
+                    <span className="text-error text-sm">
+                      {errors.referenceSolution[index].completeCode.message}
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
@@ -558,7 +654,9 @@ function AdminUpdate() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="btn btn-primary w-full"
+          className={`btn btn-primary w-full ${
+            isSubmitting ? "btn-disabled" : ""
+          }`}
         >
           {isSubmitting ? (
             <>

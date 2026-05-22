@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import axiosClient from "../utils/axiosClient";
+import toast from "react-hot-toast";
+import { getErrorMessage } from "../utils/errorHandler";
 
 const AdminVideo = () => {
   const navigate = useNavigate();
@@ -10,6 +12,7 @@ const AdminVideo = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     fetchProblems(currentPage);
@@ -23,14 +26,38 @@ const AdminVideo = () => {
         `/problem/getAllProblems?page=${page}&limit=5`,
       );
 
-      setProblems(data.problems);
-      setCurrentPage(data.currentPage);
-      setTotalPages(data.totalPages);
+      setProblems(data.data.problems || []);
+      setCurrentPage(data.data.currentPage || 1);
+      setTotalPages(data.data.totalPages || 1);
     } catch (err) {
       setError("Failed to fetch problems");
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteVideo = async (problemId) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this video?",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeletingId(problemId);
+
+      const response = await axiosClient.delete(`/video/delete/${problemId}`);
+
+      toast.success(response.data.message);
+
+      fetchProblems(currentPage);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -112,7 +139,7 @@ const AdminVideo = () => {
             </thead>
 
             <tbody>
-              {problems.map((problem, index) => (
+              {problems?.map((problem, index) => (
                 <tr key={problem._id} className="hover">
                   {/* Index */}
                   <th className="font-semibold">
@@ -134,7 +161,7 @@ const AdminVideo = () => {
                   {/* Tags */}
                   <td>
                     <div className="flex flex-wrap gap-2 max-w-sm">
-                      {problem.tags.map((tag, index) => (
+                      {problem.tags?.map((tag, index) => (
                         <span
                           key={index}
                           className="px-3 py-1 rounded-full bg-base-300 text-sm font-medium text-base-content border border-base-100 shadow-sm"
@@ -147,12 +174,26 @@ const AdminVideo = () => {
 
                   {/* Actions */}
                   <td>
-                    <button
-                      onClick={() => navigate(`/admin/upload/${problem._id}`)}
-                      className="btn btn-sm btn-primary"
-                    >
-                      Upload Video
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => navigate(`/admin/upload/${problem._id}`)}
+                        className="btn btn-sm btn-primary"
+                      >
+                        Upload Video
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteVideo(problem._id)}
+                        disabled={deletingId === problem._id}
+                        className="btn btn-sm btn-error"
+                      >
+                        {deletingId === problem._id ? (
+                          <span className="loading loading-spinner loading-xs"></span>
+                        ) : (
+                          "Delete Video"
+                        )}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

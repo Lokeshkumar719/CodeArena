@@ -5,6 +5,7 @@ import { z } from "zod";
 import axiosClient from "../utils/axiosClient";
 import { useNavigate } from "react-router";
 import toast from "react-hot-toast";
+import { getErrorMessage } from "../utils/errorHandler";
 
 const tagOptions = [
   "array",
@@ -177,14 +178,18 @@ function AdminPanel() {
     if (savedForm) {
       reset(JSON.parse(savedForm));
     }
-  }, []);
+  }, [reset]);
 
   const watchedData = watch();
 
   useEffect(() => {
-    if (watchedData.title || watchedData.description) {
-      localStorage.setItem("createProblemDraft", JSON.stringify(watchedData));
-    }
+    const timeout = setTimeout(() => {
+      if (watchedData.title || watchedData.description) {
+        localStorage.setItem("createProblemDraft", JSON.stringify(watchedData));
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
   }, [watchedData]);
 
   const {
@@ -208,7 +213,10 @@ function AdminPanel() {
 
       navigate("/admin");
     } catch (error) {
-      toast.error(error.response?.data?.message || error.message);
+      toast.error(getErrorMessage(error));
+      if (import.meta.env.DEV) {
+        console.error(error);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -217,7 +225,12 @@ function AdminPanel() {
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">Create New Problem</h1>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form
+        onSubmit={handleSubmit(onSubmit, () => {
+          toast.error("Please fix validation errors");
+        })}
+        className="space-y-6"
+      >
         {/* Basic Information */}
         <div className="card bg-base-100 shadow-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Basic Information</h2>
@@ -410,6 +423,13 @@ function AdminPanel() {
               </div>
             ))}
           </div>
+
+          {errors.visibleTestCases?.message && (
+            <span className="text-error">
+              {errors.visibleTestCases.message}
+            </span>
+          )}
+
           {/* Hidden Test Cases */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -442,20 +462,44 @@ function AdminPanel() {
                 <textarea
                   {...register(`hiddenTestCases.${index}.input`)}
                   placeholder="Input"
-                  className="textarea textarea-bordered w-full font-mono whitespace-pre"
+                  className={`textarea textarea-bordered w-full font-mono whitespace-pre ${
+                    errors.hiddenTestCases?.[index]?.input
+                      ? "textarea-error"
+                      : ""
+                  }`}
                   rows={4}
                 />
+
+                {errors.hiddenTestCases?.[index]?.input && (
+                  <span className="text-error text-sm">
+                    {errors.hiddenTestCases[index].input.message}
+                  </span>
+                )}
 
                 <textarea
                   {...register(`hiddenTestCases.${index}.output`)}
                   placeholder="Output"
-                  className="textarea textarea-bordered w-full font-mono whitespace-pre"
+                  className={`textarea textarea-bordered w-full font-mono whitespace-pre ${
+                    errors.hiddenTestCases?.[index]?.output
+                      ? "textarea-error"
+                      : ""
+                  }`}
                   rows={3}
                 />
+
+                {errors.hiddenTestCases?.[index]?.output && (
+                  <span className="text-error text-sm">
+                    {errors.hiddenTestCases[index].output.message}
+                  </span>
+                )}
               </div>
             ))}
           </div>
+          {errors.hiddenTestCases?.message && (
+            <span className="text-error">{errors.hiddenTestCases.message}</span>
+          )}
         </div>
+
         {/* Code Templates */}
         <div className="card bg-base-100 shadow-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Code Templates</h2>
@@ -496,7 +540,9 @@ function AdminPanel() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="btn btn-primary w-full"
+          className={`btn btn-primary w-full ${
+            isSubmitting ? "btn-disabled" : ""
+          }`}
         >
           {isSubmitting ? (
             <>
