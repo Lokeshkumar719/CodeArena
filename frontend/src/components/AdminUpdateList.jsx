@@ -1,155 +1,93 @@
+// AdminUpdateList.jsx
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, NavLink } from "react-router";
 import axiosClient from "../utils/axiosClient";
 
 const AdminUpdateList = () => {
   const navigate = useNavigate();
-
   const [problems, setProblems] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    fetchProblems(currentPage);
-  }, [currentPage]);
+  useEffect(() => { fetchProblems(currentPage); }, [currentPage]);
 
   const fetchProblems = async (page = 1) => {
     try {
       setLoading(true);
-
-      const { data } = await axiosClient.get(
-        `/problem/getAllProblems?page=${page}&limit=5`,
-      );
-
+      const { data } = await axiosClient.get(`/problem/getAllProblems?page=${page}&limit=5`);
       setProblems(data.problems);
       setCurrentPage(data.currentPage);
       setTotalPages(data.totalPages);
     } catch (err) {
       setError("Failed to fetch problems");
-      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const getDifficultyBadge = (difficulty) => {
-    if (difficulty === "easy") {
-      return "badge-success";
-    }
+  if (loading) return <div style={{ minHeight: "100vh", background: "#080c14" }} />;
 
-    if (difficulty === "medium") {
-      return "badge-warning";
-    }
-
-    return "badge-error";
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <span className="loading loading-spinner loading-lg"></span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="alert alert-error shadow-lg">
-          <div>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="stroke-current shrink-0 h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-
-            <span>{error}</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (error) return (
+    <div style={{ minHeight: "100vh", background: "#080c14", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Sora', sans-serif" }}>
+      <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "12px", padding: "20px 28px", color: "#f87171" }}>{error}</div>
+    </div>
+  );
 
   return (
-    <div className="container mx-auto p-6">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-4xl font-bold mb-2">Update Problems</h1>
-
-          <p className="text-base-content/70">
-            Edit and manage coding problems on the platform
-          </p>
+    <div style={s.page}>
+      <nav style={s.navbar}>
+        <div style={s.navLeft}>
+          <button onClick={() => navigate(-1)} style={s.backBtn}>
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
+          <NavLink to="/" style={{ textDecoration: "none" }}>
+            <span style={s.logo}>LeetLab</span>
+          </NavLink>
         </div>
-      </div>
+        <NavLink to="/admin" style={{ textDecoration: "none" }}>
+          <span style={s.adminBox}>Admin Dashboard</span>
+        </NavLink>
+      </nav>
 
-      {/* Table */}
-      <div className="bg-base-100 rounded-2xl shadow-xl border border-base-300 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="table w-full">
-            <thead className="bg-base-200">
+      <div style={s.main}>
+        <div style={s.header}>
+          <h1 style={s.heading}>Update Problems</h1>
+          <p style={s.subheading}>Edit and manage coding problems on the platform</p>
+        </div>
+
+        <div style={s.tableWrap}>
+          <table style={s.table}>
+            <thead>
               <tr>
-                <th>#</th>
-
-                <th>Title</th>
-
-                <th>Difficulty</th>
-
-                <th>Tags</th>
-
-                <th>Actions</th>
+                {["#", "Title", "Difficulty", "Tags", "Action"].map((h) => (
+                  <th key={h} style={s.th}>{h}</th>
+                ))}
               </tr>
             </thead>
-
             <tbody>
               {problems.map((problem, index) => (
-                <tr key={problem._id} className="hover">
-                  {/* Index */}
-                  <th className="font-semibold">
-                    {(currentPage - 1) * 5 + index + 1}
-                  </th>
-
-                  {/* Title */}
-                  <td className="font-medium">{problem.title}</td>
-
-                  {/* Difficulty */}
-                  <td>
-                    <span
-                      className={`badge ${getDifficultyBadge(problem.difficulty)} badge-md capitalize`}
-                    >
-                      {problem.difficulty}
-                    </span>
+                <tr key={problem._id} style={s.tr}>
+                  <td style={s.td}>{(currentPage - 1) * 5 + index + 1}</td>
+                  <td style={{ ...s.td, color: "#e2e8f0", fontWeight: 600 }}>{problem.title}</td>
+                  <td style={s.td}>
+                    <span style={getDifficultyStyle(problem.difficulty)}>{problem.difficulty}</span>
                   </td>
-
-                  {/* Tags */}
-                  <td>
-                    <div className="flex flex-wrap gap-2 max-w-sm">
-                      {problem.tags.map((tag, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1 rounded-full bg-base-300 text-sm font-medium text-base-content border border-base-100 shadow-sm"
-                        >
-                          {tag}
-                        </span>
+                  <td style={s.td}>
+                    <div style={s.tagRow}>
+                      {problem.tags.map((tag, i) => (
+                        <span key={i} style={s.tag}>{tag}</span>
                       ))}
                     </div>
                   </td>
-
-                  {/* Actions */}
-                  <td>
+                  <td style={s.td}>
                     <button
                       onClick={() => navigate(`/admin/update/${problem._id}`)}
-                      className="btn btn-sm btn-warning"
+                      style={s.updateBtn}
                     >
                       Update
                     </button>
@@ -159,32 +97,57 @@ const AdminUpdateList = () => {
             </tbody>
           </table>
         </div>
-      </div>
 
-      {/* Pagination */}
-      <div className="flex justify-center items-center gap-4 mt-8">
-        <button
-          className="btn btn-outline btn-sm"
-          disabled={currentPage === 1}
-          onClick={() => setCurrentPage((prev) => prev - 1)}
-        >
-          Previous
-        </button>
-
-        <span className="font-semibold">
-          Page {currentPage} of {totalPages}
-        </span>
-
-        <button
-          className="btn btn-outline btn-sm"
-          disabled={currentPage === totalPages}
-          onClick={() => setCurrentPage((prev) => prev + 1)}
-        >
-          Next
-        </button>
+        <div style={s.pagination}>
+          <button
+            style={{ ...s.pageBtn, opacity: currentPage === 1 ? 0.4 : 1 }}
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(p => p - 1)}
+          >← Prev</button>
+          <span style={s.pageInfo}>Page {currentPage} of {totalPages}</span>
+          <button
+            style={{ ...s.pageBtn, opacity: currentPage === totalPages ? 0.4 : 1 }}
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage(p => p + 1)}
+          >Next →</button>
+        </div>
       </div>
     </div>
   );
+};
+
+const s = {
+  page: { minHeight: "100vh", background: "#080c14", fontFamily: "'Sora', sans-serif", color: "#c9d1d9" },
+  navbar: { height: "64px", background: "#080c14", borderBottom: "1px solid #1e2738", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 40px", position: "sticky", top: 0, zIndex: 100 },
+  navLeft: { display: "flex", alignItems: "center", gap: "20px" },
+  backBtn: { display: "flex", alignItems: "center", gap: "6px", background: "transparent", border: "1px solid #1e2738", borderRadius: "8px", color: "#9ca3af", fontSize: "13px", fontWeight: 600, padding: "6px 14px", cursor: "pointer", fontFamily: "'Sora', sans-serif" },
+  logo: { fontSize: "20px", fontWeight: 700, color: "#a5b4fc" },
+  adminBox: { fontSize: "13px", color: "#6b7280", fontWeight: 500, border: "1px solid #1e2738", borderRadius: "8px", padding: "6px 14px", background: "#0c1018" },
+  main: { padding: "48px 40px", maxWidth: "1200px", margin: "0 auto" },
+  header: { marginBottom: "36px" },
+  heading: { fontSize: "28px", fontWeight: 700, color: "#f9fafb", marginBottom: "8px" },
+  subheading: { fontSize: "14px", color: "#6b7280" },
+  tableWrap: { background: "#0c1018", border: "1px solid #1e2738", borderRadius: "16px", overflow: "hidden" },
+  table: { width: "100%", borderCollapse: "collapse" },
+  th: { padding: "14px 20px", textAlign: "left", fontSize: "12px", fontWeight: 700, color: "#4b5563", textTransform: "uppercase", letterSpacing: "0.06em", background: "#0a0e18", borderBottom: "1px solid #1e2738" },
+  tr: { borderBottom: "1px solid #1e2738" },
+  td: { padding: "16px 20px", fontSize: "14px", color: "#9ca3af", verticalAlign: "middle" },
+  tagRow: { display: "flex", flexWrap: "wrap", gap: "6px" },
+  tag: { background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: "999px", color: "#a5b4fc", fontSize: "11px", fontWeight: 600, padding: "3px 9px" },
+  updateBtn: { background: "rgba(234,179,8,0.1)", border: "1px solid rgba(234,179,8,0.25)", borderRadius: "8px", color: "#eab308", fontSize: "13px", fontWeight: 600, padding: "7px 16px", cursor: "pointer", fontFamily: "'Sora', sans-serif" },
+  pagination: { display: "flex", justifyContent: "center", alignItems: "center", gap: "16px", marginTop: "32px" },
+  pageBtn: { background: "#0c1018", border: "1px solid #1e2738", borderRadius: "8px", color: "#9ca3af", fontSize: "13px", fontWeight: 600, padding: "8px 18px", cursor: "pointer", fontFamily: "'Sora', sans-serif" },
+  pageInfo: { fontSize: "13px", color: "#4b5563", fontWeight: 500 },
+};
+
+const getDifficultyStyle = (difficulty) => {
+  const base = { borderRadius: "999px", fontSize: "11px", fontWeight: 600, padding: "3px 10px", textTransform: "capitalize" };
+  switch (difficulty?.toLowerCase()) {
+    case "easy":   return { ...base, background: "rgba(34,197,94,0.1)",  color: "#22c55e", border: "1px solid rgba(34,197,94,0.2)" };
+    case "medium": return { ...base, background: "rgba(234,179,8,0.1)", color: "#eab308", border: "1px solid rgba(234,179,8,0.2)" };
+    case "hard":   return { ...base, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" };
+    default:       return { ...base, background: "rgba(99,102,241,0.1)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.2)" };
+  }
 };
 
 export default AdminUpdateList;

@@ -24,12 +24,10 @@ function App() {
   }, [dispatch]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <span className="loading loading-spinner loading-lg"></span>
-      </div>
-    );
-  }
+  return (
+    <div style={{ minHeight: "100vh", background: "#080c14" }} />
+  );
+}
 
   const isAdmin = user?.role?.toLowerCase() === "admin";
 

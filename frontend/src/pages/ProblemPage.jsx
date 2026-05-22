@@ -90,10 +90,10 @@ const ProblemPage = () => {
     return () => cancelAnimationFrame(id);
   }, [leftWidth, activeRightTab]);
 
-  // current language ka code
+  // current language
   const currentCode = codeMap[selectedLanguage] || "";
 
-  // editor change hone pe sirf us language ka code update karo
+  
   const handleEditorChange = (value) => {
     setCodeMap((prev) => ({
       ...prev,

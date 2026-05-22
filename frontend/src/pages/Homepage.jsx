@@ -5,32 +5,10 @@ import axiosClient from "../utils/axiosClient";
 import { logoutUser } from "../authSlice";
 
 const tagOptions = [
-  "array",
-  "string",
-  "stack",
-  "queue",
-  "hashing",
-  "sorting",
-  "binarySearch",
-  "twoPointers",
-  "slidingWindow",
-  "recursion",
-  "backtracking",
-  "greedy",
-  "heap",
-  "trie",
-  "graph",
-  "dfs",
-  "bfs",
-  "dp",
-  "bitManipulation",
-  "math",
-  "prefixSum",
-  "matrix",
-  "unionFind",
-  "segmentTree",
-  "topologicalSort",
-  "shortestPath",
+  "array", "string", "stack", "queue", "hashing", "sorting", "binarySearch",
+  "twoPointers", "slidingWindow", "recursion", "backtracking", "greedy",
+  "heap", "trie", "graph", "dfs", "bfs", "dp", "bitManipulation", "math",
+  "prefixSum", "matrix", "unionFind", "segmentTree", "topologicalSort", "shortestPath",
 ];
 
 function Homepage() {
@@ -41,20 +19,14 @@ function Homepage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalProblems, setTotalProblems] = useState(0);
-  const [filters, setFilters] = useState({
-    difficulty: "all",
-    tag: "all",
-    status: "all",
-  });
+  const [filters, setFilters] = useState({ difficulty: "all", tag: "all", status: "all" });
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
   useEffect(() => {
     const fetchProblems = async () => {
       try {
-        const { data } = await axiosClient.get(
-          `/problem/getAllProblems?page=${currentPage}&limit=5`,
-        );
-
+        const { data } = await axiosClient.get(`/problem/getAllProblems?page=${currentPage}&limit=5`);
         setProblems(data.problems);
-
         setTotalPages(data.totalPages);
         setTotalProblems(data.totalProblems);
       } catch (error) {
@@ -70,207 +42,153 @@ function Homepage() {
       }
     };
     fetchProblems();
-    if (user) {
-      fetchSolvedProblems();
-    }
+    if (user) fetchSolvedProblems();
   }, [user, currentPage]);
 
   const handleLogout = () => {
     dispatch(logoutUser());
     setSolvedProblems([]);
+    setDropdownOpen(false);
   };
 
   const filteredProblems = problems.filter((problem) => {
-    const difficultyMatch =
-      filters.difficulty === "all" ||
-      problem.difficulty.toLowerCase() === filters.difficulty.toLowerCase();
-    const tagMatch =
-      filters.tag === "all" ||
-      problem.tags.some(
-        (tag) => tag.toLowerCase() === filters.tag.toLowerCase(),
-      );
+    const difficultyMatch = filters.difficulty === "all" || problem.difficulty.toLowerCase() === filters.difficulty.toLowerCase();
+    const tagMatch = filters.tag === "all" || problem.tags.some((tag) => tag.toLowerCase() === filters.tag.toLowerCase());
     const statusMatch =
       filters.status === "all" ||
-      (filters.status === "solved" &&
-        solvedProblems.some((sp) => sp._id === problem._id)) ||
-      (filters.status === "unsolved" &&
-        !solvedProblems.some((sp) => sp._id === problem._id));
+      (filters.status === "solved" && solvedProblems.some((sp) => sp._id === problem._id)) ||
+      (filters.status === "unsolved" && !solvedProblems.some((sp) => sp._id === problem._id));
     return difficultyMatch && tagMatch && statusMatch;
   });
 
   return (
-    <div className="min-h-screen bg-base-200">
+    <div style={s.page}>
       {/* Navbar */}
-      <nav className="navbar bg-base-100 shadow-md px-6 h-16">
-        <div className="flex-1">
-          <NavLink to="/" className="btn btn-ghost text-2xl font-bold">
-            CodeArena
-          </NavLink>
-        </div>
-        <div className="flex-none">
-          <div className="dropdown dropdown-end">
-            <div
-              tabIndex={0}
-              role="button"
-              className="btn btn-ghost btn-sm rounded-lg"
-            >
-              {user?.firstName}
-            </div>
-            <div
-              tabIndex={0}
-              className="dropdown-content z-[1] mt-2 w-36 bg-base-100 rounded-xl shadow-lg border border-base-300 overflow-hidden"
-            >
+      <nav style={s.navbar}>
+        <NavLink to="/" style={{ textDecoration: "none" }}>
+          <span style={s.logoStrong}>CodeArena</span>
+        </NavLink>
+
+        <div style={{ position: "relative" }}>
+          <button style={s.userBtn} onClick={() => setDropdownOpen(!dropdownOpen)}>
+            {user?.firstName} ▾
+          </button>
+          {dropdownOpen && (
+            <div style={s.dropdown}>
               {user?.role === "admin" && (
-                <NavLink
-                  to="/admin"
-                  className="block px-4 py-3 hover:bg-base-200 transition"
-                >
+                <NavLink to="/admin" style={s.dropdownItem} onClick={() => setDropdownOpen(false)}>
                   Admin
                 </NavLink>
               )}
-              <button
-                onClick={handleLogout}
-                className="w-full text-left px-4 py-3 hover:bg-base-200 transition"
-              >
-                Logout
-              </button>
+              <button onClick={handleLogout} style={s.dropdownItem}>Logout</button>
             </div>
-          </div>
+          )}
         </div>
       </nav>
-      {/* Main */}
-      <div className="container mx-auto px-4 py-6">
+
+      {/* Main — full width like before */}
+      <div style={s.main}>
+
         {/* Filters */}
-        <div className="flex flex-wrap gap-4 mb-6">
-          {/* Status Filter */}
-          <select
-            className="select select-bordered"
-            value={filters.status}
-            onChange={(e) =>
-              setFilters({
-                ...filters,
-                status: e.target.value,
-              })
-            }
-          >
-            <option value="all">All Problems</option>
-            <option value="solved">Solved Problems</option>
-            <option value="unsolved">Unsolved Problems</option>
-          </select>
-
-          {/* Difficulty Filter */}
-          <select
-            className="select select-bordered"
-            value={filters.difficulty}
-            onChange={(e) =>
-              setFilters({
-                ...filters,
-                difficulty: e.target.value,
-              })
-            }
-          >
-            <option value="all">All Difficulties</option>
-            <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
-          </select>
-
-          {/* Tag Filter */}
-          <select
-            className="select select-bordered"
-            value={filters.tag}
-            onChange={(e) =>
-              setFilters({
-                ...filters,
-                tag: e.target.value,
-              })
-            }
-          >
-            <option value="all">All Tags</option>
-
-            {tagOptions.map((tag) => (
-              <option key={tag} value={tag}>
-                {tag}
-              </option>
-            ))}
-          </select>
+        <div style={s.filterRow}>
+          {[
+            {
+              key: "status",
+              value: filters.status,
+              options: [
+                { value: "all", label: "All Problems" },
+                { value: "solved", label: "Solved Problems" },
+                { value: "unsolved", label: "Unsolved Problems" },
+              ],
+            },
+            {
+              key: "difficulty",
+              value: filters.difficulty,
+              options: [
+                { value: "all", label: "All Difficulties" },
+                { value: "easy", label: "Easy" },
+                { value: "medium", label: "Medium" },
+                { value: "hard", label: "Hard" },
+              ],
+            },
+            {
+              key: "tag",
+              value: filters.tag,
+              options: [
+                { value: "all", label: "All Tags" },
+                ...tagOptions.map((t) => ({ value: t, label: t })),
+              ],
+            },
+          ].map(({ key, value, options }) => (
+            <select
+              key={key}
+              value={value}
+              onChange={(e) => setFilters({ ...filters, [key]: e.target.value })}
+              style={s.select}
+            >
+              {options.map((o) => (
+                <option key={o.value} value={o.value} style={{ background: "#0c1018" }}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          ))}
         </div>
 
-        {/* Problems */}
-        <div className="grid gap-4">
-          {filteredProblems.map((problem) => (
-            <div
-              key={problem._id}
-              className="card bg-base-100 shadow-xl hover:shadow-2xl transition"
-            >
-              <div className="card-body">
-                <div className="flex items-center justify-between">
-                  <h2 className="card-title text-lg">
-                    <NavLink
-                      to={`/problem/${problem._id}`}
-                      className="hover:text-primary transition"
-                    >
-                      {problem.title}
-                    </NavLink>
-                  </h2>
-
-                  {solvedProblems.some((sp) => sp._id === problem._id) && (
-                    <div className="badge badge-success gap-2 px-3 py-3">
-                      ✔ Solved
-                    </div>
-                  )}
+        {/* Problem List */}
+        <div style={s.problemList}>
+          {filteredProblems.map((problem) => {
+            const isSolved = solvedProblems.some((sp) => sp._id === problem._id);
+            return (
+              <div key={problem._id} style={s.problemCard}>
+                <div style={s.problemCardTop}>
+                  <NavLink to={`/problem/${problem._id}`} style={s.problemTitle}>
+                    {problem.title}
+                  </NavLink>
+                  {isSolved && <span style={s.solvedBadge}>✔ Solved</span>}
                 </div>
-
-                <div className="flex gap-2 flex-wrap">
-                  <div
-                    className={`badge ${getDifficultyBadgeColor(problem.difficulty)}`}
-                  >
+                <div style={s.badgeRow}>
+                  <span style={getDifficultyStyle(problem.difficulty)}>
                     {problem.difficulty}
-                  </div>
-
-                  {problem.tags.map((tag, index) => (
-                    <div key={index} className="badge badge-info">
-                      {tag}
-                    </div>
+                  </span>
+                  {problem.tags.map((tag, i) => (
+                    <span key={i} style={s.tagBadge}>{tag}</span>
                   ))}
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        <div className="text-center text-sm text-base-content/70 mt-6">
-          Showing {(currentPage - 1) * 5 + 1}-
-          {Math.min(currentPage * 5, totalProblems)} of {totalProblems} problems
+        {/* Pagination info */}
+        <div style={s.paginationInfo}>
+          Showing {(currentPage - 1) * 5 + 1}–{Math.min(currentPage * 5, totalProblems)} of {totalProblems} problems
         </div>
 
-        <div className="flex justify-center items-center gap-2 mt-8">
+        {/* Pagination */}
+        <div style={s.pagination}>
           <button
-            className="btn btn-sm"
+            style={{ ...s.pageBtn, opacity: currentPage === 1 ? 0.4 : 1 }}
             disabled={currentPage === 1}
             onClick={() => setCurrentPage(currentPage - 1)}
           >
-            Previous
+            ← Prev
           </button>
-
-          {[...Array(totalPages)].map((_, index) => (
+          {[...Array(totalPages)].map((_, i) => (
             <button
-              key={index}
-              className={`btn btn-sm ${
-                currentPage === index + 1 ? "btn-primary" : "btn-outline"
-              }`}
-              onClick={() => setCurrentPage(index + 1)}
+              key={i}
+              style={{ ...s.pageBtn, ...(currentPage === i + 1 ? s.pageBtnActive : {}) }}
+              onClick={() => setCurrentPage(i + 1)}
             >
-              {index + 1}
+              {i + 1}
             </button>
           ))}
-
           <button
-            className="btn btn-sm"
+            style={{ ...s.pageBtn, opacity: currentPage === totalPages ? 0.4 : 1 }}
             disabled={currentPage === totalPages}
             onClick={() => setCurrentPage(currentPage + 1)}
           >
-            Next
+            Next →
           </button>
         </div>
       </div>
@@ -278,19 +196,182 @@ function Homepage() {
   );
 }
 
-const getDifficultyBadgeColor = (difficulty) => {
+const s = {
+  page: {
+    minHeight: "100vh",
+    background: "#080c14",
+    color: "#c9d1d9",
+    fontFamily: "'Sora', sans-serif",
+  },
+  navbar: {
+    height: "64px",
+    background: "#080c14",
+    borderBottom: "1px solid #1e2738",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "0 40px",
+    position: "sticky",
+    top: 0,
+    zIndex: 100,
+  },
+  logoStrong: {
+    fontSize: "22px",
+    fontWeight: 700,
+    color: "#a5b4fc",
+    letterSpacing: "0.01em",
+    fontFamily: "'Sora', sans-serif",
+  },
+  userBtn: {
+    background: "transparent",
+    border: "1px solid #1e2738",
+    borderRadius: "8px",
+    color: "#9ca3af",
+    fontSize: "14px",
+    fontWeight: 600,
+    padding: "8px 18px",
+    cursor: "pointer",
+    fontFamily: "'Sora', sans-serif",
+  },
+  dropdown: {
+    position: "absolute",
+    right: 0,
+    top: "calc(100% + 8px)",
+    background: "#0c1018",
+    border: "1px solid #1e2738",
+    borderRadius: "12px",
+    overflow: "hidden",
+    minWidth: "140px",
+    zIndex: 200,
+    boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+  },
+  dropdownItem: {
+    display: "block",
+    width: "100%",
+    padding: "12px 18px",
+    fontSize: "14px",
+    color: "#9ca3af",
+    background: "transparent",
+    border: "none",
+    textAlign: "left",
+    cursor: "pointer",
+    fontFamily: "'Sora', sans-serif",
+    textDecoration: "none",
+  },
+  main: {
+    width: "100%",
+    padding: "32px 40px",   // full width, same padding as original
+  },
+  filterRow: {
+    display: "flex",
+    gap: "16px",
+    marginBottom: "32px",
+    flexWrap: "wrap",
+  },
+  select: {
+    background: "#0c1018",
+    border: "1px solid #1e2738",
+    borderRadius: "10px",
+    color: "#9ca3af",
+    fontSize: "14px",
+    fontWeight: 500,
+    padding: "10px 18px",
+    cursor: "pointer",
+    fontFamily: "'Sora', sans-serif",
+    outline: "none",
+    minWidth: "180px",
+  },
+  problemList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+  },
+  problemCard: {
+    background: "#0c1018",
+    border: "1px solid #1e2738",
+    borderRadius: "16px",
+    padding: "22px 28px",
+    width: "100%",
+  },
+  problemCardTop: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: "12px",
+  },
+  problemTitle: {
+    fontSize: "17px",
+    fontWeight: 600,
+    color: "#e2e8f0",
+    textDecoration: "none",
+  },
+  solvedBadge: {
+    background: "rgba(34, 197, 94, 0.1)",
+    border: "1px solid rgba(34, 197, 94, 0.25)",
+    borderRadius: "999px",
+    color: "#22c55e",
+    fontSize: "12px",
+    fontWeight: 700,
+    padding: "4px 14px",
+  },
+  badgeRow: {
+    display: "flex",
+    gap: "8px",
+    flexWrap: "wrap",
+  },
+  tagBadge: {
+    background: "rgba(99, 102, 241, 0.1)",
+    border: "1px solid rgba(99, 102, 241, 0.2)",
+    borderRadius: "999px",
+    color: "#a5b4fc",
+    fontSize: "12px",
+    fontWeight: 600,
+    padding: "4px 12px",
+  },
+  paginationInfo: {
+    textAlign: "center",
+    fontSize: "13px",
+    color: "#4b5563",
+    marginTop: "32px",
+    marginBottom: "20px",
+  },
+  pagination: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: "8px",
+    paddingBottom: "40px",
+  },
+  pageBtn: {
+    background: "#0c1018",
+    border: "1px solid #1e2738",
+    borderRadius: "8px",
+    color: "#9ca3af",
+    fontSize: "14px",
+    fontWeight: 600,
+    padding: "8px 18px",
+    cursor: "pointer",
+    fontFamily: "'Sora', sans-serif",
+  },
+  pageBtnActive: {
+    background: "#4f46e5",
+    border: "1px solid #6366f1",
+    color: "white",
+  },
+};
+
+const getDifficultyStyle = (difficulty) => {
+  const base = {
+    borderRadius: "999px",
+    fontSize: "12px",
+    fontWeight: 600,
+    padding: "4px 12px",
+  };
   switch (difficulty.toLowerCase()) {
-    case "easy":
-      return "badge-success";
-
-    case "medium":
-      return "badge-warning";
-
-    case "hard":
-      return "badge-error";
-
-    default:
-      return "badge-neutral";
+    case "easy":   return { ...base, background: "rgba(34,197,94,0.1)",  color: "#22c55e", border: "1px solid rgba(34,197,94,0.2)" };
+    case "medium": return { ...base, background: "rgba(234,179,8,0.1)", color: "#eab308", border: "1px solid rgba(234,179,8,0.2)" };
+    case "hard":   return { ...base, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" };
+    default:       return { ...base, background: "rgba(99,102,241,0.1)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.2)" };
   }
 };
 
