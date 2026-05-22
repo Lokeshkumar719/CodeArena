@@ -1,57 +1,38 @@
-const redisClient = require("../config/redis");
+const { redisClient } = require("../config/redis");
 const User = require("../models/user");
 const validate = require("../utils/validate");
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const submission = require("../models/submission");
+const jwt=require("jsonwebtoken");
 const asyncHandler = require("../utils/asyncHandler");
+const sendTokenResponse = require("../utils/sendTokenResponse");
+const STATUS_CODES = require("../constants/statusCodes");
+const ApiError = require("../utils/ApiError");
 
 // REGISTER
 const register = asyncHandler(async (req, res) => {
   // validate incoming user data before processing
-  validate(req.body);
+  await validate(req.body);
 
   // prevent users from self-registering as admin
   req.body.role = "user";
 
   // hash password before storing in database
   const { password } = req.body;
+
+  //   bcrypt.hash() internally does BOTH:
+  // 1. generate salt
+  // 2. hash password using that salt
   req.body.password = await bcrypt.hash(password, 10);
 
   const user = await User.create(req.body);
 
   // user data sent back to frontend
-  const reply = {
-    firstName: user.firstName,
-    emailId: user.emailId,
-    _id: user._id,
-    role: user.role,
-  };
-
-  // JWT payload stores identity and authorization-related data
-  const token = jwt.sign(
-    {
-      id: user._id,
-      emailId: user.emailId,
-      role: user.role,
-    },
-    process.env.JWT_KEY,
-    {
-      expiresIn: "1d",
-    },
+  return sendTokenResponse(
+    res,
+    user,
+    "User registered successfully",
+    STATUS_CODES.CREATED,
   );
-
-  // store JWT securely inside HTTP-only cookie
-  res.cookie("token", token, {
-    maxAge: 24 * 60 * 60 * 1000,
-    httpOnly: true,
-    sameSite: "strict",
-  });
-
-  res.status(201).json({
-    user: reply,
-    message: "Logged in Successfully",
-  });
 });
 
 // LOGIN
@@ -59,62 +40,43 @@ const login = asyncHandler(async (req, res) => {
   const { emailId, password } = req.body;
 
   if (!emailId || !password) {
-    throw new Error("Invalid Credentials");
+    throw new ApiError(
+      STATUS_CODES.BAD_REQUEST,
+      "Email and password are required",
+    );
   }
 
   // find user using email
   const user = await User.findOne({ emailId });
 
   if (!user) {
-    throw new Error("Invalid Credentials");
+    throw new ApiError(STATUS_CODES.UNAUTHORIZED, "Invalid credentials");
   }
 
   // compare entered password with hashed password stored in DB
   const match = await bcrypt.compare(password, user.password);
 
   if (!match) {
-    throw new Error("Invalid Credentials");
+    throw new ApiError(STATUS_CODES.UNAUTHORIZED, "Invalid credentials");
   }
 
-  // user data sent back to frontend
-  const reply = {
-    firstName: user.firstName,
-    emailId: user.emailId,
-    _id: user._id,
-    role: user.role,
-  };
-
-  // JWT payload stores identity and authorization-related data
-  const token = jwt.sign(
-    {
-      id: user._id,
-      emailId: user.emailId,
-      role: user.role,
-    },
-    process.env.JWT_KEY,
-    {
-      expiresIn: "1d",
-    },
+  return sendTokenResponse(
+    res,
+    user,
+    "User logged in successfully",
+    STATUS_CODES.OK,
   );
-
-  // HTTP-only cookie prevents frontend JS from accessing JWT
-  res.cookie("token", token, {
-    maxAge: 24 * 60 * 60 * 1000,
-    httpOnly: true,
-    sameSite: "strict",
-  });
-
-  res.status(201).json({
-    user: reply,
-    message: "Logged in Successfully",
-  });
 });
 
 // LOGOUT
 const logout = asyncHandler(async (req, res) => {
   const { token } = req.cookies;
 
-  const payload = jwt.decode(token);
+  if (!token) {
+    throw new ApiError(STATUS_CODES.UNAUTHORIZED, "User is not logged in");
+  }
+
+  const payload = jwt.verify(token, process.env.JWT_KEY);
 
   await redisClient.set(`token:${token}`, "blocked");
 
@@ -122,9 +84,14 @@ const logout = asyncHandler(async (req, res) => {
 
   res.cookie("token", null, {
     expires: new Date(Date.now()),
+    httpOnly: true,
+    sameSite: "strict",
   });
 
-  res.status(200).send("Logged Out Successfully");
+  return res.status(STATUS_CODES.OK).json({
+    success: true,
+    message: "User logged out successfully",
+  });
 });
 
 // only allow existing admins to register new admins and also validate the request body for admin registration and hash the password before saving to database and send the JWT with role as "admin" in the payload
@@ -132,46 +99,34 @@ const adminRegister = asyncHandler(async (req, res) => {
   // validate the request body
   validate(req.body);
 
-  // important to set the role before creating the user because admin will not be registered through this route and we are not allowing users to set their role by themselves so we will set the role as "admin" by default
+  // prevent users from setting roles manually
   req.body.role = "admin";
 
-  // extract the password from request body and hash it before saving to database
+  // extract the password from request body
   const { password } = req.body;
 
-  // hash the password
+  // hash the password before storing in database
   req.body.password = await bcrypt.hash(password, 10);
 
   const user = await User.create(req.body);
 
-  // send the JWT and assign the role to the user in the JWT payload so that we can use it in the future for authorization
-  const token = jwt.sign(
-    {
-      id: user._id,
-      emailId: user.emailId,
-      role: "admin",
-    },
-    process.env.JWT_KEY,
-    {
-      expiresIn: 60 * 60,
-    },
+  // send useful user data back to frontend
+  return sendTokenResponse(
+    res,
+    user,
+    "Admin registered successfully",
+    STATUS_CODES.CREATED,
   );
-
-  res.cookie("token", token, {
-    maxAge: 60 * 60 * 1000,
-    httpOnly: true,
-    sameSite: "strict",
-  });
-
-  res.status(201).send("Admin Registered Successfully");
 });
 
 const deleteProfile = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-
-  // delete From userSchema
+  // delete user from database
   await User.findByIdAndDelete(userId);
-
-  res.status(200).send("User deleted Successfully");
+  return res.status(STATUS_CODES.OK).json({
+    success: true,
+    message: "User deleted successfully",
+  });
 });
 
 module.exports = {

@@ -47,10 +47,10 @@ function Admin() {
 
   return (
     <div className="min-h-screen bg-base-200">
-      <div className="container mx-auto px-6 py-10">
+      <div className="container mx-auto px-4 sm:px-6 py-10">
         {/* Header */}
         <div className="text-center mb-14">
-          <h1 className="text-5xl font-extrabold text-base-content mb-4">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-base-content mb-4">
             Admin Dashboard
           </h1>
 

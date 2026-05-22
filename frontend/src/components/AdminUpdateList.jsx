@@ -23,9 +23,9 @@ const AdminUpdateList = () => {
         `/problem/getAllProblems?page=${page}&limit=5`,
       );
 
-      setProblems(data.problems);
-      setCurrentPage(data.currentPage);
-      setTotalPages(data.totalPages);
+      setProblems(data.data.problems || []);
+      setCurrentPage(data.data.currentPage || 1);
+      setTotalPages(data.data.totalPages || 1);
     } catch (err) {
       setError("Failed to fetch problems");
       console.error(err);
@@ -112,7 +112,7 @@ const AdminUpdateList = () => {
             </thead>
 
             <tbody>
-              {problems.map((problem, index) => (
+              {problems?.map((problem, index) => (
                 <tr key={problem._id} className="hover">
                   {/* Index */}
                   <th className="font-semibold">
@@ -134,7 +134,7 @@ const AdminUpdateList = () => {
                   {/* Tags */}
                   <td>
                     <div className="flex flex-wrap gap-2 max-w-sm">
-                      {problem.tags.map((tag, index) => (
+                      {problem.tags?.map((tag, index) => (
                         <span
                           key={index}
                           className="px-3 py-1 rounded-full bg-base-300 text-sm font-medium text-base-content border border-base-100 shadow-sm"

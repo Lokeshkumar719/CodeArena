@@ -3,6 +3,7 @@ import { NavLink } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import axiosClient from "../utils/axiosClient";
 import { logoutUser } from "../authSlice";
+import toast from "react-hot-toast";
 
 const tagOptions = [
   "array",
@@ -46,38 +47,45 @@ function Homepage() {
     tag: "all",
     status: "all",
   });
+
   useEffect(() => {
     const fetchProblems = async () => {
       try {
         const { data } = await axiosClient.get(
           `/problem/getAllProblems?page=${currentPage}&limit=5`,
         );
-
-        setProblems(data.problems);
-
-        setTotalPages(data.totalPages);
-        setTotalProblems(data.totalProblems);
+        setProblems(data.data.problems);
+        setTotalPages(data.data.totalPages);
+        setTotalProblems(data.data.totalProblems);
       } catch (error) {
         console.error("Error fetching problems:", error);
       }
     };
+
     const fetchSolvedProblems = async () => {
       try {
         const { data } = await axiosClient.get("/problem/problemSolvedByUser");
-        setSolvedProblems(data);
+        setSolvedProblems(data.data);
       } catch (error) {
         console.error("Error fetching solved problems:", error);
       }
     };
+
     fetchProblems();
     if (user) {
       fetchSolvedProblems();
     }
   }, [user, currentPage]);
 
-  const handleLogout = () => {
-    dispatch(logoutUser());
-    setSolvedProblems([]);
+  const handleLogout = async () => {
+    const resultAction = await dispatch(logoutUser());
+
+    if (logoutUser.fulfilled.match(resultAction)) {
+      toast.success("Logged out successfully");
+      setSolvedProblems([]);
+    } else {
+      toast.error(resultAction.payload || "Logout failed");
+    }
   };
 
   const filteredProblems = problems.filter((problem) => {
@@ -107,37 +115,48 @@ function Homepage() {
             CodeArena
           </NavLink>
         </div>
+
         <div className="flex-none">
           <div className="dropdown dropdown-end">
             <div
               tabIndex={0}
               role="button"
-              className="btn btn-ghost btn-sm rounded-lg"
+              className="btn btn-outline btn-sm rounded-lg flex items-center gap-2"
             >
-              {user?.firstName}
+              {/* Avatar circle with first initial */}
+              <div className="w-6 h-6 rounded-full bg-primary text-primary-content flex items-center justify-center text-xs font-bold">
+                {user?.firstName?.[0]?.toUpperCase() ?? "?"}
+              </div>
+              <span>{user?.firstName ?? "Account"}</span>
             </div>
-            <div
+
+            <ul
               tabIndex={0}
-              className="dropdown-content z-[1] mt-2 w-36 bg-base-100 rounded-xl shadow-lg border border-base-300 overflow-hidden"
+              className="dropdown-content bg-base-100 rounded-box z-[1] mt-2 w-48 p-1 shadow-lg border border-base-300"
             >
-              {user?.role === "admin" && (
-                <NavLink
-                  to="/admin"
-                  className="block px-4 py-3 hover:bg-base-200 transition"
-                >
-                  Admin
-                </NavLink>
+              {user?.role?.toLowerCase() === "admin" && (
+                <li>
+                  <NavLink
+                    to="/admin"
+                    className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-base-200 transition text-sm font-medium"
+                  >
+                    ⚙️ Admin
+                  </NavLink>
+                </li>
               )}
-              <button
-                onClick={handleLogout}
-                className="w-full text-left px-4 py-3 hover:bg-base-200 transition"
-              >
-                Logout
-              </button>
-            </div>
+              <li>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 w-full px-4 py-2 rounded-lg hover:bg-error/10 hover:text-error transition text-sm font-medium"
+                >
+                  🚪 Logout
+                </button>
+              </li>
+            </ul>
           </div>
         </div>
       </nav>
+
       {/* Main */}
       <div className="container mx-auto px-4 py-6">
         {/* Filters */}
@@ -187,7 +206,6 @@ function Homepage() {
             }
           >
             <option value="all">All Tags</option>
-
             {tagOptions.map((tag) => (
               <option key={tag} value={tag}>
                 {tag}
@@ -282,13 +300,10 @@ const getDifficultyBadgeColor = (difficulty) => {
   switch (difficulty.toLowerCase()) {
     case "easy":
       return "badge-success";
-
     case "medium":
       return "badge-warning";
-
     case "hard":
       return "badge-error";
-
     default:
       return "badge-neutral";
   }

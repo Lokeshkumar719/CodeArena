@@ -1,43 +1,30 @@
-function ResultPanel({
-  submitResult
-}){
+function ResultPanel({ submitResult }) {
   return (
     <div className="result-panel">
-      <p
-        className="section-title"
-        style={{fontSize:'14px'}}
-      >
+      <p className="section-title" style={{ fontSize: "14px" }}>
         Submission Result
       </p>
 
       {submitResult ? (
         <div
           className={`result-card ${
-            submitResult.accepted
-              ? 'result-success'
-              : 'result-error'
+            submitResult.accepted ? "result-success" : "result-error"
           }`}
         >
           <p className="result-heading">
-            {submitResult.accepted
-              ? '🎉 Accepted'
-              : `✗ ${submitResult.error}`
-            }
+            {submitResult.accepted ? "🎉 Accepted" : `✗ ${submitResult.error}`}
           </p>
 
           <p className="result-meta">
-            Test Cases: {submitResult.passedTestCases}/{submitResult.totalTestCases}
+            Test Cases: {submitResult.passedTestCases}/
+            {submitResult.totalTestCases}
           </p>
 
           {submitResult.accepted && (
             <>
-              <p className="result-meta">
-                Runtime: {submitResult.runtime} sec
-              </p>
+              <p className="result-meta">Runtime: {submitResult.runtime} sec</p>
 
-              <p className="result-meta">
-                Memory: {submitResult.memory} KB
-              </p>
+              <p className="result-meta">Memory: {submitResult.memory} KB</p>
             </>
           )}
         </div>

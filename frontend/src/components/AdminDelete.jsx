@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axiosClient from "../utils/axiosClient";
 import toast from "react-hot-toast";
+import { getErrorMessage } from "../utils/errorHandler";
 
 const AdminDelete = () => {
   const [problems, setProblems] = useState([]);
@@ -21,15 +22,15 @@ const AdminDelete = () => {
         `/problem/getAllProblems?page=${page}&limit=5`,
       );
 
-      setProblems(data.problems);
-      setCurrentPage(data.currentPage);
-      setTotalPages(data.totalPages);
+      setProblems(data.data.problems);
+      setCurrentPage(data.data.currentPage);
+      setTotalPages(data.data.totalPages);
     } catch (err) {
-      toast.error(
-        err.response?.data?.message || "Failed to fetch problems",
-      );
+      toast.error(getErrorMessage(err));
 
-      console.error(err);
+      if (import.meta.env.DEV) {
+        console.error(err);
+      }
     } finally {
       setLoading(false);
     }
@@ -49,17 +50,15 @@ const AdminDelete = () => {
 
       await axiosClient.delete(`/problem/delete/${id}`);
 
-      setProblems((prev) =>
-        prev.filter((problem) => problem._id !== id),
-      );
+      setProblems((prev) => prev.filter((problem) => problem._id !== id));
 
       toast.success("Problem deleted successfully");
     } catch (err) {
-      toast.error(
-        err.response?.data?.message || "Failed to delete problem",
-      );
+      toast.error(getErrorMessage(err));
 
-      console.error(err);
+      if (import.meta.env.DEV) {
+        console.error(err);
+      }
     } finally {
       setDeletingId(null);
     }
@@ -117,58 +116,69 @@ const AdminDelete = () => {
             </thead>
 
             <tbody>
-              {problems.map((problem, index) => (
-                <tr key={problem._id} className="hover">
-                  {/* Index */}
-                  <th className="font-semibold">
-                    {(currentPage - 1) * 5 + index + 1}
-                  </th>
-
-                  {/* Title */}
-                  <td className="font-medium">{problem.title}</td>
-
-                  {/* Difficulty */}
-                  <td>
-                    <span
-                      className={`badge ${getDifficultyBadge(problem.difficulty)} badge-md capitalize`}
-                    >
-                      {problem.difficulty}
-                    </span>
-                  </td>
-
-                  {/* Tags */}
-                  <td>
-                    <div className="flex flex-wrap gap-2 max-w-sm">
-                      {problem.tags.map((tag, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1 rounded-full bg-base-300 text-sm font-medium text-base-content border border-base-100 shadow-sm"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-
-                  {/* Actions */}
-                  <td>
-                    <button
-                      onClick={() => handleDelete(problem._id)}
-                      disabled={deletingId === problem._id}
-                      className="btn btn-sm btn-error"
-                    >
-                      {deletingId === problem._id ? (
-                        <>
-                          <span className="loading loading-spinner loading-xs"></span>
-                          Deleting...
-                        </>
-                      ) : (
-                        "Delete"
-                      )}
-                    </button>
+              {problems.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="text-center py-10 text-base-content/70"
+                  >
+                    No problems found
                   </td>
                 </tr>
-              ))}
+              ) : (
+                problems.map((problem, index) => (
+                  <tr key={problem._id} className="hover">
+                    {/* Index */}
+                    <th className="font-semibold">
+                      {(currentPage - 1) * 5 + index + 1}
+                    </th>
+
+                    {/* Title */}
+                    <td className="font-medium">{problem.title}</td>
+
+                    {/* Difficulty */}
+                    <td>
+                      <span
+                        className={`badge ${getDifficultyBadge(problem.difficulty)} badge-md capitalize`}
+                      >
+                        {problem.difficulty}
+                      </span>
+                    </td>
+
+                    {/* Tags */}
+                    <td>
+                      <div className="flex flex-wrap gap-2 max-w-sm">
+                        {problem.tags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className="px-3 py-1 rounded-full bg-base-300 text-sm font-medium text-base-content border border-base-100 shadow-sm"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+
+                    {/* Actions */}
+                    <td>
+                      <button
+                        onClick={() => handleDelete(problem._id)}
+                        disabled={deletingId === problem._id}
+                        className="btn btn-sm btn-error"
+                      >
+                        {deletingId === problem._id ? (
+                          <>
+                            <span className="loading loading-spinner loading-xs"></span>
+                            Deleting...
+                          </>
+                        ) : (
+                          "Delete"
+                        )}
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -178,7 +188,7 @@ const AdminDelete = () => {
           <button
             className="btn btn-outline btn-sm"
             disabled={currentPage === 1}
-            onClick={() => setCurrentPage((prev) => prev - 1)}
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
           >
             Previous
           </button>
@@ -190,7 +200,9 @@ const AdminDelete = () => {
           <button
             className="btn btn-outline btn-sm"
             disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((prev) => prev + 1)}
+            onClick={() =>
+              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+            }
           >
             Next
           </button>

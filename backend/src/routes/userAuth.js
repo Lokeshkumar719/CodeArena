@@ -30,9 +30,11 @@ authRouter.get("/check", userMiddleware, (req, res) => {
     _id: req.user._id,
     role: req.user.role,
   };
+
   res.status(200).json({
-    user: reply,
-    message: "valid user",
+    success: true,
+    message: "Valid user",
+    data: reply,
   });
 });
 

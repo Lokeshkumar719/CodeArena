@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router";
+import toast from "react-hot-toast";
 import axiosClient from "../utils/axiosClient";
 
 import SubmissionHistory from "../components/SubmissionHistory";
@@ -41,17 +42,19 @@ const ProblemPage = () => {
           `/problem/problemById/${problemId}`,
         );
 
+        const problemData = response.data?.data;
+
         const initialCode =
-          response.data.startCode.find((sc) => sc.language === selectedLanguage)
+          problemData?.startCode?.find((sc) => sc.language === selectedLanguage)
             ?.initialCode || "";
 
-        setProblem(response.data);
+        setProblem(problemData);
         setCode(initialCode);
       } catch (error) {
-        console.error("Error fetching problem:", error);
+        toast.error("Failed to load problem");
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
     fetchProblem();
@@ -80,8 +83,9 @@ const ProblemPage = () => {
   };
 
   const handleRun = async () => {
-    setIsRunning(true);
+    if (isRunning) return;
 
+    setIsRunning(true);
     setRunResult(null);
 
     try {
@@ -90,13 +94,14 @@ const ProblemPage = () => {
         language: selectedLanguage,
       });
 
-      setRunResult(response.data);
-
+      setRunResult(response.data.data);
       setActiveRightTab("testcase");
     } catch (error) {
+      toast.error(error.response?.data?.message || "Run failed");
+
       setRunResult({
         success: false,
-        error: "Internal server error",
+        error: error.response?.data?.message || "Internal server error",
       });
 
       setActiveRightTab("testcase");
@@ -106,8 +111,9 @@ const ProblemPage = () => {
   };
 
   const handleSubmitCode = async () => {
-    setIsSubmitting(true);
+    if (isSubmitting) return;
 
+    setIsSubmitting(true);
     setSubmitResult(null);
 
     try {
@@ -119,12 +125,12 @@ const ProblemPage = () => {
         },
       );
 
-      setSubmitResult(response.data);
-
+      setSubmitResult(response.data.data);
       setActiveRightTab("result");
     } catch (error) {
-      setSubmitResult(null);
+      toast.error(error.response?.data?.message || "Submission failed");
 
+      setSubmitResult(null);
       setActiveRightTab("result");
     } finally {
       setIsSubmitting(false);
@@ -183,11 +189,11 @@ const ProblemPage = () => {
   return (
     <div className="problem-page">
       <div className="top-bar">
-        <div className="top-title">LeetLab · Problem Solver</div>
+        <div className="top-title">CodeArena · Problem Solver</div>
       </div>
 
       <div className="split-layout">
-        {/* ══ LEFT PANEL ══ */}
+        {/* LEFT PANEL */}
         <div className="panel panel-left">
           <ProblemTabs
             tabs={LEFT_TABS}
@@ -229,11 +235,7 @@ const ProblemPage = () => {
                           </pre>
                         </div>
                       </div>
-                    )) || (
-                      <p className="desc-text">
-                        Solutions visible after solving the problem.
-                      </p>
-                    )}
+                    ))}
                   </div>
                 )}
 
@@ -249,7 +251,7 @@ const ProblemPage = () => {
           </div>
         </div>
 
-        {/* ══ RIGHT PANEL ══ */}
+        {/* RIGHT PANEL */}
         <div className="panel panel-right">
           <ProblemTabs
             tabs={RIGHT_TABS}

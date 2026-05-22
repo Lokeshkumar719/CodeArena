@@ -1,0 +1,6 @@
+const AUTH_CONFIG={
+  JWT_EXPIRES_IN:"1d",
+  COOKIE_MAX_AGE:24*60*60*1000,
+};
+
+module.exports=AUTH_CONFIG;
