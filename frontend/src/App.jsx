@@ -4,7 +4,7 @@ import Signup from "./pages/Signup";
 import Homepage from "./pages/Homepage";
 import { useDispatch, useSelector } from "react-redux";
 import { checkAuth } from "./authSlice";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import AdminPanel from "./components/AdminPanel";
 import AdminUpdate from "./components/AdminUpdate";
 import AdminUpdateList from "./components/AdminUpdateList";
@@ -17,92 +17,132 @@ import AdminUpload from "./components/AdminUpload";
 function App() {
   const dispatch = useDispatch();
 
-  const { isAuthenticated, user, loading } = useSelector((state) => state.auth);
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
+
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    dispatch(checkAuth());
+    const verifyAuth = async () => {
+      await dispatch(checkAuth());
+      setAuthChecked(true);
+    };
+
+    verifyAuth();
   }, [dispatch]);
 
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
+    );
+  }
+
   if (loading) {
-  return (
-    <div style={{ minHeight: "100vh", background: "#080c14" }} />
-  );
-}
+    return (
+      <div style={{ minHeight: "100vh", background: "#080c14" }} />
+    );
+  }
 
   const isAdmin = user?.role?.toLowerCase() === "admin";
 
   return (
-    <>
-      <Routes>
-        <Route
-          path="/"
-          element={isAuthenticated ? <Homepage /> : <Navigate to="/signup" />}
-        />
+    <Routes>
+      <Route
+        path="/"
+        element={isAuthenticated ? <Homepage /> : <Navigate to="/signup" />}
+      />
 
-        <Route
-          path="/login"
-          element={isAuthenticated ? <Navigate to="/" /> : <Login />}
-        />
+      <Route
+        path="/login"
+        element={isAuthenticated ? <Navigate to="/" /> : <Login />}
+      />
 
-        <Route
-          path="/signup"
-          element={isAuthenticated ? <Navigate to="/" /> : <Signup />}
-        />
+      <Route
+        path="/signup"
+        element={isAuthenticated ? <Navigate to="/" /> : <Signup />}
+      />
 
-        <Route
-          path="/admin"
-          element={isAuthenticated && isAdmin ? <Admin /> : <Navigate to="/" />}
-        />
+      <Route
+        path="/problem/:problemId"
+        element={
+          isAuthenticated ? <ProblemPage /> : <Navigate to="/login" />
+        }
+      />
 
-        <Route
-          path="/admin/create"
-          element={
-            isAuthenticated && isAdmin ? <AdminPanel /> : <Navigate to="/" />
-          }
-        />
+      <Route
+        path="/admin"
+        element={
+          isAuthenticated && isAdmin ? <Admin /> : <Navigate to="/" />
+        }
+      />
 
-        <Route
-          path="/admin/delete"
-          element={
-            isAuthenticated && isAdmin ? <AdminDelete /> : <Navigate to="/" />
-          }
-        />
+      <Route
+        path="/admin/create"
+        element={
+          isAuthenticated && isAdmin ? (
+            <AdminPanel />
+          ) : (
+            <Navigate to="/" />
+          )
+        }
+      />
 
-        <Route
-          path="/admin/update-list"
-          element={
-            isAuthenticated && isAdmin ? (
-              <AdminUpdateList />
-            ) : (
-              <Navigate to="/" />
-            )
-          }
-        />
+      <Route
+        path="/admin/delete"
+        element={
+          isAuthenticated && isAdmin ? (
+            <AdminDelete />
+          ) : (
+            <Navigate to="/" />
+          )
+        }
+      />
 
-        <Route path="/problem/:problemId" element={<ProblemPage />} />
+      <Route
+        path="/admin/update-list"
+        element={
+          isAuthenticated && isAdmin ? (
+            <AdminUpdateList />
+          ) : (
+            <Navigate to="/" />
+          )
+        }
+      />
 
-        <Route
-          path="/admin/video"
-          element={
-            isAuthenticated && isAdmin ? <AdminVideo /> : <Navigate to="/" />
-          }
-        />
+      <Route
+        path="/admin/video"
+        element={
+          isAuthenticated && isAdmin ? (
+            <AdminVideo />
+          ) : (
+            <Navigate to="/" />
+          )
+        }
+      />
 
-        <Route
-          path="/admin/upload/:problemId"
-          element={
-            isAuthenticated && isAdmin ? <AdminUpload /> : <Navigate to="/" />
-          }
-        />
+      <Route
+        path="/admin/upload/:problemId"
+        element={
+          isAuthenticated && isAdmin ? (
+            <AdminUpload />
+          ) : (
+            <Navigate to="/" />
+          )
+        }
+      />
 
-        <Route
-          path="/admin/update/:id"
-          element={
-            isAuthenticated && isAdmin ? <AdminUpdate /> : <Navigate to="/" />
-          }
-        />
-      </Routes>
-    </>
+      <Route
+        path="/admin/update/:id"
+        element={
+          isAuthenticated && isAdmin ? (
+            <AdminUpdate />
+          ) : (
+            <Navigate to="/" />
+          )
+        }
+      />
+    </Routes>
   );
 }
 

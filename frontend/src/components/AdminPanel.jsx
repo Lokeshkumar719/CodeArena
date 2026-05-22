@@ -5,6 +5,7 @@ import { z } from "zod";
 import axiosClient from "../utils/axiosClient";
 import { useNavigate, NavLink } from "react-router";
 import toast from "react-hot-toast";
+import { getErrorMessage } from "../utils/errorHandler";
 
 const tagOptions = [
   "array","string","stack","queue","hashing","sorting","binarySearch",
@@ -55,13 +56,20 @@ function AdminPanel() {
 
   useEffect(() => {
     const savedForm = localStorage.getItem("createProblemDraft");
-    if (savedForm) reset(JSON.parse(savedForm));
-  }, []);
+
+    if (savedForm) {
+      reset(JSON.parse(savedForm));
+    }
+  }, [reset]);
 
   useEffect(() => {
-    if (watchedData.title || watchedData.description) {
-      localStorage.setItem("createProblemDraft", JSON.stringify(watchedData));
-    }
+    const timeout = setTimeout(() => {
+      if (watchedData.title || watchedData.description) {
+        localStorage.setItem("createProblemDraft", JSON.stringify(watchedData));
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
   }, [watchedData]);
 
   const onSubmit = async (data) => {
@@ -72,7 +80,10 @@ function AdminPanel() {
       toast.success("Problem created successfully!");
       navigate("/admin");
     } catch (error) {
-      toast.error(error.response?.data?.message || error.message);
+      toast.error(getErrorMessage(error));
+      if (import.meta.env.DEV) {
+        console.error(error);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -104,7 +115,12 @@ function AdminPanel() {
           <p style={s.subheading}>Add a new coding problem to the platform</p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        <form
+        onSubmit={handleSubmit(onSubmit, () => {
+          toast.error("Please fix validation errors");
+        })}
+        className="space-y-6"
+      >
 
           {/* ── Basic Information ── */}
           <div style={s.card}>

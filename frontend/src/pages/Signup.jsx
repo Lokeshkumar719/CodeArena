@@ -4,29 +4,48 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, NavLink } from "react-router";
-import { registerUser } from "../authSlice";
+import toast from "react-hot-toast";
+import { registerUser, clearError } from "../authSlice";
 
 const signupSchema = z.object({
   firstName: z.string().min(3, "Minimum character should be 3"),
   emailId: z.string().email("Invalid Email"),
-  password: z.string().min(8, "Password is too weak"),
+  password: z.string().min(8, "Password must be at least 8 characters long"),
 });
 
 function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { isAuthenticated, loading } = useSelector((state) => state.auth);
+
+  const { isAuthenticated, loading, error } = useSelector(
+    (state) => state.auth,
+  );
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(signupSchema),
   });
 
   useEffect(() => {
-    if (isAuthenticated) navigate("/");
-  }, [isAuthenticated, navigate]);
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
 
-  const onSubmit = (data) => dispatch(registerUser(data));
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
+
+  const onSubmit = async (data) => {
+    const resultAction = await dispatch(registerUser(data));
+
+    if (registerUser.fulfilled.match(resultAction)) {
+      toast.success("Signup successful");
+      navigate("/");
+    }
+  };
 
   return (
     <div style={s.page}>

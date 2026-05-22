@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router";
+import toast from "react-hot-toast";
 import axiosClient from "../utils/axiosClient";
 
 import SubmissionHistory from "../components/SubmissionHistory";
@@ -38,18 +39,19 @@ const ProblemPage = () => {
       try {
         const response = await axiosClient.get(`/problem/problemById/${problemId}`);
 
-        // sabhi languages ka initial code ek saath store karo
-        const initialCodeMap = {};
-        response.data.startCode.forEach((sc) => {
-          initialCodeMap[sc.language] = sc.initialCode || "";
-        });
+        const problemData = response.data?.data;
 
-        setProblem(response.data);
+        const initialCodeMap = {};
+          problemData?.startCode?.find((sc) => sc.language === selectedLanguage)
+            ?.initialCode || "";
+
+        setProblem(problemData);
         setCodeMap(initialCodeMap);
       } catch (error) {
-        console.error("Error fetching problem:", error);
+        toast.error("Failed to load problem");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchProblem();
   }, [problemId]);
@@ -105,6 +107,8 @@ const ProblemPage = () => {
   const handleLanguageChange = (language) => setSelectedLanguage(language);
 
   const handleRun = async () => {
+    if (isRunning) return;
+
     setIsRunning(true);
     setRunResult(null);
     try {
@@ -112,10 +116,17 @@ const ProblemPage = () => {
         code: currentCode,
         language: selectedLanguage,
       });
-      setRunResult(response.data);
+
+      setRunResult(response.data.data);
       setActiveRightTab("testcase");
     } catch (error) {
-      setRunResult({ success: false, error: "Internal server error" });
+      toast.error(error.response?.data?.message || "Run failed");
+
+      setRunResult({
+        success: false,
+        error: error.response?.data?.message || "Internal server error",
+      });
+
       setActiveRightTab("testcase");
     } finally {
       setIsRunning(false);
@@ -123,16 +134,24 @@ const ProblemPage = () => {
   };
 
   const handleSubmitCode = async () => {
+    if (isSubmitting) return;
+
     setIsSubmitting(true);
     setSubmitResult(null);
     try {
-      const response = await axiosClient.post(`/submission/submit/${problemId}`, {
-        code: currentCode,
-        language: selectedLanguage,
-      });
-      setSubmitResult(response.data);
+      const response = await axiosClient.post(
+        `/submission/submit/${problemId}`,
+        {
+          code: currentCode,
+          language: selectedLanguage,
+        },
+      );
+
+      setSubmitResult(response.data.data);
       setActiveRightTab("result");
     } catch (error) {
+      toast.error(error.response?.data?.message || "Submission failed");
+
       setSubmitResult(null);
       setActiveRightTab("result");
     } finally {
@@ -175,7 +194,7 @@ const ProblemPage = () => {
   return (
     <div className="problem-page">
       <div className="top-bar">
-        <div className="top-title">LeetLab · Problem Solver</div>
+        <div className="top-title">CodeArena · Problem Solver</div>
       </div>
 
       <div className="split-layout" ref={splitLayoutRef}>

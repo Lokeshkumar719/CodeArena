@@ -16,10 +16,14 @@ const AdminUpdateList = () => {
   const fetchProblems = async (page = 1) => {
     try {
       setLoading(true);
-      const { data } = await axiosClient.get(`/problem/getAllProblems?page=${page}&limit=5`);
-      setProblems(data.problems);
-      setCurrentPage(data.currentPage);
-      setTotalPages(data.totalPages);
+
+      const { data } = await axiosClient.get(
+        `/problem/getAllProblems?page=${page}&limit=5`,
+      );
+
+      setProblems(data.data.problems || []);
+      setCurrentPage(data.data.currentPage || 1);
+      setTotalPages(data.data.totalPages || 1);
     } catch (err) {
       setError("Failed to fetch problems");
     } finally {

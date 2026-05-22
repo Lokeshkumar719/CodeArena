@@ -3,12 +3,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, NavLink } from "react-router";
-import { loginUser } from "../authSlice";
+import { loginUser, clearError } from "../authSlice";
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 const loginSchema = z.object({
   emailId: z.string().email("Invalid Email"),
-  password: z.string().min(8, "Password is too weak"),
+  password: z.string().min(1, "Password is required"),
 });
 
 function Login() {
@@ -22,10 +23,25 @@ function Login() {
   });
 
   useEffect(() => {
-    if (isAuthenticated) navigate("/");
-  }, [isAuthenticated, navigate]);
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
 
-  const onSubmit = (data) => dispatch(loginUser(data));
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
+
+  const onSubmit = async (data) => {
+    const resultAction = await dispatch(loginUser(data));
+
+    if (loginUser.fulfilled.match(resultAction)) {
+      toast.success("Login successful");
+      navigate("/");
+    }
+  };
 
   return (
     <div style={s.page}>

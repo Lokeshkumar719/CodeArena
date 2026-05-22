@@ -1,68 +1,72 @@
-const validator=require('validator');
-const mongoose=require('mongoose');
-const {Schema}=mongoose;
-const userSchema=new Schema({
-  firstName:{
-    type:String,
-    required:true,
-    minLength:3,
-    maxLength:20,
-    trim:true
-  },
-  lastName:{
-    type:String,
-    minLength:3,
-    maxLength:20,
-    trim:true
-  },
-  emailId:{
-    type:String,
-    required:true,
-    unique:true,
-    trim:true,
-    lowercase:true,
-    immutable:true,
-    // never believe just on controllers we should always add index and this in email check
-    validate: {
-      validator: validator.isEmail,
-      message: 'Invalid email format'
+const validator = require("validator");
+const mongoose = require("mongoose");
+const { Schema } = mongoose;
+const userSchema = new Schema(
+  {
+    firstName: {
+      type: String,
+      required: true,
+      minLength: 3,
+      maxLength: 20,
+      trim: true,
     },
-    // this will increase it's search speed in DB in a query
-    index:true
+    lastName: {
+      type: String,
+      minLength: 3,
+      maxLength: 20,
+      trim: true,
+    },
+    emailId: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+      immutable: true,
+      // never believe just on controllers we should always add index and this in email check
+      validate: {
+        validator: validator.isEmail,
+        message: "Invalid email format",
+      },
+      // this will increase it's search speed in DB in a query
+      index: true,
+    },
+    age: {
+      type: Number,
+      min: 5,
+      max: 80,
+    },
+    role: {
+      type: String,
+      enum: ["user", "admin"],
+      default: "user",
+    },
+    problemSolved: {
+      type: [
+        {
+          type: Schema.Types.ObjectId,
+          ref: "Problem",
+        },
+      ],
+      default: [],
+    },
+    password: {
+      type: String,
+      required: true,
+    },
   },
-  age:{
-    type:Number,
-    min:5,
-    max:80
+  {
+    timestamps: true,
   },
-  role:{
-    type:String,
-    enum:["user","admin"],
-    default:"user"
-  },
-  problemSolved:{
-    type:[{
-        type:Schema.Types.ObjectId,
-        ref:'Problem'
-    }],
-    default:[]
-  },
-  password:{
-    type:String,
-    required:true,
-  },
-},
-{
-  timestamps:true
-});
+);
 
-userSchema.post('findOneAndDelete',async function (userInfo) {
-  if(userInfo){
-    // not capital S in submission 
-    await mongoose.model('submission').deleteMany({userId:userInfo._id});
+userSchema.post("findOneAndDelete", async function (userInfo) {
+  if (userInfo) {
+    // not capital S in submission
+    await mongoose.model("submission").deleteMany({ userId: userInfo._id });
   }
 });
 
-const User=mongoose.model("user",userSchema);
+const User = mongoose.model("user", userSchema);
 // Export the User
-module.exports=User;
+module.exports = User;

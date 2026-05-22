@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import axiosClient from "../utils/axiosClient";
 import toast from "react-hot-toast";
 import { NavLink, useNavigate } from "react-router";
+import { getErrorMessage } from "../utils/errorHandler";
 
 const AdminDelete = () => {
   const navigate = useNavigate();
@@ -17,12 +18,20 @@ const AdminDelete = () => {
   const fetchProblems = async (page = 1) => {
     try {
       setLoading(true);
-      const { data } = await axiosClient.get(`/problem/getAllProblems?page=${page}&limit=5`);
-      setProblems(data.problems);
-      setCurrentPage(data.currentPage);
-      setTotalPages(data.totalPages);
+
+      const { data } = await axiosClient.get(
+        `/problem/getAllProblems?page=${page}&limit=5`,
+      );
+
+      setProblems(data.data.problems);
+      setCurrentPage(data.data.currentPage);
+      setTotalPages(data.data.totalPages);
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to fetch problems");
+      toast.error(getErrorMessage(err));
+
+      if (import.meta.env.DEV) {
+        console.error(err);
+      }
     } finally {
       setLoading(false);
     }
@@ -33,10 +42,16 @@ const AdminDelete = () => {
     try {
       setDeletingId(id);
       await axiosClient.delete(`/problem/delete/${id}`);
-      setProblems((prev) => prev.filter((p) => p._id !== id));
+
+      setProblems((prev) => prev.filter((problem) => problem._id !== id));
+
       toast.success("Problem deleted successfully");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to delete problem");
+      toast.error(getErrorMessage(err));
+
+      if (import.meta.env.DEV) {
+        console.error(err);
+      }
     } finally {
       setDeletingId(null);
     }
@@ -103,7 +118,60 @@ const AdminDelete = () => {
                     </button>
                   </td>
                 </tr>
-              ))}
+              ) , (
+                problems.map((problem, index) => (
+                  <tr key={problem._id} className="hover">
+                    {/* Index */}
+                    <th className="font-semibold">
+                      {(currentPage - 1) * 5 + index + 1}
+                    </th>
+
+                    {/* Title */}
+                    <td className="font-medium">{problem.title}</td>
+
+                    {/* Difficulty */}
+                    <td>
+                      <span
+                        className={`badge ${getDifficultyBadge(problem.difficulty)} badge-md capitalize`}
+                      >
+                        {problem.difficulty}
+                      </span>
+                    </td>
+
+                    {/* Tags */}
+                    <td>
+                      <div className="flex flex-wrap gap-2 max-w-sm">
+                        {problem.tags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className="px-3 py-1 rounded-full bg-base-300 text-sm font-medium text-base-content border border-base-100 shadow-sm"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+
+                    {/* Actions */}
+                    <td>
+                      <button
+                        onClick={() => handleDelete(problem._id)}
+                        disabled={deletingId === problem._id}
+                        className="btn btn-sm btn-error"
+                      >
+                        {deletingId === problem._id ? (
+                          <>
+                            <span className="loading loading-spinner loading-xs"></span>
+                            Deleting...
+                          </>
+                        ) : (
+                          "Delete"
+                        )}
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ))},
             </tbody>
           </table>
         </div>
@@ -112,14 +180,18 @@ const AdminDelete = () => {
           <button
             style={{ ...s.pageBtn, opacity: currentPage === 1 ? 0.4 : 1 }}
             disabled={currentPage === 1}
-            onClick={() => setCurrentPage(p => p - 1)}
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
           >← Prev</button>
           <span style={s.pageInfo}>Page {currentPage} of {totalPages}</span>
           <button
             style={{ ...s.pageBtn, opacity: currentPage === totalPages ? 0.4 : 1 }}
             disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage(p => p + 1)}
-          >Next →</button>
+            onClick={() =>
+              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+            }
+          >
+            Next
+          </button>
         </div>
       </div>
     </div>

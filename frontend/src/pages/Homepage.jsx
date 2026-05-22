@@ -3,6 +3,7 @@ import { NavLink } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import axiosClient from "../utils/axiosClient";
 import { logoutUser } from "../authSlice";
+import toast from "react-hot-toast";
 
 const tagOptions = [
   "array", "string", "stack", "queue", "hashing", "sorting", "binarySearch",
@@ -33,22 +34,31 @@ function Homepage() {
         console.error("Error fetching problems:", error);
       }
     };
+
     const fetchSolvedProblems = async () => {
       try {
         const { data } = await axiosClient.get("/problem/problemSolvedByUser");
-        setSolvedProblems(data);
+        setSolvedProblems(data.data);
       } catch (error) {
         console.error("Error fetching solved problems:", error);
       }
     };
+
     fetchProblems();
     if (user) fetchSolvedProblems();
   }, [user, currentPage]);
 
-  const handleLogout = () => {
-    dispatch(logoutUser());
-    setSolvedProblems([]);
-    setDropdownOpen(false);
+  const handleLogout = async () => {
+    const resultAction = await dispatch(logoutUser());
+
+    if (logoutUser.fulfilled.match(resultAction)) {
+      toast.success("Logged out successfully");
+      setSolvedProblems([]);
+      setDropdownOpen(false);
+    } else {
+      toast.error(resultAction.payload || "Logout failed");
+    }
+    
   };
 
   const filteredProblems = problems.filter((problem) => {

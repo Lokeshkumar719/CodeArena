@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import axios from "axios";
 import axiosClient from "../utils/axiosClient";
+import toast from "react-hot-toast";
 
 function AdminUpload() {
   const { problemId } = useParams();
@@ -30,9 +31,19 @@ function AdminUpload() {
     clearErrors();
 
     try {
-      const signatureResponse = await axiosClient.get(`/video/create/${problemId}`);
-      const { signature, timestamp, public_id, api_key, cloud_name, upload_url } = signatureResponse.data;
+      // Step 1: Get upload signature from backend
+      const signatureResponse = await axiosClient.get(
+        `/video/create/${problemId}`,
+      );
+      const {
+        signature,
+        timestamp,
+        public_id,
+        api_key,
+        upload_url,
+      } = signatureResponse.data.data;
 
+      // Step 2: Create FormData for Cloudinary upload
       const formData = new FormData();
       formData.append("file", file);
       formData.append("signature", signature);
@@ -40,37 +51,50 @@ function AdminUpload() {
       formData.append("public_id", public_id);
       formData.append("api_key", api_key);
 
+      // Step 3: Upload directly to Cloudinary so we use axios not axiosClient
       const uploadResponse = await axios.post(upload_url, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
         onUploadProgress: (progressEvent) => {
-          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          const total = progressEvent.total || 1;
+
+          const progress = Math.round((progressEvent.loaded * 100) / total);
           setUploadProgress(progress);
         },
       });
 
       const cloudinaryResult = uploadResponse.data;
 
+      // Step 4: Save video metadata to backend
       const metadataResponse = await axiosClient.post("/video/save", {
-        problemId,
+        problemId: problemId,
         cloudinaryPublicId: cloudinaryResult.public_id,
         secureUrl: cloudinaryResult.secure_url,
         duration: cloudinaryResult.duration,
       });
 
-      setUploadedVideo(metadataResponse.data.videoSolution);
-      reset();
+      setUploadedVideo(metadataResponse.data?.data?.videoSolution || null);
+      toast.success("Video uploaded successfully!");
+      reset(); // Reset form after successful upload
     } catch (err) {
-      console.error("Upload error:", err);
+      if (import.meta.env.DEV) {
+        console.error("Upload error:", err);
+      }
       setError("root", {
         type: "manual",
-        message: err.response?.data?.message || "Upload failed. Please try again.",
+        message:
+          err.response?.data?.message || "Upload failed. Please try again.",
       });
+
+      toast.error("Video upload failed");
     } finally {
       setUploading(false);
       setUploadProgress(0);
     }
   };
 
+  // Format file size
   const formatFileSize = (bytes) => {
     if (bytes === 0) return "0 Bytes";
     const k = 1024;

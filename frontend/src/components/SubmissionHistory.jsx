@@ -11,12 +11,19 @@ const SubmissionHistory = ({ problemId }) => {
     const fetchSubmissions = async () => {
       try {
         setLoading(true);
-        const response = await axiosClient.get(`/problem/problemSubmmision/${problemId}`);
-        setSubmissions(response.data);
+
+        const response = await axiosClient.get(
+          `/problem/problemSubmmision/${problemId}`,
+        );
+
+        setSubmissions(response.data?.data || []);
         setError(null);
       } catch (err) {
         setError("Failed to fetch submission history");
-        console.error(err);
+
+        if (import.meta.env.DEV) {
+          console.error(err);
+        }
       } finally {
         setLoading(false);
       }

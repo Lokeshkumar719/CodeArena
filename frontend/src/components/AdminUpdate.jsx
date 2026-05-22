@@ -5,6 +5,7 @@ import { z } from "zod";
 import axiosClient from "../utils/axiosClient";
 import { useNavigate, useParams, NavLink } from "react-router";
 import toast from "react-hot-toast";
+import { getErrorMessage } from "../utils/errorHandler";
 
 const tagOptions = [
   "array","string","stack","queue","hashing","sorting","binarySearch",
@@ -56,16 +57,23 @@ function AdminUpdate() {
   useEffect(() => {
     const fetchProblem = async () => {
       try {
-        const response = await axiosClient.get(`/problem/admin/problemById/${id}`);
-        reset(response.data);
-      } catch {
-        toast.error("Failed to fetch problem");
+        const response = await axiosClient.get(
+          `/problem/admin/problemById/${id}`,
+        );
+
+        reset(response.data.data);
+      } catch (error) {
+        toast.error(getErrorMessage(error));
+
+        if (import.meta.env.DEV) {
+          console.error(error);
+        }
       } finally {
         setLoading(false);
       }
     };
     fetchProblem();
-  }, []);
+  }, [id, reset]);
 
   const onSubmit = async (data) => {
     try {
@@ -74,7 +82,11 @@ function AdminUpdate() {
       toast.success("Problem updated successfully!");
       navigate("/admin/update-list");
     } catch (error) {
-      toast.error(error.response?.data?.error || error.message);
+      toast.error(getErrorMessage(error));
+
+      if (import.meta.env.DEV) {
+        console.error(error);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -107,8 +119,12 @@ function AdminUpdate() {
           <h1 style={s.heading}>Update Problem</h1>
           <p style={s.subheading}>Edit the details of this coding problem</p>
         </div>
-
-        <form onSubmit={handleSubmit(onSubmit)} style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+      <form
+        onSubmit={handleSubmit(onSubmit, () => {
+          toast.error("Please fix validation errors");
+        })}
+        className="space-y-6"
+      >
 
           {/* ── Basic Information ── */}
           <div style={s.card}>
