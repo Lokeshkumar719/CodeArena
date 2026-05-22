@@ -9,9 +9,11 @@ const {
 } = require("../controllers/userAuthenticate");
 const userMiddleware = require("../middlewares/userMiddleware");
 const adminMiddleware = require("../middlewares/adminMiddleware");
+const {limitLogin,limitRegister}=require("../middlewares/rateLimitMiddleware");
+
 // register and login routes are public routes so we don't need to add userMiddleware in them but logout route is a private route so we need to add userMiddleware in it
-authRouter.post("/register", register);
-authRouter.post("/login", login);
+authRouter.post("/register",limitLogin, register);
+authRouter.post("/login",limitRegister ,login);
 // before logout we need to check whether the user is authenticated or not so we will use userMiddleware
 authRouter.post("/logout", userMiddleware, logout);
 // authRouter.post('/getProfile',getProfile);
