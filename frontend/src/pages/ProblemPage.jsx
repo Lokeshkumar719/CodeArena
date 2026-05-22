@@ -41,12 +41,14 @@ const ProblemPage = () => {
 
         const problemData = response.data?.data;
 
-        const initialCodeMap = {};
-          problemData?.startCode?.find((sc) => sc.language === selectedLanguage)
-            ?.initialCode || "";
+        const initialCodeMap={};
 
-        setProblem(problemData);
-        setCodeMap(initialCodeMap);
+problemData?.startCode?.forEach((sc)=>{
+	initialCodeMap[sc.language]=sc.initialCode || "";
+});
+
+setProblem(problemData);
+setCodeMap(initialCodeMap);
       } catch (error) {
         toast.error("Failed to load problem");
       } finally {

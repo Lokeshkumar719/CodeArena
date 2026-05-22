@@ -38,11 +38,11 @@ function App() {
     );
   }
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: "100vh", background: "#080c14" }} />
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <div style={{ minHeight: "100vh", background: "#080c14" }} />
+  //   );
+  // }
 
   const isAdmin = user?.role?.toLowerCase() === "admin";
 
