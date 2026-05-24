@@ -1,15 +1,23 @@
 import { Routes, Route, Navigate } from "react-router";
+
+import { useDispatch, useSelector } from "react-redux";
+
+import { useEffect, useState } from "react";
+
+import { checkAuth } from "./authSlice";
+
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Homepage from "./pages/Homepage";
-import { useDispatch, useSelector } from "react-redux";
-import { checkAuth } from "./authSlice";
-import { useEffect, useState } from "react";
+import ProblemPage from "./pages/ProblemPage";
+import Admin from "./pages/Admin";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import ChangePassword from "./pages/ChangePassword";
+
 import AdminPanel from "./components/AdminPanel";
 import AdminUpdate from "./components/AdminUpdate";
 import AdminUpdateList from "./components/AdminUpdateList";
-import ProblemPage from "./pages/ProblemPage";
-import Admin from "./pages/Admin";
 import AdminVideo from "./components/AdminVideo";
 import AdminDelete from "./components/AdminDelete";
 import AdminUpload from "./components/AdminUpload";
@@ -24,6 +32,7 @@ function App() {
   useEffect(() => {
     const verifyAuth = async () => {
       await dispatch(checkAuth());
+
       setAuthChecked(true);
     };
 
@@ -64,82 +73,71 @@ function App() {
       />
 
       <Route
-        path="/problem/:problemId"
+        path="/forgot-password"
+        element={isAuthenticated ? <Navigate to="/" /> : <ForgotPassword />}
+      />
+
+      <Route
+        path="/reset-password/:token"
+        element={isAuthenticated ? <Navigate to="/" /> : <ResetPassword />}
+      />
+
+      <Route
+        path="/change-password"
         element={
-          isAuthenticated ? <ProblemPage /> : <Navigate to="/login" />
+          isAuthenticated ? <ChangePassword /> : <Navigate to="/login" />
         }
       />
 
       <Route
+        path="/problem/:problemId"
+        element={isAuthenticated ? <ProblemPage /> : <Navigate to="/login" />}
+      />
+
+      <Route
         path="/admin"
-        element={
-          isAuthenticated && isAdmin ? <Admin /> : <Navigate to="/" />
-        }
+        element={isAuthenticated && isAdmin ? <Admin /> : <Navigate to="/" />}
       />
 
       <Route
         path="/admin/create"
         element={
-          isAuthenticated && isAdmin ? (
-            <AdminPanel />
-          ) : (
-            <Navigate to="/" />
-          )
+          isAuthenticated && isAdmin ? <AdminPanel /> : <Navigate to="/" />
         }
       />
 
       <Route
         path="/admin/delete"
         element={
-          isAuthenticated && isAdmin ? (
-            <AdminDelete />
-          ) : (
-            <Navigate to="/" />
-          )
+          isAuthenticated && isAdmin ? <AdminDelete /> : <Navigate to="/" />
         }
       />
 
       <Route
         path="/admin/update-list"
         element={
-          isAuthenticated && isAdmin ? (
-            <AdminUpdateList />
-          ) : (
-            <Navigate to="/" />
-          )
+          isAuthenticated && isAdmin ? <AdminUpdateList /> : <Navigate to="/" />
         }
       />
 
       <Route
         path="/admin/video"
         element={
-          isAuthenticated && isAdmin ? (
-            <AdminVideo />
-          ) : (
-            <Navigate to="/" />
-          )
+          isAuthenticated && isAdmin ? <AdminVideo /> : <Navigate to="/" />
         }
       />
 
       <Route
         path="/admin/upload/:problemId"
         element={
-          isAuthenticated && isAdmin ? (
-            <AdminUpload />
-          ) : (
-            <Navigate to="/" />
-          )
+          isAuthenticated && isAdmin ? <AdminUpload /> : <Navigate to="/" />
         }
       />
 
       <Route
         path="/admin/update/:id"
         element={
-          isAuthenticated && isAdmin ? (
-            <AdminUpdate />
-          ) : (
-            <Navigate to="/" />
-          )
+          isAuthenticated && isAdmin ? <AdminUpdate /> : <Navigate to="/" />
         }
       />
     </Routes>
