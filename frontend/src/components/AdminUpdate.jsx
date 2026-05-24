@@ -58,6 +58,13 @@ const problemSchema = z.object({
   inputFormat: z.string().min(1, "Input format is required"),
   outputFormat: z.string().min(1, "Output format is required"),
   constraints: z.string().min(1, "Constraints are required"),
+  timeLimit: z.coerce
+  .number()
+  .min(1, "Time limit must be at least 1 second"),
+
+memoryLimit: z.coerce
+  .number()
+  .min(1024, "Memory limit must be at least 1024 KB"),
 
   tags: z
     .array(z.string().refine((tag) => tagOptions.includes(tag), "Invalid tag"))
@@ -126,6 +133,8 @@ function AdminUpdate() {
       inputFormat: "",
       outputFormat: "",
       constraints: "",
+      timeLimit: 2,
+memoryLimit: 256000,
 
       visibleTestCases: [
         {
@@ -348,6 +357,58 @@ function AdminUpdate() {
                 <span className="text-error">{errors.constraints.message}</span>
               )}
             </div>
+
+            <div className="flex gap-4">
+
+  {/* Time Limit */}
+  <div className="form-control w-1/2">
+    <label className="label">
+      <span className="label-text">
+        Time Limit (seconds)
+      </span>
+    </label>
+
+    <input
+      type="number"
+      min="1"
+      {...register("timeLimit")}
+      className={`input input-bordered ${
+        errors.timeLimit && "input-error"
+      }`}
+    />
+
+    {errors.timeLimit && (
+      <span className="text-error">
+        {errors.timeLimit.message}
+      </span>
+    )}
+  </div>
+
+  {/* Memory Limit */}
+  <div className="form-control w-1/2">
+    <label className="label">
+      <span className="label-text">
+        Memory Limit (KB)
+      </span>
+    </label>
+
+    <input
+      type="number"
+      min="1024"
+      {...register("memoryLimit")}
+      className={`input input-bordered ${
+        errors.memoryLimit && "input-error"
+      }`}
+    />
+
+    {errors.memoryLimit && (
+      <span className="text-error">
+        {errors.memoryLimit.message}
+      </span>
+    )}
+  </div>
+
+</div>
 
             <div className="flex gap-4">
               {/* Difficulty */}

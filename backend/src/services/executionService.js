@@ -1,18 +1,21 @@
 const { submitBatch, submitToken } = require("./judge0Service");
 const { JUDGE0_STATUS } = require("../constants/judgeStatus");
+const getSubmissionResult = require("../utils/getSubmissionResult");
 
 const executeCode = async (
   testcases,
   code,
   languageId,
+  executionLimits,
   includeTestResult = false,
 ) => {
-  const submissions = testcases.map((testcase) => ({
-    source_code: code,
-    language_id: languageId,
-    stdin: testcase.input,
-    expected_output: testcase.output,
-  }));
+const submissions=testcases.map((testcase)=>({
+  source_code:code,
+  language_id:languageId,
+  stdin:testcase.input,
+  expected_output:testcase.output,
+  ...executionLimits
+}));
 
   const submitResult = await submitBatch(submissions);
   const resultTokens = submitResult.map((value) => value.token);
@@ -26,9 +29,11 @@ const executeCode = async (
 
   for (const test of testResult) {
     if (test.status.id !== JUDGE0_STATUS.ACCEPTED) {
-      status =
-        test.status.id === JUDGE0_STATUS.COMPILE_ERROR ? "error" : "wrong";
-      errorMessage = test.stderr;
+      const result = getSubmissionResult(test);
+
+      status = result.status;
+      errorMessage = result.errorMessage;
+
       break;
     }
     testCasesPassed++;

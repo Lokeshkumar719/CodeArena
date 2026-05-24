@@ -16,6 +16,22 @@ function ProblemDescription({ problem, getDifficultyBadge }) {
         ))}
       </div>
 
+      <div className="mt-4 flex gap-4 text-sm text-gray-400">
+  <div>
+    <span className="font-semibold text-gray-300">
+      Time Limit:
+    </span>{" "}
+    {problem.timeLimit} sec
+  </div>
+
+  <div>
+    <span className="font-semibold text-gray-300">
+      Memory Limit:
+    </span>{" "}
+    {Math.floor(problem.memoryLimit / 1024)} MB
+  </div>
+</div>
+
       <p className="desc-text whitespace-pre-wrap">{problem.description}</p>
 
       {/* Input Format */}

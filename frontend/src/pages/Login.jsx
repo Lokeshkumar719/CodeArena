@@ -122,6 +122,15 @@ function Login() {
                   {errors.password.message}
                 </span>
               )}
+
+              <div className="text-right mt-2">
+                <NavLink
+                  to="/forgot-password"
+                  className="text-sm link link-hover link-primary"
+                >
+                  Forgot Password?
+                </NavLink>
+              </div>
             </div>
 
             <div className="form-control mt-8 flex justify-center">

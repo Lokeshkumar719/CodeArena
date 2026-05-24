@@ -145,6 +145,14 @@ function Homepage() {
                 </li>
               )}
               <li>
+                <NavLink
+                  to="/change-password"
+                  className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-base-200 transition text-sm font-medium"
+                >
+                  🔒 Change Password
+                </NavLink>
+              </li>
+              <li>
                 <button
                   onClick={handleLogout}
                   className="flex items-center gap-3 w-full px-4 py-2 rounded-lg hover:bg-error/10 hover:text-error transition text-sm font-medium"
