@@ -16,7 +16,7 @@ const submitBatch = async (submissions) => {
       base64_encoded: "false",
     },
     data: {
-      submissions,
+      submissions
     },
   };
 

@@ -4,180 +4,183 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, NavLink } from "react-router";
-import { registerUser } from "../authSlice";
+import toast from "react-hot-toast";
+import { registerUser, clearError } from "../authSlice";
 
 const signupSchema = z.object({
   firstName: z.string().min(3, "Minimum character should be 3"),
   emailId: z.string().email("Invalid Email"),
-  password: z.string().min(8, "Password is too weak"),
+  password: z.string().min(8, "Password must be at least 8 characters long"),
 });
 
 function Signup() {
   const [showPassword, setShowPassword] = useState(false);
-
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { isAuthenticated, loading } = useSelector((state) => state.auth);
+  const { isAuthenticated, loading, error } = useSelector(
+    (state) => state.auth,
+  );
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm({
+  const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(signupSchema),
   });
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
+
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
+
+  const onSubmit = async (data) => {
+    const resultAction = await dispatch(registerUser(data));
+
+    if (registerUser.fulfilled.match(resultAction)) {
+      toast.success("Signup successful");
       navigate("/");
     }
-  }, [isAuthenticated, navigate]);
-
-  const onSubmit = (data) => {
-    dispatch(registerUser(data));
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-base-200">
-      <div className="card w-96 bg-base-100 shadow-xl border border-base-300">
-        <div className="card-body">
-          <div className="text-center mb-8">
-            <h1 className="text-5xl font-bold text-primary">CodeArena</h1>
+    <div style={s.page}>
+      <div style={s.card}>
+        <div style={s.logoArea}>
+          <div style={s.logo}>LeetLab</div>
+          <div style={s.tagline}>Practice. Compete. Improve.</div>
+        </div>
 
-            <p className="text-sm text-gray-400 mt-2">
-              Practice. Compete. Improve.
-            </p>
+        <div style={s.form}>
+          {/* First Name */}
+          <div style={s.fieldGroup}>
+            <label style={s.label}>First Name</label>
+            <input
+              type="text"
+              placeholder="John"
+              style={{ ...s.input, ...(errors.firstName ? s.inputError : {}) }}
+              {...register("firstName")}
+            />
+            {errors.firstName && <span style={s.errorMsg}>{errors.firstName.message}</span>}
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">First Name</span>
-              </label>
+          {/* Email */}
+          <div style={s.fieldGroup}>
+            <label style={s.label}>Email</label>
+            <input
+              type="email"
+              placeholder="john@example.com"
+              style={{ ...s.input, ...(errors.emailId ? s.inputError : {}) }}
+              {...register("emailId")}
+            />
+            {errors.emailId && <span style={s.errorMsg}>{errors.emailId.message}</span>}
+          </div>
 
+          {/* Password */}
+          <div style={s.fieldGroup}>
+            <label style={s.label}>Password</label>
+            <div style={{ position: "relative" }}>
               <input
-                type="text"
-                placeholder="John"
-                className={`input input-bordered w-full ${errors.firstName ? "input-error" : ""}`}
-                {...register("firstName")}
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                style={{ ...s.input, paddingRight: "44px", ...(errors.password ? s.inputError : {}) }}
+                {...register("password")}
               />
-
-              {errors.firstName && (
-                <span className="text-error text-sm mt-1">
-                  {errors.firstName.message}
-                </span>
-              )}
-            </div>
-
-            <div className="form-control mt-4">
-              <label className="label">
-                <span className="label-text">Email</span>
-              </label>
-
-              <input
-                type="email"
-                placeholder="john@example.com"
-                className={`input input-bordered w-full ${errors.emailId ? "input-error" : ""}`}
-                {...register("emailId")}
-              />
-
-              {errors.emailId && (
-                <span className="text-error text-sm mt-1">
-                  {errors.emailId.message}
-                </span>
-              )}
-            </div>
-
-            <div className="form-control mt-4">
-              <label className="label">
-                <span className="label-text">Password</span>
-              </label>
-
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  className={`input input-bordered w-full pr-10 ${errors.password ? "input-error" : ""}`}
-                  {...register("password")}
-                />
-
-                <button
-                  type="button"
-                  className="absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-500 hover:text-gray-300"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                      />
-                    </svg>
-                  )}
-                </button>
-              </div>
-
-              {errors.password && (
-                <span className="text-error text-sm mt-1">
-                  {errors.password.message}
-                </span>
-              )}
-            </div>
-
-            <div className="form-control mt-8 flex justify-center">
               <button
-                type="submit"
-                className={`btn btn-primary ${loading ? "loading" : ""}`}
-                disabled={loading}
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={s.eyeBtn}
               >
-                {loading ? "Signing Up..." : "Sign Up"}
+                {showPassword ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                )}
               </button>
             </div>
-          </form>
-
-          <div className="text-center mt-6">
-            <span className="text-sm">
-              Already have an account?{" "}
-              <NavLink to="/login" className="link link-primary">
-                Login
-              </NavLink>
-            </span>
+            {errors.password && <span style={s.errorMsg}>{errors.password.message}</span>}
           </div>
+
+          <button
+            onClick={handleSubmit(onSubmit)}
+            disabled={loading}
+            style={{ ...s.submitBtn, opacity: loading ? 0.7 : 1 }}
+          >
+            {loading ? "Signing Up..." : "Sign Up"}
+          </button>
+        </div>
+
+        <div style={s.footer}>
+          Already have an account?{" "}
+          <NavLink to="/login" style={s.link}>Login</NavLink>
         </div>
       </div>
     </div>
   );
 }
+
+const s = {
+  page: {
+    minHeight: "100vh",
+    background: "#080c14",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontFamily: "'Sora', sans-serif",
+    padding: "24px",
+  },
+  card: {
+    background: "#0c1018",
+    border: "1px solid #1e2738",
+    borderRadius: "20px",
+    padding: "44px 40px",
+    width: "100%",
+    maxWidth: "420px",
+    boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
+  },
+  logoArea: { textAlign: "center", marginBottom: "36px" },
+  logo: { fontSize: "32px", fontWeight: 700, color: "#a5b4fc", marginBottom: "6px" },
+  tagline: { fontSize: "13px", color: "#4b5563", fontWeight: 500 },
+  form: { display: "flex", flexDirection: "column", gap: "20px" },
+  fieldGroup: { display: "flex", flexDirection: "column", gap: "8px" },
+  label: { fontSize: "13px", fontWeight: 600, color: "#9ca3af" },
+  input: {
+    background: "#080c14",
+    border: "1px solid #1e2738",
+    borderRadius: "10px",
+    color: "#e2e8f0",
+    fontSize: "14px",
+    padding: "11px 14px",
+    outline: "none",
+    fontFamily: "'Sora', sans-serif",
+    width: "100%",
+    boxSizing: "border-box",
+  },
+  inputError: { borderColor: "rgba(239,68,68,0.5)" },
+  errorMsg: { fontSize: "12px", color: "#f87171" },
+  eyeBtn: {
+    position: "absolute", top: "50%", right: "12px",
+    transform: "translateY(-50%)", background: "transparent",
+    border: "none", cursor: "pointer", color: "#4b5563",
+    padding: 0, display: "flex", alignItems: "center",
+  },
+  submitBtn: {
+    background: "#4f46e5", border: "1px solid #6366f1",
+    borderRadius: "10px", color: "white", fontSize: "14px",
+    fontWeight: 700, padding: "12px", cursor: "pointer",
+    fontFamily: "'Sora', sans-serif", marginTop: "8px",
+  },
+  footer: { textAlign: "center", marginTop: "28px", fontSize: "13px", color: "#4b5563" },
+  link: { color: "#a5b4fc", fontWeight: 600, textDecoration: "none" },
+};
 
 export default Signup;
