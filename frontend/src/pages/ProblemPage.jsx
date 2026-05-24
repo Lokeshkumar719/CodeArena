@@ -12,11 +12,14 @@ import ProblemDescription from "../components/problem/ProblemDescription";
 import TestCasePanel from "../components/problem/TestCasePanel";
 import ResultPanel from "../components/problem/ResultPanel";
 import CodeEditorPanel from "../components/problem/CodeEditorPanel";
+import useRateLimit from "../hooks/useRateLimit.jsx";
 
 import "./ProblemPage.css";
 
 const ProblemPage = () => {
   const [problem, setProblem] = useState(null);
+  const runRateLimit = useRateLimit();
+const submitRateLimit = useRateLimit();
 
   const [selectedLanguage, setSelectedLanguage] = useState("javascript");
   const [code, setCode] = useState("");
@@ -97,13 +100,19 @@ const ProblemPage = () => {
       setRunResult(response.data.data);
       setActiveRightTab("testcase");
     } catch (error) {
-      toast.error(error.response?.data?.message || "Run failed");
+      if (error.rateLimitedFor) {
+        // Rate limited — show toast, start cooldown, don't touch run result or tab
+        runRateLimit.startCooldown(error.rateLimitedFor);
+        toast.error(error.response?.data?.message || "Too many requests. Please slow down.");
+        return; // ← early return, skip setRunResult and tab switch
+      }
 
+      // Genuine execution error
+      toast.error(error.response?.data?.message || "Run failed");
       setRunResult({
         success: false,
         error: error.response?.data?.message || "Internal server error",
       });
-
       setActiveRightTab("testcase");
     } finally {
       setIsRunning(false);
@@ -117,19 +126,21 @@ const ProblemPage = () => {
     setSubmitResult(null);
 
     try {
-      const response = await axiosClient.post(
-        `/submission/submit/${problemId}`,
-        {
-          code,
-          language: selectedLanguage,
-        },
-      );
+      const response = await axiosClient.post(`/submission/submit/${problemId}`, {
+        code,
+        language: selectedLanguage,
+      });
 
       setSubmitResult(response.data.data);
       setActiveRightTab("result");
     } catch (error) {
-      toast.error(error.response?.data?.message || "Submission failed");
+      if (error.rateLimitedFor) {
+        submitRateLimit.startCooldown(error.rateLimitedFor);
+        toast.error(error.response?.data?.message || "Too many requests. Please slow down.");
+        return; // ← don't touch submitResult or switch to result tab
+      }
 
+      toast.error(error.response?.data?.message || "Submission failed");
       setSubmitResult(null);
       setActiveRightTab("result");
     } finally {
@@ -272,6 +283,8 @@ const ProblemPage = () => {
             isSubmitting={isSubmitting}
             handleRun={handleRun}
             handleSubmitCode={handleSubmitCode}
+            runCooldown={runRateLimit.cooldown}       
+            submitCooldown={submitRateLimit.cooldown}
           />
 
           {activeRightTab === "testcase" && (

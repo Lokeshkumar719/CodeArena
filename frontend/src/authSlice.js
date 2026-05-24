@@ -6,14 +6,18 @@ export const registerUser = createAsyncThunk(
   async (userData, { rejectWithValue }) => {
     try {
       const response = await axiosClient.post("/user/register", userData);
-
       return response.data.data;
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || "Something went wrong",
-      );
+      // Pass rate limit metadata through so the component can start a cooldown
+      if (error.rateLimitedFor) {
+        return rejectWithValue({
+          message: error.response?.data?.message || "Too many requests",
+          rateLimitedFor: error.rateLimitedFor,
+        });
+      }
+      return rejectWithValue(error.response?.data?.message || "Something went wrong");
     }
-  },
+  }
 );
 
 export const loginUser = createAsyncThunk(
@@ -21,14 +25,17 @@ export const loginUser = createAsyncThunk(
   async (credentials, { rejectWithValue }) => {
     try {
       const response = await axiosClient.post("/user/login", credentials);
-
       return response.data.data;
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || "Something went wrong",
-      );
+      if (error.rateLimitedFor) {
+        return rejectWithValue({
+          message: error.response?.data?.message || "Too many requests",
+          rateLimitedFor: error.rateLimitedFor,
+        });
+      }
+      return rejectWithValue(error.response?.data?.message || "Something went wrong");
     }
-  },
+  }
 );
 
 export const checkAuth = createAsyncThunk(
@@ -99,7 +106,7 @@ const authSlice = createSlice({
 
       .addCase(registerUser.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload?.message ?? action.payload ?? null;
       })
 
       // Login User Cases
@@ -117,7 +124,8 @@ const authSlice = createSlice({
 
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        // Normalize: store only the message string in Redux state
+        state.error = action.payload?.message ?? action.payload ?? null;
       })
 
       // Check Auth Cases

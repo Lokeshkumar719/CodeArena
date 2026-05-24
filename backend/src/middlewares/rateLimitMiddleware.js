@@ -1,41 +1,43 @@
-const {
-  RateLimiterRedis,
-  BurstyRateLimiter,
-  RateLimiterMemory,
-} = require("rate-limiter-flexible");
+const { RateLimiterRedis } = require("rate-limiter-flexible");
 
-const redisClient = require("../config/redis");
+const { redisClient } = require("../config/redis");
 
 // ---------------------------------------------------------------------------
-// HELPERS
+// SHARED HELPERS
 // ---------------------------------------------------------------------------
 
 /**
- * Builds the Response headers we send back on every rate-limited request.
- * Standard headers let the frontend know the current state without guessing.
+ * Builds standard rate-limit response headers from plain values.
  *
- * X-RateLimit-Limit     → max points allowed in the window
- * X-RateLimit-Remaining → points left before the user is blocked
- * Retry-After           → seconds until the window resets (only on 429)
+ * X-RateLimit-Limit     → max tokens/points allowed
+ * X-RateLimit-Remaining → tokens/points remaining
+ * Retry-After           → seconds until next token is available (only on 429)
+ *
+ * @param {number} limit          - The configured maximum capacity.
+ * @param {number} remaining      - Remaining tokens/points after this request.
+ * @param {number|null} retryAfterMs - Milliseconds to wait before retrying (null if not blocked).
  */
-const buildHeaders = (rateLimiterRes, limit, retryAfter = null) => {
+const buildHeaders = (limit, remaining, retryAfterMs = null) => {
   const headers = {
     "X-RateLimit-Limit": limit,
-    "X-RateLimit-Remaining": Math.max(0, rateLimiterRes.remainingPoints),
+    "X-RateLimit-Remaining": Math.max(0, Math.floor(remaining)),
   };
-  if (retryAfter !== null) {
-    // msBeforeNext → convert to whole seconds, minimum 1
-    headers["Retry-After"] = Math.ceil(retryAfter / 1000) || 1;
+  if (retryAfterMs !== null) {
+    headers["Retry-After"] = Math.ceil(retryAfterMs / 1000) || 1;
   }
   return headers;
 };
 
 /**
- * Shared 429 response writer.
- * Always includes Retry-After so the frontend can show a countdown.
+ * Sends a standard 429 Too Many Requests response.
+ * Reuses buildHeaders so the response is always consistent.
+ *
+ * @param {object} res            - Express response object.
+ * @param {number} limit          - The configured maximum capacity.
+ * @param {number} retryAfterMs   - Milliseconds until next retry is allowed.
  */
-const tooManyRequests = (res, rateLimiterRes, limit) => {
-  const headers = buildHeaders(rateLimiterRes, limit, rateLimiterRes.msBeforeNext);
+const tooManyRequests = (res, limit, retryAfterMs) => {
+  const headers = buildHeaders(limit, 0, retryAfterMs);
   res.set(headers);
   return res.status(429).json({
     success: false,
@@ -45,88 +47,115 @@ const tooManyRequests = (res, rateLimiterRes, limit) => {
 };
 
 // ---------------------------------------------------------------------------
-// LIMITER FACTORIES
+// TOKEN BUCKET (RUN & SUBMIT) — Redis Lua Script
+// ---------------------------------------------------------------------------
+
+/**
+ * Atomic Redis Lua script implementing Token Bucket with lazy refilling.
+ * Returns a 3-element array: [ allowed (1/0), remaining_tokens, wait_time_ms ]
+ *
+ * Lazy refill: tokens are calculated on-demand based on time elapsed since the
+ * last request, rather than using a background timer. This is accurate, cheap,
+ * and works correctly across server restarts.
+ */
+const TOKEN_BUCKET_LUA = `
+local key = KEYS[1]
+local capacity = tonumber(ARGV[1])
+local refill_rate = tonumber(ARGV[2]) -- tokens per millisecond
+local now = tonumber(ARGV[3])         -- current timestamp in ms
+local requested = tonumber(ARGV[4])   -- normally 1
+
+local bucket = redis.call("HMGET", key, "tokens", "last_refill")
+local tokens = tonumber(bucket[1])
+local last_refill = tonumber(bucket[2])
+
+if not tokens then
+  tokens = capacity
+  last_refill = now
+else
+  local elapsed = math.max(0, now - last_refill)
+  local refill = elapsed * refill_rate
+  tokens = math.min(capacity, tokens + refill)
+  last_refill = now
+end
+
+if tokens >= requested then
+  tokens = tokens - requested
+  redis.call("HMSET", key, "tokens", tokens, "last_refill", last_refill)
+  return {1, tokens, 0}
+else
+  redis.call("HMSET", key, "tokens", tokens, "last_refill", last_refill)
+  local wait_ms = math.ceil((requested - tokens) / refill_rate)
+  return {0, tokens, wait_ms}
+end
+`;
+
+/**
+ * Executes the token bucket Lua script atomically in Redis.
+ *
+ * @param {string} key             - Redis key scoped to the user (e.g. "rl:run:userId").
+ * @param {number} capacity        - Maximum number of tokens the bucket can hold.
+ * @param {number} refillRatePerSec - Number of tokens refilled per second.
+ * @returns {{ allowed: boolean, remaining: number, waitMs: number }}
+ */
+const consumeTokenBucket = async (key, capacity, refillRatePerSec) => {
+  const now = Date.now();
+  const refillRatePerMs = refillRatePerSec / 1000;
+  const requested = 1;
+
+  const [allowed, remaining, waitMs] = await redisClient.eval(TOKEN_BUCKET_LUA, {
+    keys: [key],
+    arguments: [
+      capacity.toString(),
+      refillRatePerMs.toString(),
+      now.toString(),
+      requested.toString(),
+    ],
+  });
+
+  return {
+    allowed: allowed === 1,
+    remaining: Math.max(0, remaining),
+    waitMs,
+  };
+};
+
+// ---------------------------------------------------------------------------
+// FIXED WINDOW LIMITERS (LOGIN & REGISTER)
 // We create limiters once at module load (not per request) so Redis
 // connections are reused and counters persist across the process lifetime.
 // ---------------------------------------------------------------------------
 
-// --- 1. CODE RUN  (/submission/run/:id) ------------------------------------
-// Token bucket via BurstyRateLimiter:
-//   - Base  : 10 runs per minute  (refills slowly — normal coding pace)
-//   - Burst : 3 extra back-to-back runs are forgiven instantly
-//
-// Why BurstyRateLimiter?  A user debugging will hit "Run" several times in
-// quick succession, then pause to think. Bursting allows that natural rhythm
-// without blocking them, while still capping sustained spam.
-//
-// Key: userId (req.user._id) — per authenticated user, not per IP.
-// userMiddleware runs before this, so req.user is guaranteed.
-
-const runBaseStore = new RateLimiterRedis({
-  storeClient: redisClient,
-  useRedisPackage: true, 
-  keyPrefix: "rl:run:base",
-  points: 10,       // 10 runs …
-  duration: 60,     // … per 60 seconds
-});
-
-const runBurstStore = new RateLimiterMemory({
-  // Burst bucket lives in memory — it's intentionally short-lived (10 s).
-  // Using memory here avoids an extra Redis round-trip for the burst window.
-  keyPrefix: "rl:run:burst",
-  points: 3,        // 3 extra back-to-back runs allowed
-  duration: 10,     // burst window of 10 seconds
-});
-
-const runLimiter = new BurstyRateLimiter(runBaseStore, runBurstStore);
-const RUN_LIMIT = 10; // used only for the header value
-
-// --- 2. CODE SUBMIT  (/submission/submit/:id) --------------------------------
-// Stricter token bucket — submitting is a deliberate final action.
-// No burst bucket here: submitting 3 times in 2 seconds is unusual.
-//
-// 5 submissions per minute keeps legitimate users completely unaffected
-// while stopping automated flooding.
-
-const submitLimiter = new RateLimiterRedis({
-  storeClient: redisClient,
-  useRedisPackage: true, 
-  keyPrefix: "rl:submit",
-  points: 5,        // 5 submissions …
-  duration: 60,     // … per 60 seconds
-});
-const SUBMIT_LIMIT = 5;
-
-// --- 3. LOGIN  (/user/login) -------------------------------------------------
+// --- LOGIN  (/user/login) --------------------------------------------------
 // Fixed window, keyed by IP (user is not authenticated yet).
-//
-// Why fixed window?  Brute force protection only needs a hard wall per time
-// window. Sliding window precision is unnecessary here.
-//
 // Conservative: 10 attempts per 15 minutes.
-// A legitimate user who forgot their password will stay well under this.
-
 const loginLimiter = new RateLimiterRedis({
   storeClient: redisClient,
-  useRedisPackage: true, 
+  useRedisPackage: true,
   keyPrefix: "rl:login",
-  points: 10,       // 10 attempts …
+  points: 10,        // 10 attempts …
   duration: 15 * 60, // … per 15 minutes
 });
 const LOGIN_LIMIT = 10;
 
-// --- 4. REGISTER  (/user/register) -------------------------------------------
+// --- REGISTER  (/user/register) -------------------------------------------
 // More lenient than login — registering 5 times is suspicious but
 // less directly dangerous than brute-forcing credentials.
-
 const registerLimiter = new RateLimiterRedis({
   storeClient: redisClient,
-  useRedisPackage: true, 
+  useRedisPackage: true,
   keyPrefix: "rl:register",
   points: 5,
   duration: 60 * 60, // 5 attempts per hour
 });
 const REGISTER_LIMIT = 5;
+
+// --- TOKEN BUCKET LIMITS (RUN & SUBMIT) -----------------------------------
+const RUN_LIMIT = 3;                      // Max burst capacity of 3 runs
+const RUN_REFILL_RATE_PER_SEC = 4 / 60;   // 1 token every 15 seconds
+
+const SUBMIT_LIMIT = 3;                   // Max burst capacity of 3 submissions
+const SUBMIT_REFILL_RATE_PER_SEC = 2 / 60; // 1 token every 30 seconds
 
 // ---------------------------------------------------------------------------
 // MIDDLEWARE FUNCTIONS
@@ -138,25 +167,26 @@ const REGISTER_LIMIT = 5;
  * Key: authenticated userId (req.user._id set by userMiddleware)
  */
 const limitRunCode = async (req, res, next) => {
-  const key = req.user._id.toString();
+  const key = `rl:run:${req.user._id.toString()}`;
 
   try {
-    const result = await runLimiter.consume(key);
-    // Pass remaining info downstream so controllers can log if needed
-    let header = buildHeaders(result, RUN_LIMIT);
-    res.set(header);
-    console.log(header);
-    next();
-  } catch (rateLimiterRes) {
-    // BurstyRateLimiter throws a RateLimiterRes object (not an Error) when
-    // all points (base + burst) are exhausted.
-    if (rateLimiterRes instanceof Error) {
-      // Genuine unexpected error (e.g. Redis down) — fail open so users
-      // aren't blocked due to infrastructure issues. Log and continue.
-      console.error("[rateLimitMiddleware] runLimiter unexpected error:", rateLimiterRes);
+    const { allowed, remaining, waitMs } = await consumeTokenBucket(
+      key,
+      RUN_LIMIT,
+      RUN_REFILL_RATE_PER_SEC
+    );
+
+    res.set(buildHeaders(RUN_LIMIT, remaining));
+
+    if (allowed) {
       return next();
     }
-    return tooManyRequests(res, rateLimiterRes, RUN_LIMIT);
+
+    return tooManyRequests(res, RUN_LIMIT, waitMs);
+  } catch (error) {
+    // Fail-open: Redis being down must not block users from running code.
+    console.error("[rateLimitMiddleware] limitRunCode unexpected error:", error);
+    return next();
   }
 };
 
@@ -166,18 +196,26 @@ const limitRunCode = async (req, res, next) => {
  * Key: authenticated userId
  */
 const limitSubmitCode = async (req, res, next) => {
-  const key = req.user._id.toString();
+  const key = `rl:submit:${req.user._id.toString()}`;
 
   try {
-    const result = await submitLimiter.consume(key);
-    res.set(buildHeaders(result, SUBMIT_LIMIT));
-    next();
-  } catch (rateLimiterRes) {
-    if (rateLimiterRes instanceof Error) {
-      console.error("[rateLimitMiddleware] submitLimiter unexpected error:", rateLimiterRes);
+    const { allowed, remaining, waitMs } = await consumeTokenBucket(
+      key,
+      SUBMIT_LIMIT,
+      SUBMIT_REFILL_RATE_PER_SEC
+    );
+
+    res.set(buildHeaders(SUBMIT_LIMIT, remaining));
+
+    if (allowed) {
       return next();
     }
-    return tooManyRequests(res, rateLimiterRes, SUBMIT_LIMIT);
+
+    return tooManyRequests(res, SUBMIT_LIMIT, waitMs);
+  } catch (error) {
+    // Fail-open: Redis being down must not block users from submitting code.
+    console.error("[rateLimitMiddleware] limitSubmitCode unexpected error:", error);
+    return next();
   }
 };
 
@@ -186,24 +224,21 @@ const limitSubmitCode = async (req, res, next) => {
  * Applied to: POST /user/login
  * Key: IP address (user not yet authenticated)
  *
- * req.ip works when Express's trust proxy is configured correctly.
- * Falls back to the raw socket address if not.
+ * req.ip works correctly because app.set('trust proxy', 1) is set in index.js.
  */
 const limitLogin = async (req, res, next) => {
-  // x-forwarded-for is only trusted if you've set app.set('trust proxy', 1)
-  // For local dev, req.ip is fine as-is.
   const key = req.ip;
 
   try {
     const result = await loginLimiter.consume(key);
-    res.set(buildHeaders(result, LOGIN_LIMIT));
-    next();
+    res.set(buildHeaders(LOGIN_LIMIT, result.remainingPoints));
+    return next();
   } catch (rateLimiterRes) {
     if (rateLimiterRes instanceof Error) {
       console.error("[rateLimitMiddleware] loginLimiter unexpected error:", rateLimiterRes);
       return next();
     }
-    return tooManyRequests(res, rateLimiterRes, LOGIN_LIMIT);
+    return tooManyRequests(res, LOGIN_LIMIT, rateLimiterRes.msBeforeNext);
   }
 };
 
@@ -217,14 +252,14 @@ const limitRegister = async (req, res, next) => {
 
   try {
     const result = await registerLimiter.consume(key);
-    res.set(buildHeaders(result, REGISTER_LIMIT));
-    next();
+    res.set(buildHeaders(REGISTER_LIMIT, result.remainingPoints));
+    return next();
   } catch (rateLimiterRes) {
     if (rateLimiterRes instanceof Error) {
       console.error("[rateLimitMiddleware] registerLimiter unexpected error:", rateLimiterRes);
       return next();
     }
-    return tooManyRequests(res, rateLimiterRes, REGISTER_LIMIT);
+    return tooManyRequests(res, REGISTER_LIMIT, rateLimiterRes.msBeforeNext);
   }
 };
 

@@ -15,20 +15,13 @@ const CodeEditorPanel = ({
   isSubmitting,
   handleRun,
   handleSubmitCode,
+  runCooldown,   
+  submitCooldown,
 }) => {
-  if (activeRightTab !== "code") {
-    return null;
-  }
+  if (activeRightTab !== "code") return null;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        flex: 1,
-        overflow: "hidden",
-      }}
-    >
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
       <LanguageSelector
         LANGS={LANGS}
         selectedLanguage={selectedLanguage}
@@ -72,6 +65,8 @@ const CodeEditorPanel = ({
           isSubmitting={isSubmitting}
           handleRun={handleRun}
           handleSubmitCode={handleSubmitCode}
+          runCooldown={runCooldown}       
+          submitCooldown={submitCooldown}  
         />
       </div>
     </div>
