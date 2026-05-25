@@ -1,6 +1,6 @@
 # Documentation Index
 
-**Hub for CodeArena / LeetLab (`coding-platform/`)**  
+**Hub for CodeArena / CodeArena (`coding-platform/`)**  
 **Start here:** [recommended_visit.md](./recommended_visit.md) (entry points & first-read path) · [GETTING_STARTED.md](./GETTING_STARTED.md) (run locally)  
 **Last reviewed:** 2026-05-18 (architecture docs synced with auth + problem schema changes)
 
@@ -154,7 +154,7 @@ See **[recommended_visit.md](./recommended_visit.md)** for the full curated path
 ## Repository Map (High Level)
 
 ```
-LeetLab/
+CodeArena/
 └── coding-platform/
     ├── backend/src/     → API, models, Judge0, Cloudinary
     ├── frontend/src/    → React UI

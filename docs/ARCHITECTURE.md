@@ -1,6 +1,6 @@
 # System Architecture
 
-**Project:** CodeArena / LeetLab coding platform  
+**Project:** CodeArena / CodeArena coding platform  
 **Repository layout:** `coding-platform/` (monorepo-style split: `frontend/` + `backend/`)  
 **Last reviewed:** 2026-05-18
 

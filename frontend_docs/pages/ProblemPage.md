@@ -95,6 +95,6 @@ All local React state (no Redux on this page):
 
 - Initial fetch `useEffect` omits `selectedLanguage` from deps — first load uses default `javascript` for starter code only.
 - Solutions tab shows `referenceSolution` when present; fallback message text may not match backend gating rules.
-- Top bar title says "LeetLab · Problem Solver" while brand elsewhere is CodeArena.
+- Top bar title says "CodeArena · Problem Solver" while brand elsewhere is CodeArena.
 
 # Last Reviewed: 2026-05-18
