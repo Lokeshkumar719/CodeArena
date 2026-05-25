@@ -50,7 +50,7 @@ const AdminUpdateList = () => {
             Back
           </button>
           <NavLink to="/" style={{ textDecoration: "none" }}>
-            <span style={s.logo}>LeetLab</span>
+            <span style={s.logo}>CodeArena</span>
           </NavLink>
         </div>
         <NavLink to="/admin" style={{ textDecoration: "none" }}>

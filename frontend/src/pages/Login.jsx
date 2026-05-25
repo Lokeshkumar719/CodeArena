@@ -59,7 +59,7 @@ function Login() {
     <div style={s.page}>
       <div style={s.card}>
         <div style={s.logoArea}>
-          <div style={s.logo}>LeetLab</div>
+          <div style={s.logo}>CodeArena</div>
 
           <div style={s.tagline}>
             Practice. Compete. Improve.

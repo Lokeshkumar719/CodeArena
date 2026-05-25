@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import toast from "react-hot-toast";
 import axiosClient from "../utils/axiosClient";
 
@@ -15,40 +15,63 @@ import CodeEditorPanel from "../components/problem/CodeEditorPanel";
 
 import "./ProblemPage.css";
 
+const LANG_STORAGE_KEY    = (problemId)       => `lang_${problemId}`;
+const CODE_STORAGE_KEY    = (problemId, lang) => `code_${problemId}_${lang}`;
+const INITIAL_STORAGE_KEY = (problemId, lang) => `initial_${problemId}_${lang}`;
+
+const hasUserWrittenCode = (saved, initial) => {
+  if (!saved || saved.trim() === "") return false;
+  if (saved.trim() === initial.trim()) return false;
+  if (saved.trim().length > initial.trim().length) return true;
+  return false;
+};
+
 const ProblemPage = () => {
-  const [problem, setProblem] = useState(null);
+  const [problem,          setProblem]          = useState(null);
   const [selectedLanguage, setSelectedLanguage] = useState("javascript");
-  const [codeMap, setCodeMap] = useState({});   // ← har language ka code alag
-  const [loading, setLoading] = useState(false);
-  const [isRunning, setIsRunning] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [runResult, setRunResult] = useState(null);
-  const [submitResult, setSubmitResult] = useState(null);
-  const [activeLeftTab, setActiveLeftTab] = useState("description");
-  const [activeRightTab, setActiveRightTab] = useState("code");
-  const [leftWidth, setLeftWidth] = useState(50);
-  const [isDragging, setIsDragging] = useState(false);
+  const [codeMap,          setCodeMap]          = useState({});
+  const [codeReady,        setCodeReady]        = useState(false);
+  const [loading,          setLoading]          = useState(false);
+  const [isRunning,        setIsRunning]        = useState(false);
+  const [isSubmitting,     setIsSubmitting]     = useState(false);
+  const [runResult,        setRunResult]        = useState(null);
+  const [submitResult,     setSubmitResult]     = useState(null);
+  const [activeLeftTab,    setActiveLeftTab]    = useState("description");
+  const [activeRightTab,   setActiveRightTab]   = useState("code");
+  const [leftWidth,        setLeftWidth]        = useState(50);
+  const [isDragging,       setIsDragging]       = useState(false);
 
-  const editorRef = useRef(null);
+  const editorRef      = useRef(null);
   const splitLayoutRef = useRef(null);
-  const { problemId } = useParams();
+  const { problemId }  = useParams();
+  const navigate       = useNavigate();
 
+  // ── Restore saved language ───────────────────────────────────────────────
+  useEffect(() => {
+    const saved = localStorage.getItem(LANG_STORAGE_KEY(problemId));
+    if (saved) setSelectedLanguage(saved);
+  }, [problemId]);
+
+  // ── Fetch problem + build codeMap ────────────────────────────────────────
   useEffect(() => {
     const fetchProblem = async () => {
       setLoading(true);
+      setCodeReady(false);
       try {
-        const response = await axiosClient.get(`/problem/problemById/${problemId}`);
-
+        const response    = await axiosClient.get(`/problem/problemById/${problemId}`);
         const problemData = response.data?.data;
 
-        const initialCodeMap={};
+        const map = {};
+        problemData?.startCode?.forEach((sc) => {
+          const initial = sc.initialCode ?? "";
+          const saved   = localStorage.getItem(CODE_STORAGE_KEY(problemId, sc.language));
+          localStorage.setItem(INITIAL_STORAGE_KEY(problemId, sc.language), initial);
+          map[sc.language] = hasUserWrittenCode(saved, initial) ? saved : initial;
+        });
 
-problemData?.startCode?.forEach((sc)=>{
-	initialCodeMap[sc.language]=sc.initialCode || "";
-});
-
-setProblem(problemData);
-setCodeMap(initialCodeMap);
+        setProblem(problemData);
+        setCodeMap(map);
+        setCodeReady(true);
       } catch (error) {
         toast.error("Failed to load problem");
       } finally {
@@ -58,77 +81,64 @@ setCodeMap(initialCodeMap);
     fetchProblem();
   }, [problemId]);
 
-  // ← ye useEffect hataya — yahi code reset ka root cause tha
-  // useEffect(() => {
-  //   if (problem) {
-  //     const initialCode = problem.startCode.find(...)
-  //     setCode(initialCode);
-  //   }
-  // }, [selectedLanguage, problem]);
-
+  // ── Drag resize ──────────────────────────────────────────────────────────
   useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!isDragging) return;
-      if (!splitLayoutRef.current) return;
+    const onMove = (e) => {
+      if (!isDragging || !splitLayoutRef.current) return;
       const rect = splitLayoutRef.current.getBoundingClientRect();
-      const newLeftWidth = ((e.clientX - rect.left) / rect.width) * 100;
-      if (newLeftWidth >= 20 && newLeftWidth <= 80) {
-        setLeftWidth(newLeftWidth);
-      }
+      const next = ((e.clientX - rect.left) / rect.width) * 100;
+      if (next >= 20 && next <= 80) setLeftWidth(next);
     };
-    const handleMouseUp = () => setIsDragging(false);
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
+    const onUp = () => setIsDragging(false);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup",   onUp);
     return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup",   onUp);
     };
   }, [isDragging]);
 
+  // ── Monaco layout on panel resize ───────────────────────────────────────
   useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      if (editorRef.current && typeof editorRef.current.layout === "function") {
-        editorRef.current.layout();
-      }
-    });
+    const id = requestAnimationFrame(() => editorRef.current?.layout?.());
     return () => cancelAnimationFrame(id);
   }, [leftWidth, activeRightTab]);
 
-  // current language
-  const currentCode = codeMap[selectedLanguage] || "";
+  // ── Handlers ─────────────────────────────────────────────────────────────
+  const currentCode = codeMap[selectedLanguage] ?? "";
 
-  
   const handleEditorChange = (value) => {
-    setCodeMap((prev) => ({
-      ...prev,
-      [selectedLanguage]: value || "",
-    }));
+    const v = value ?? "";
+    setCodeMap((prev) => ({ ...prev, [selectedLanguage]: v }));
+    const key     = CODE_STORAGE_KEY(problemId, selectedLanguage);
+    const initial = localStorage.getItem(INITIAL_STORAGE_KEY(problemId, selectedLanguage)) ?? "";
+    if (!hasUserWrittenCode(v, initial)) {
+      localStorage.removeItem(key);
+    } else {
+      localStorage.setItem(key, v);
+    }
   };
 
-  const handleEditorDidMount = (editor) => { editorRef.current = editor; };
-  const handleLanguageChange = (language) => setSelectedLanguage(language);
+  const handleEditorDidMount = (editor) => {
+    editorRef.current = editor;
+  };
+
+  const handleLanguageChange = (language) => {
+    setSelectedLanguage(language);
+    localStorage.setItem(LANG_STORAGE_KEY(problemId), language);
+  };
 
   const handleRun = async () => {
     if (isRunning) return;
-
     setIsRunning(true);
     setRunResult(null);
     try {
-      const response = await axiosClient.post(`/submission/run/${problemId}`, {
-        code: currentCode,
-        language: selectedLanguage,
-      });
-
-      setRunResult(response.data.data);
+      const res = await axiosClient.post(`/submission/run/${problemId}`, { code: currentCode, language: selectedLanguage });
+      setRunResult(res.data.data);
       setActiveRightTab("testcase");
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Run failed");
-
-      setRunResult({
-        success: false,
-        error: error.response?.data?.message || "Internal server error",
-      });
-
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Run failed");
+      setRunResult({ success: false, error: err.response?.data?.message || "Internal server error" });
       setActiveRightTab("testcase");
     } finally {
       setIsRunning(false);
@@ -137,23 +147,14 @@ setCodeMap(initialCodeMap);
 
   const handleSubmitCode = async () => {
     if (isSubmitting) return;
-
     setIsSubmitting(true);
     setSubmitResult(null);
     try {
-      const response = await axiosClient.post(
-        `/submission/submit/${problemId}`,
-        {
-          code: currentCode,
-          language: selectedLanguage,
-        },
-      );
-
-      setSubmitResult(response.data.data);
+      const res = await axiosClient.post(`/submission/submit/${problemId}`, { code: currentCode, language: selectedLanguage });
+      setSubmitResult(res.data.data);
       setActiveRightTab("result");
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Submission failed");
-
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Submission failed");
       setSubmitResult(null);
       setActiveRightTab("result");
     } finally {
@@ -161,85 +162,51 @@ setCodeMap(initialCodeMap);
     }
   };
 
-  const getLanguageForMonaco = (lang) => {
-    switch (lang) {
-      case "javascript": return "javascript";
-      case "java": return "java";
-      case "cpp": return "cpp";
-      default: return "javascript";
-    }
-  };
+  const getLanguageForMonaco = (lang) => ({ javascript: "javascript", java: "java", cpp: "cpp" }[lang] ?? "javascript");
+  const getDifficultyBadge   = (d)    => ({ easy: "badge-easy", medium: "badge-medium", hard: "badge-hard" }[d] ?? "badge-tag");
 
-  const getDifficultyBadge = (difficulty) => {
-    if (difficulty === "easy") return "badge-easy";
-    if (difficulty === "medium") return "badge-medium";
-    if (difficulty === "hard") return "badge-hard";
-    return "badge-tag";
-  };
-
-  const LANGS = [
-    { key: "javascript", label: "JavaScript" },
-    { key: "java", label: "Java" },
-    { key: "cpp", label: "C++" },
-  ];
-
-  const LEFT_TABS = ["description", "editorial", "solutions", "submissions"];
+  const LANGS      = [{ key: "javascript", label: "JavaScript" }, { key: "java", label: "Java" }, { key: "cpp", label: "C++" }];
+  const LEFT_TABS  = ["description", "editorial", "solutions", "submissions"];
   const RIGHT_TABS = ["code", "testcase", "result"];
 
   if (loading && !problem) return <LoadingScreen />;
 
-  const startDragging = (e) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
   return (
     <div className="problem-page">
+      {/* Top Bar — with Back button */}
       <div className="top-bar">
+        <button onClick={() => navigate("/")} className="top-bar-back-btn">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back
+        </button>
         <div className="top-title">CodeArena · Problem Solver</div>
+        {/* Spacer to keep title centered */}
+        <div className="top-bar-spacer" />
       </div>
 
       <div className="split-layout" ref={splitLayoutRef}>
+
         {/* LEFT PANEL */}
         <div className="panel panel-left" style={{ width: `${leftWidth}%` }}>
-          <ProblemTabs
-            tabs={LEFT_TABS}
-            activeTab={activeLeftTab}
-            setActiveTab={setActiveLeftTab}
-          />
+          <ProblemTabs tabs={LEFT_TABS} activeTab={activeLeftTab} setActiveTab={setActiveLeftTab} />
           <div className="panel-content">
             {problem && (
               <>
-                {activeLeftTab === "description" && (
-                  <ProblemDescription
-                    problem={problem}
-                    getDifficultyBadge={getDifficultyBadge}
-                  />
-                )}
-                {activeLeftTab === "editorial" && (
-                  <Editorial
-                    secureUrl={problem.secureUrl}
-                    thumbnailUrl={problem.thumbnailUrl}
-                    duration={problem.duration}
-                  />
-                )}
-                {activeLeftTab === "solutions" && (
+                {activeLeftTab === "description" && <ProblemDescription problem={problem} getDifficultyBadge={getDifficultyBadge} />}
+                {activeLeftTab === "editorial"   && <Editorial secureUrl={problem.secureUrl} thumbnailUrl={problem.thumbnailUrl} duration={problem.duration} />}
+                {activeLeftTab === "solutions"   && (
                   <div>
                     <p className="section-title">Solutions</p>
                     {problem.referenceSolution?.length > 0 ? (
                       problem.referenceSolution.map((sol, i) => (
                         <div key={i} className="solution-card">
-                          <div className="solution-header">
-                            {problem.title} — {sol.language}
-                          </div>
-                          <div className="solution-body">
-                            <pre><code>{sol.completeCode}</code></pre>
-                          </div>
+                          <div className="solution-header">{problem.title} — {sol.language}</div>
+                          <div className="solution-body"><pre><code>{sol.completeCode}</code></pre></div>
                         </div>
                       ))
-                    ) : (
-                      <p className="desc-text">Solutions visible after solving the problem.</p>
-                    )}
+                    ) : <p className="desc-text">Solutions visible after solving the problem.</p>}
                   </div>
                 )}
                 {activeLeftTab === "submissions" && (
@@ -253,78 +220,60 @@ setCodeMap(initialCodeMap);
           </div>
         </div>
 
-        {/* DRAGGABLE DIVIDER */}
+        {/* DIVIDER */}
         <div
           className="divider"
-          onMouseDown={startDragging}
-          onMouseDownCapture={startDragging}
+          onMouseDown={(e) => { e.preventDefault(); setIsDragging(true); }}
           onDragStart={(e) => e.preventDefault()}
         />
 
         {/* RIGHT PANEL */}
         <div
           className="panel panel-right"
-          style={{
-            width: `${100 - leftWidth}%`,
-            display: "flex",
-            flexDirection: "column",
-          }}
+          style={{ width: `${100 - leftWidth}%`, display: "flex", flexDirection: "column", background: "#0d1117" }}
         >
-          <ProblemTabs
-            tabs={RIGHT_TABS}
-            activeTab={activeRightTab}
-            setActiveTab={setActiveRightTab}
-          />
+          <ProblemTabs tabs={RIGHT_TABS} activeTab={activeRightTab} setActiveTab={setActiveRightTab} />
 
-          <div
-            style={{
+          <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", background: "#0d1117" }}>
+            <div style={{
               flex: 1,
               overflow: "hidden",
-              display: "flex",
+              display: activeRightTab === "code" ? "flex" : "none",
               flexDirection: "column",
-            }}
-          >
-            <CodeEditorPanel
-              activeRightTab={activeRightTab}
-              selectedLanguage={selectedLanguage}
-              handleLanguageChange={handleLanguageChange}
-              LANGS={LANGS}
-              getLanguageForMonaco={getLanguageForMonaco}
-              code={currentCode}
-              handleEditorChange={handleEditorChange}
-              handleEditorDidMount={handleEditorDidMount}
-            />
+              background: "#0d1117",
+            }}>
+              {codeReady ? (
+                <CodeEditorPanel
+                  key={selectedLanguage}
+                  activeRightTab="code"
+                  selectedLanguage={selectedLanguage}
+                  handleLanguageChange={handleLanguageChange}
+                  LANGS={LANGS}
+                  getLanguageForMonaco={getLanguageForMonaco}
+                  code={currentCode}
+                  handleEditorChange={handleEditorChange}
+                  handleEditorDidMount={handleEditorDidMount}
+                />
+              ) : (
+                <div style={{ flex: 1, background: "#0d1117" }} />
+              )}
+            </div>
 
-            {activeRightTab === "testcase" && (
-              <TestCasePanel runResult={runResult} />
-            )}
-
-            {activeRightTab === "result" && (
-              <ResultPanel submitResult={submitResult} />
-            )}
+            {activeRightTab === "testcase" && <TestCasePanel runResult={runResult} />}
+            {activeRightTab === "result"   && <ResultPanel   submitResult={submitResult} />}
           </div>
 
           {/* Action Bar */}
-          <div
-            style={{
-              padding: "12px 16px",
-              borderTop: "1px solid #1e293b",
-              background: "#0d1117",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-end",
-              gap: "10px",
-              flexShrink: 0,
-            }}
-          >
-            <button className="run-btn" onClick={handleRun} disabled={isRunning}>
-              {isRunning ? "Running..." : "▶ Run"}
+          <div style={{ padding: "12px 16px", borderTop: "1px solid #1e293b", background: "#0d1117", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "10px", flexShrink: 0 }}>
+            <button className="run-btn"    onClick={handleRun}        disabled={isRunning}>
+              {isRunning    ? "Running..."    : "▶ Run"}
             </button>
             <button className="submit-btn" onClick={handleSubmitCode} disabled={isSubmitting}>
               {isSubmitting ? "Submitting..." : "↗ Submit"}
             </button>
           </div>
         </div>
+
       </div>
     </div>
   );

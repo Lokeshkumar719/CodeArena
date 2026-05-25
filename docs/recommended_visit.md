@@ -83,7 +83,7 @@ Read in this order before diving into admin or video features:
 ## Repository map (high level)
 
 ```
-LeetLab/
+CodeArena/
 └── coding-platform/
     ├── backend/src/       # Express API (port from .env, typically 3000)
     ├── frontend/src/      # Vite + React (default 5173)
