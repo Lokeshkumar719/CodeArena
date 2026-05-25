@@ -49,7 +49,7 @@ const AdminUpdateList = () => {
             Back
           </button>
           <NavLink to="/" style={{ textDecoration: "none" }}>
-            <span style={s.logo}>LeetLab</span>
+            <span style={s.logo}>CodeArena</span>
           </NavLink>
         </div>
         <NavLink to="/admin" style={{ textDecoration: "none" }}>
@@ -102,17 +102,39 @@ const AdminUpdateList = () => {
         </div>
 
         <div style={s.pagination}>
-          <button
-            style={{ ...s.pageBtn, opacity: currentPage === 1 ? 0.4 : 1 }}
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage(p => p - 1)}
-          >← Prev</button>
-          <span style={s.pageInfo}>Page {currentPage} of {totalPages}</span>
-          <button
-            style={{ ...s.pageBtn, opacity: currentPage === totalPages ? 0.4 : 1 }}
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage(p => p + 1)}
-          >Next →</button>
+          <p style={s.showingText}>
+            Showing {(currentPage - 1) * 5 + 1}–{Math.min(currentPage * 5, (currentPage - 1) * 5 + problems.length)} of {totalPages * 5} problems
+          </p>
+          <div style={s.pageRow}>
+            <button
+              style={{ ...s.pageBtn, opacity: currentPage === 1 ? 0.4 : 1 }}
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            >
+              ← Prev
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                style={{
+                  ...s.pageBtn,
+                  ...(page === currentPage ? s.pageBtnActive : {}),
+                }}
+              >
+                {page}
+              </button>
+            ))}
+
+            <button
+              style={{ ...s.pageBtn, opacity: currentPage === totalPages ? 0.4 : 1 }}
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            >
+              Next →
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -138,18 +160,51 @@ const s = {
   tagRow: { display: "flex", flexWrap: "wrap", gap: "6px" },
   tag: { background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: "999px", color: "#a5b4fc", fontSize: "11px", fontWeight: 600, padding: "3px 9px" },
   updateBtn: { background: "rgba(234,179,8,0.1)", border: "1px solid rgba(234,179,8,0.25)", borderRadius: "8px", color: "#eab308", fontSize: "13px", fontWeight: 600, padding: "7px 16px", cursor: "pointer", fontFamily: "'Sora', sans-serif" },
-  pagination: { display: "flex", justifyContent: "center", alignItems: "center", gap: "16px", marginTop: "32px" },
-  pageBtn: { background: "#0c1018", border: "1px solid #1e2738", borderRadius: "8px", color: "#9ca3af", fontSize: "13px", fontWeight: 600, padding: "8px 18px", cursor: "pointer", fontFamily: "'Sora', sans-serif" },
-  pageInfo: { fontSize: "13px", color: "#4b5563", fontWeight: 500 },
+  pagination: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "12px",
+    marginTop: "32px",
+  },
+  showingText: {
+    fontSize: "13px",
+    color: "#4b5563",
+    fontWeight: 500,
+    margin: 0,
+  },
+  pageRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+  pageBtn: {
+    background: "#0c1018",
+    border: "1px solid #1e2738",
+    borderRadius: "8px",
+    color: "#9ca3af",
+    fontSize: "13px",
+    fontWeight: 600,
+    padding: "8px 14px",
+    cursor: "pointer",
+    fontFamily: "'Sora', sans-serif",
+    minWidth: "40px",
+    textAlign: "center",
+  },
+  pageBtnActive: {
+    background: "#4f46e5",
+    border: "1px solid #6366f1",
+    color: "#fff",
+  },
 };
 
 const getDifficultyStyle = (difficulty) => {
   const base = { borderRadius: "999px", fontSize: "11px", fontWeight: 600, padding: "3px 10px", textTransform: "capitalize" };
   switch (difficulty?.toLowerCase()) {
-    case "easy":   return { ...base, background: "rgba(34,197,94,0.1)",  color: "#22c55e", border: "1px solid rgba(34,197,94,0.2)" };
+    case "easy": return { ...base, background: "rgba(34,197,94,0.1)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.2)" };
     case "medium": return { ...base, background: "rgba(234,179,8,0.1)", color: "#eab308", border: "1px solid rgba(234,179,8,0.2)" };
-    case "hard":   return { ...base, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" };
-    default:       return { ...base, background: "rgba(99,102,241,0.1)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.2)" };
+    case "hard": return { ...base, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" };
+    default: return { ...base, background: "rgba(99,102,241,0.1)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.2)" };
   }
 };
 

@@ -229,18 +229,18 @@ function AdminPanel() {
       {/* Navbar */}
       <nav style={s.navbar}>
         <div style={s.navLeft}>
-          <button
-            onClick={() => navigate(-1)}
-            style={s.backBtn}
-          >
-            ← Back
+          <button onClick={() => navigate(-1)} style={s.backBtn}>
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
           </button>
 
           <NavLink
             to="/"
             style={{ textDecoration: "none" }}
           >
-            <span style={s.logo}>LeetLab</span>
+            <span style={s.logo}>CodeArena</span>
           </NavLink>
         </div>
 
@@ -510,21 +510,21 @@ function AdminPanel() {
 
                     {field.value?.length >
                       0 && (
-                      <div style={s.tagWrap}>
-                        {field.value.map(
-                          (tag) => (
-                            <span
-                              key={tag}
-                              style={
-                                s.tagPill
-                              }
-                            >
-                              {tag}
-                            </span>
-                          )
-                        )}
-                      </div>
-                    )}
+                        <div style={s.tagWrap}>
+                          {field.value.map(
+                            (tag) => (
+                              <span
+                                key={tag}
+                                style={
+                                  s.tagPill
+                                }
+                              >
+                                {tag}
+                              </span>
+                            )
+                          )}
+                        </div>
+                      )}
 
                     {errors.tags && (
                       <p style={s.errorText}>
@@ -679,14 +679,14 @@ function TestCaseSection({
             append(
               visible
                 ? {
-                    input: "",
-                    output: "",
-                    explanation: "",
-                  }
+                  input: "",
+                  output: "",
+                  explanation: "",
+                }
                 : {
-                    input: "",
-                    output: "",
-                  }
+                  input: "",
+                  output: "",
+                }
             )
           }
         >
@@ -778,14 +778,7 @@ const s = {
     gap: "20px",
   },
 
-  backBtn: {
-    background: "transparent",
-    border: "1px solid #1e2738",
-    borderRadius: "8px",
-    color: "#9ca3af",
-    padding: "8px 14px",
-    cursor: "pointer",
-  },
+  backBtn: { display: "flex", alignItems: "center", gap: "6px", background: "transparent", border: "1px solid #1e2738", borderRadius: "8px", color: "#9ca3af", fontSize: "13px", fontWeight: 600, padding: "6px 14px", cursor: "pointer", fontFamily: "'Sora', sans-serif" },
 
   logo: {
     fontSize: "20px",

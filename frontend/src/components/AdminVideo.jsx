@@ -18,11 +18,7 @@ const AdminVideo = () => {
   const fetchProblems = async (page = 1) => {
     try {
       setLoading(true);
-
-      const { data } = await axiosClient.get(
-        `/problem/getAllProblems?page=${page}&limit=5`,
-      );
-
+      const { data } = await axiosClient.get(`/problem/getAllProblems?page=${page}&limit=5`);
       setProblems(data.data.problems || []);
       setCurrentPage(data.data.currentPage || 1);
       setTotalPages(data.data.totalPages || 1);
@@ -34,23 +30,14 @@ const AdminVideo = () => {
     }
   };
 
-  if (loading) return <div style={{ minHeight: "100vh", background: "#080c14" }} />;
   const handleDeleteVideo = async (problemId) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this video?",
-    );
-
-    if (!confirmed) {
-      return;
-    }
+    const confirmed = window.confirm("Are you sure you want to delete this video?");
+    if (!confirmed) return;
 
     try {
       setDeletingId(problemId);
-
       const response = await axiosClient.delete(`/video/delete/${problemId}`);
-
       toast.success(response.data.message);
-
       fetchProblems(currentPage);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -59,20 +46,8 @@ const AdminVideo = () => {
     }
   };
 
-  const getDifficultyBadge = (difficulty) => {
-    if (difficulty === "easy") {
-      return "badge-success";
-    }
-    
-    if (difficulty === "medium") {
-      return "badge-warning";
-    }   
+  if (loading) return <div style={{ minHeight: "100vh", background: "#080c14" }} />;
 
-    if (difficulty === "hard") {
-      return "badge-error";
-    } 
-    return "badge-primary";
-    };
   if (error) return (
     <div style={{ minHeight: "100vh", background: "#080c14", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Sora', sans-serif" }}>
       <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "12px", padding: "20px 28px", color: "#f87171" }}>{error}</div>
@@ -91,7 +66,7 @@ const AdminVideo = () => {
             Back
           </button>
           <NavLink to="/" style={{ textDecoration: "none" }}>
-            <span style={s.logo}>LeetLab</span>
+            <span style={s.logo}>CodeArena</span>
           </NavLink>
         </div>
         <NavLink to="/admin" style={s.adminLink}>
@@ -130,12 +105,25 @@ const AdminVideo = () => {
                     </div>
                   </td>
                   <td style={s.td}>
-                    <button
-                      onClick={() => navigate(`/admin/upload/${problem._id}`)}
-                      style={s.uploadBtn}
-                    >
-                      Upload Video
-                    </button>
+                    <div style={s.actionRow}>
+                      <button
+                        onClick={() => navigate(`/admin/upload/${problem._id}`)}
+                        style={s.uploadBtn}
+                      >
+                        ↑ Upload Video
+                      </button>
+                      <button
+                        onClick={() => handleDeleteVideo(problem._id)}
+                        disabled={deletingId === problem._id}
+                        style={{
+                          ...s.deleteBtn,
+                          opacity: deletingId === problem._id ? 0.6 : 1,
+                          cursor: deletingId === problem._id ? "not-allowed" : "pointer",
+                        }}
+                      >
+                        {deletingId === problem._id ? "Deleting..." : "✕ Delete Video"}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -145,17 +133,39 @@ const AdminVideo = () => {
 
         {/* Pagination */}
         <div style={s.pagination}>
-          <button
-            style={{ ...s.pageBtn, opacity: currentPage === 1 ? 0.4 : 1 }}
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage(p => p - 1)}
-          >← Prev</button>
-          <span style={s.pageInfo}>Page {currentPage} of {totalPages}</span>
-          <button
-            style={{ ...s.pageBtn, opacity: currentPage === totalPages ? 0.4 : 1 }}
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage(p => p + 1)}
-          >Next →</button>
+          <p style={s.showingText}>
+            Showing {(currentPage - 1) * 5 + 1}–{Math.min(currentPage * 5, (currentPage - 1) * 5 + problems.length)} of {totalPages * 5} problems
+          </p>
+          <div style={s.pageRow}>
+            <button
+              style={{ ...s.pageBtn, opacity: currentPage === 1 ? 0.4 : 1 }}
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            >
+              ← Prev
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                style={{
+                  ...s.pageBtn,
+                  ...(page === currentPage ? s.pageBtnActive : {}),
+                }}
+              >
+                {page}
+              </button>
+            ))}
+
+            <button
+              style={{ ...s.pageBtn, opacity: currentPage === totalPages ? 0.4 : 1 }}
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            >
+              Next →
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -181,19 +191,23 @@ const s = {
   td: { padding: "16px 20px", fontSize: "14px", color: "#9ca3af", verticalAlign: "middle" },
   tagRow: { display: "flex", flexWrap: "wrap", gap: "6px" },
   tag: { background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: "999px", color: "#a5b4fc", fontSize: "11px", fontWeight: 600, padding: "3px 9px" },
-  uploadBtn: { background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: "8px", color: "#a5b4fc", fontSize: "13px", fontWeight: 600, padding: "7px 16px", cursor: "pointer", fontFamily: "'Sora', sans-serif" },
-  pagination: { display: "flex", justifyContent: "center", alignItems: "center", gap: "16px", marginTop: "32px" },
-  pageBtn: { background: "#0c1018", border: "1px solid #1e2738", borderRadius: "8px", color: "#9ca3af", fontSize: "13px", fontWeight: 600, padding: "8px 18px", cursor: "pointer", fontFamily: "'Sora', sans-serif" },
-  pageInfo: { fontSize: "13px", color: "#4b5563", fontWeight: 500 },
+  actionRow: { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" },
+  uploadBtn: { background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: "8px", color: "#a5b4fc", fontSize: "13px", fontWeight: 600, padding: "7px 16px", cursor: "pointer", fontFamily: "'Sora', sans-serif", whiteSpace: "nowrap" },
+  deleteBtn: { background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "8px", color: "#f87171", fontSize: "13px", fontWeight: 600, padding: "7px 16px", fontFamily: "'Sora', sans-serif", whiteSpace: "nowrap" },
+  pagination: { display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", marginTop: "32px" },
+  pageBtn: { background: "#0c1018", border: "1px solid #1e2738", borderRadius: "8px", color: "#9ca3af", fontSize: "13px", fontWeight: 600, padding: "8px 14px", cursor: "pointer", fontFamily: "'Sora', sans-serif", minWidth: "40px" },
+  showingText: { fontSize: "13px", color: "#4b5563", fontWeight: 500, margin: 0 },
+  pageRow: { display: "flex", alignItems: "center", gap: "8px" },
+  pageBtnActive: { background: "#4f46e5", border: "1px solid #6366f1", color: "#fff" },
 };
 
 const getDifficultyStyle = (difficulty) => {
   const base = { borderRadius: "999px", fontSize: "11px", fontWeight: 600, padding: "3px 10px", textTransform: "capitalize" };
   switch (difficulty?.toLowerCase()) {
-    case "easy":   return { ...base, background: "rgba(34,197,94,0.1)",  color: "#22c55e", border: "1px solid rgba(34,197,94,0.2)" };
+    case "easy": return { ...base, background: "rgba(34,197,94,0.1)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.2)" };
     case "medium": return { ...base, background: "rgba(234,179,8,0.1)", color: "#eab308", border: "1px solid rgba(234,179,8,0.2)" };
-    case "hard":   return { ...base, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" };
-    default:       return { ...base, background: "rgba(99,102,241,0.1)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.2)" };
+    case "hard": return { ...base, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" };
+    default: return { ...base, background: "rgba(99,102,241,0.1)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.2)" };
   }
 };
 

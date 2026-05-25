@@ -51,14 +51,14 @@ function Admin() {
       {/* Navbar */}
       <nav style={s.navbar}>
         <div style={s.navLeft}>
-          <button onClick={() => navigate(-1)} style={s.backBtn}>
+          <button onClick={() => navigate("/")} style={s.backBtn}>
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
             Back
           </button>
           <NavLink to="/" style={{ textDecoration: "none" }}>
-            <span style={s.logo}>LeetLab</span>
+            <span style={s.logo}>CodeArena</span>
           </NavLink>
         </div>
         <span style={s.adminBox}>Admin Dashboard</span>
