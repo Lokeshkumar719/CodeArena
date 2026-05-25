@@ -1,84 +1,16 @@
-const { getLanguageById } = require("../utils/problemUtility");
-const { submitBatch, submitToken } = require("../services/judge0Service");
-const { JUDGE0_STATUS } = require("../constants/judgeStatus");
 const Problem = require("../models/problems");
 const User = require("../models/user");
 const Submission = require("../models/submission");
 const SolutionVideo = require("../models/solutionVideo");
-const mongoose = require("mongoose");
 const asyncHandler = require("../utils/asyncHandler");
 const STATUS_CODES = require("../constants/statusCodes");
 const ApiError = require("../utils/ApiError");
+const validateReferenceSolutions = require("../services/problem/validateReferenceSolutions");
+const validateObjectId = require("../utils/validateObjectId");
+const attachVideoDetails = require("../services/problem/attachVideoDetails");
 
 const createProblem = asyncHandler(async (req, res) => {
-  const {
-    title,
-    description,
-    difficulty,
-    tags,
-    visibleTestCases,
-    hiddenTestCases,
-    startCode,
-    problemCreater,
-    referenceSolution,
-  } = req.body;
-
-  for (const { language, completeCode } of referenceSolution) {
-    const languageId = getLanguageById(language);
-
-    if (!languageId) {
-      throw new ApiError(
-        STATUS_CODES.BAD_REQUEST,
-        `Unsupported language: ${language}`,
-      );
-    }
-
-    const submission = visibleTestCases.map((testCase) => ({
-      source_code: completeCode,
-      language_id: languageId,
-      stdin: testCase.input,
-      expected_output: testCase.output,
-    }));
-
-    const submitResult = await submitBatch(submission);
-
-    const resultTokens = submitResult.map((result) => result.token);
-
-    const testResult = await submitToken(resultTokens);
-
-    for (const test of testResult) {
-      if (test.status_id !== JUDGE0_STATUS.ACCEPTED) {
-        throw new ApiError(
-          STATUS_CODES.BAD_REQUEST,
-          `Reference solution failed for ${language}`,
-        );
-      }
-    }
-  }
-
-  await Problem.create({
-    ...req.body,
-    problemCreator: req.user._id,
-  });
-
-  return res.status(STATUS_CODES.CREATED).json({
-    success: true,
-    message: "Problem created successfully",
-  });
-});
-
-const updateProblem = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-
-  const { referenceSolution, visibleTestCases } = req.body;
-
-  if (!id) {
-    throw new ApiError(STATUS_CODES.BAD_REQUEST, "Problem id is required");
-  }
-
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    throw new ApiError(STATUS_CODES.BAD_REQUEST, "Invalid problem id");
-  }
+  const { referenceSolution, visibleTestCases, hiddenTestCases } = req.body;
 
   if (!Array.isArray(referenceSolution)) {
     throw new ApiError(
@@ -94,44 +26,67 @@ const updateProblem = asyncHandler(async (req, res) => {
     );
   }
 
+  if (!Array.isArray(hiddenTestCases)) {
+    throw new ApiError(
+      STATUS_CODES.BAD_REQUEST,
+      "Hidden testcases are required",
+    );
+  }
+
+  // validate reference solutions against all testcases
+  const allTestCases = [...visibleTestCases, ...hiddenTestCases];
+
+  await validateReferenceSolutions(referenceSolution, allTestCases);
+
+  await Problem.create({
+    ...req.body,
+    problemCreator: req.user._id,
+  });
+
+  return res.status(STATUS_CODES.CREATED).json({
+    success: true,
+    message: "Problem created successfully",
+  });
+});
+
+const updateProblem = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  validateObjectId(id);
+
+  const { referenceSolution, visibleTestCases, hiddenTestCases } = req.body;
+
+  if (!Array.isArray(referenceSolution)) {
+    throw new ApiError(
+      STATUS_CODES.BAD_REQUEST,
+      "Reference solution is required",
+    );
+  }
+
+  if (!Array.isArray(visibleTestCases)) {
+    throw new ApiError(
+      STATUS_CODES.BAD_REQUEST,
+      "Visible testcases are required",
+    );
+  }
+
+  if (!Array.isArray(hiddenTestCases)) {
+    throw new ApiError(
+      STATUS_CODES.BAD_REQUEST,
+      "Hidden testcases are required",
+    );
+  }
+
   const dsaProblem = await Problem.findById(id);
 
   if (!dsaProblem) {
     throw new ApiError(STATUS_CODES.NOT_FOUND, "Problem not found");
   }
 
-  for (const { language, completeCode } of referenceSolution) {
-    const languageId = getLanguageById(language);
+  // validate reference solutions against all testcases
+  const allTestCases = [...visibleTestCases, ...hiddenTestCases];
 
-    if (!languageId) {
-      throw new ApiError(
-        STATUS_CODES.BAD_REQUEST,
-        `Unsupported language: ${language}`,
-      );
-    }
-
-    const submission = visibleTestCases.map((testCase) => ({
-      source_code: completeCode,
-      language_id: languageId,
-      stdin: testCase.input,
-      expected_output: testCase.output,
-    }));
-
-    const submitResult = await submitBatch(submission);
-
-    const resultTokens = submitResult.map((result) => result.token);
-
-    const testResult = await submitToken(resultTokens);
-
-    for (const test of testResult) {
-      if (test.status_id !== JUDGE0_STATUS.ACCEPTED) {
-        throw new ApiError(
-          STATUS_CODES.BAD_REQUEST,
-          `Reference solution failed for ${language}`,
-        );
-      }
-    }
-  }
+  await validateReferenceSolutions(referenceSolution, allTestCases);
 
   const newProblem = await Problem.findByIdAndUpdate(
     id,
@@ -152,9 +107,7 @@ const updateProblem = asyncHandler(async (req, res) => {
 const deleteProblem = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  if (!id) {
-    throw new ApiError(STATUS_CODES.BAD_REQUEST, "Problem id is required");
-  }
+  validateObjectId(id);
 
   const problemToDelete = await Problem.findById(id);
 
@@ -162,6 +115,27 @@ const deleteProblem = asyncHandler(async (req, res) => {
     throw new ApiError(STATUS_CODES.NOT_FOUND, "Problem not found");
   }
 
+  // delete related submissions
+  await Submission.deleteMany({
+    problemId: id,
+  });
+
+  // delete related solution videos
+  await SolutionVideo.deleteMany({
+    problemId: id,
+  });
+
+  // remove problem from solved list
+  await User.updateMany(
+    {},
+    {
+      $pull: {
+        problemSolved: id,
+      },
+    },
+  );
+
+  // delete actual problem
   await Problem.findByIdAndDelete(id);
 
   return res.status(STATUS_CODES.OK).json({
@@ -173,78 +147,42 @@ const deleteProblem = asyncHandler(async (req, res) => {
 const getProblemByIdAdmin = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  if (!id) {
-    throw new ApiError(STATUS_CODES.BAD_REQUEST, "Problem id is required");
-  }
+  validateObjectId(id);
 
   const reqdProblem = await Problem.findById(id).select(
-    "_id title description inputFormat outputFormat constraints difficulty tags visibleTestCases hiddenTestCases startCode referenceSolution",
+    "_id title description inputFormat outputFormat constraints timeLimit memoryLimit difficulty tags visibleTestCases hiddenTestCases startCode referenceSolution",
   );
 
   if (!reqdProblem) {
     throw new ApiError(STATUS_CODES.NOT_FOUND, "Problem not found");
   }
 
-  const videos = await SolutionVideo.findOne({
-    problemId: id,
-  });
-
-  if (videos) {
-    const responseData = {
-      ...reqdProblem.toObject(),
-      secureUrl: videos.secureUrl,
-      thumbnailUrl: videos.thumbnailUrl,
-      duration: videos.duration,
-    };
-
-    return res.status(STATUS_CODES.OK).json({
-      success: true,
-      data: responseData,
-    });
-  }
+  const responseData = await attachVideoDetails(reqdProblem, id);
 
   return res.status(STATUS_CODES.OK).json({
     success: true,
-    data: reqdProblem,
+    data: responseData,
   });
 });
 
 const getProblemById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  if (!id) {
-    throw new ApiError(STATUS_CODES.BAD_REQUEST, "Problem id is required");
-  }
+  validateObjectId(id);
 
   const reqdProblem = await Problem.findById(id).select(
-    "_id title description inputFormat outputFormat constraints difficulty tags visibleTestCases startCode referenceSolution",
+    "_id title description inputFormat outputFormat constraints timeLimit memoryLimit difficulty tags visibleTestCases startCode referenceSolution",
   );
 
   if (!reqdProblem) {
     throw new ApiError(STATUS_CODES.NOT_FOUND, "Problem not found");
   }
 
-  const videos = await SolutionVideo.findOne({
-    problemId: id,
-  });
-
-  if (videos) {
-    const responseData = {
-      ...reqdProblem.toObject(),
-      secureUrl: videos.secureUrl,
-      thumbnailUrl: videos.thumbnailUrl,
-      duration: videos.duration,
-    };
-
-    return res.status(STATUS_CODES.OK).json({
-      success: true,
-      data: responseData,
-    });
-  }
+  const responseData = await attachVideoDetails(reqdProblem, id);
 
   return res.status(STATUS_CODES.OK).json({
     success: true,
-    data: reqdProblem,
+    data: responseData,
   });
 });
 
@@ -279,12 +217,10 @@ const getAllProblems = asyncHandler(async (req, res) => {
 
 const solvedProblems = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-
   const user = await User.findById(userId).populate({
     path: "problemSolved",
     select: "_id title difficulty tags",
   });
-
   return res.status(STATUS_CODES.OK).json({
     success: true,
     data: user.problemSolved,
@@ -293,14 +229,12 @@ const solvedProblems = asyncHandler(async (req, res) => {
 
 const submittedProblem = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-
   const problemId = req.params.id;
-
+  validateObjectId(problemId);
   const ans = await Submission.find({
     userId,
     problemId,
-  });
-
+  }).sort({ createdAt: -1 });
   return res.status(STATUS_CODES.OK).json({
     success: true,
     data: ans,

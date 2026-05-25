@@ -17,7 +17,7 @@ export const registerUser = createAsyncThunk(
       }
       return rejectWithValue(error.response?.data?.message || "Something went wrong");
     }
-  }
+  },
 );
 
 export const loginUser = createAsyncThunk(
@@ -35,7 +35,7 @@ export const loginUser = createAsyncThunk(
       }
       return rejectWithValue(error.response?.data?.message || "Something went wrong");
     }
-  }
+  },
 );
 
 export const checkAuth = createAsyncThunk(
@@ -84,6 +84,13 @@ const authSlice = createSlice({
 
   reducers: {
     clearError: (state) => {
+      state.error = null;
+    },
+
+    resetAuthState: (state) => {
+      state.user = null;
+      state.isAuthenticated = false;
+      state.loading = false;
       state.error = null;
     },
   },
@@ -166,6 +173,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError } = authSlice.actions;
-
+export const { clearError, resetAuthState } =
+  authSlice.actions;
 export default authSlice.reducer;

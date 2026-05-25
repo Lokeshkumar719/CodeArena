@@ -8,16 +8,54 @@ const axiosClient = axios.create({
   },
 });
 
-// Enrich 429 errors with `rateLimitedFor` so callers never touch HTTP status codes
+/*
+  Axios response interceptor
+
+  Handles two cases:
+  1. 429 Too Many Requests — enriches error with `rateLimitedFor` so callers
+     never need to parse HTTP status codes or response bodies themselves.
+
+  2. 401 Unauthorized — silently attempts token refresh and retries the
+     original request. If refresh also fails, rejects and lets the app
+     redirect to login.
+*/
 axiosClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+
+  async (error) => {
+    const originalRequest = error.config;
+
+    // --- 429 Rate Limit ---
+    // Attach retryAfterSeconds from body so every caller just checks
+    // error.rateLimitedFor without touching HTTP internals
     if (error.response?.status === 429) {
-      // Backend always sends retryAfterSeconds in the body (see tooManyRequests())
       error.rateLimitedFor = error.response.data?.retryAfterSeconds ?? 10;
+      return Promise.reject(error);
     }
+
+    // --- 401 Unauthorized — silent token refresh ---
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      originalRequest.url !== "/user/refresh"
+    ) {
+      originalRequest._retry = true;
+
+      try {
+        // Backend verifies refresh token and sets new access token cookie
+        await axiosClient.post("/user/refresh");
+
+        // Retry the original request with the new token
+        return axiosClient(originalRequest);
+      } catch (refreshError) {
+        // Refresh token also expired — session is fully gone
+        console.log("Refresh token expired");
+        return Promise.reject(refreshError);
+      }
+    }
+
     return Promise.reject(error);
-  }
+  },
 );
 
 export default axiosClient;

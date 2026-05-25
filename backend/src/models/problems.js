@@ -65,6 +65,16 @@ const problemSchema = new Schema({
     required: true,
     trim: true,
   },
+  timeLimit: {
+    type: Number,
+    required: true,
+    default: 2,
+  },
+  memoryLimit: {
+    type: Number,
+    required: true,
+    default: 256000,
+  },
   visibleTestCases: [
     {
       input: {

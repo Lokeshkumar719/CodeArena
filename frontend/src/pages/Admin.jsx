@@ -1,37 +1,37 @@
 import { Plus, Edit, Trash2, Video, ArrowRight } from "lucide-react";
-
-import { NavLink } from "react-router";
+import { NavLink, useNavigate } from "react-router";
 
 function Admin() {
+  const navigate = useNavigate();
   const adminOptions = [
     {
       id: "create",
       title: "Create Problem",
-      description:
-        "Add new coding problems, test cases and starter templates to the platform.",
+      description: "Add new coding problems, test cases and starter templates to the platform.",
       icon: Plus,
-      color: "btn-success",
-      bgColor: "bg-success/10",
+      accent: "#22c55e",
+      accentBg: "rgba(34,197,94,0.08)",
+      accentBorder: "rgba(34,197,94,0.2)",
       route: "/admin/create",
     },
     {
       id: "update",
       title: "Update Problem",
-      description:
-        "Edit existing problems, modify solutions and manage problem details.",
+      description: "Edit existing problems, modify solutions and manage problem details.",
       icon: Edit,
-      color: "btn-warning",
-      bgColor: "bg-warning/10",
+      accent: "#eab308",
+      accentBg: "rgba(234,179,8,0.08)",
+      accentBorder: "rgba(234,179,8,0.2)",
       route: "/admin/update-list",
     },
     {
       id: "delete",
       title: "Delete Problem",
-      description:
-        "Remove outdated or invalid coding problems from the platform.",
+      description: "Remove outdated or invalid coding problems from the platform.",
       icon: Trash2,
-      color: "btn-error",
-      bgColor: "bg-error/10",
+      accent: "#ef4444",
+      accentBg: "rgba(239,68,68,0.08)",
+      accentBorder: "rgba(239,68,68,0.2)",
       route: "/admin/delete",
     },
     {
@@ -39,68 +39,69 @@ function Admin() {
       title: "Video Problem",
       description: "Upload and manage editorial videos for coding problems.",
       icon: Video,
-      color: "btn-info",
-      bgColor: "bg-info/10",
+      accent: "#a5b4fc",
+      accentBg: "rgba(99,102,241,0.08)",
+      accentBorder: "rgba(99,102,241,0.2)",
       route: "/admin/video",
     },
   ];
 
   return (
-    <div className="min-h-screen bg-base-200">
-      <div className="container mx-auto px-4 sm:px-6 py-10">
-        {/* Header */}
-        <div className="text-center mb-14">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-base-content mb-4">
-            Admin Dashboard
-          </h1>
+    <div style={s.page}>
+      {/* Navbar */}
+      <nav style={s.navbar}>
+        <div style={s.navLeft}>
+          <button onClick={() => navigate(-1)} style={s.backBtn}>
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
+          <NavLink to="/" style={{ textDecoration: "none" }}>
+            <span style={s.logo}>LeetLab</span>
+          </NavLink>
+        </div>
+        <span style={s.adminBox}>Admin Dashboard</span>
+      </nav>
 
-          <p className="text-lg text-base-content/70 max-w-2xl mx-auto leading-relaxed">
-            Manage coding problems, editorial videos and platform content from
-            one central dashboard.
+      <div style={s.main}>
+        {/* Header */}
+        <div style={s.header}>
+          <h1 style={s.heading}>Admin Dashboard</h1>
+          <p style={s.subheading}>
+            Manage coding problems, editorial videos and platform content from one central dashboard.
           </p>
         </div>
 
-        {/* Admin Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8 max-w-7xl mx-auto">
+        {/* Cards */}
+        <div style={s.grid}>
           {adminOptions.map((option) => {
-            const IconComponent = option.icon;
-
+            const Icon = option.icon;
             return (
-              <div
-                key={option.id}
-                className="group relative overflow-hidden rounded-3xl bg-base-100 border border-base-300 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
-              >
-                {/* Glow Effect */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
-
-                <div className="card-body items-center text-center p-10 relative z-10">
-                  {/* Icon */}
-                  <div
-                    className={`${option.bgColor} p-5 rounded-2xl mb-6 transition-transform duration-500 group-hover:scale-110`}
-                  >
-                    <IconComponent size={36} className="text-base-content" />
-                  </div>
-
-                  {/* Title */}
-                  <h2 className="card-title text-2xl font-bold mb-3">
-                    {option.title}
-                  </h2>
-
-                  {/* Description */}
-                  <p className="text-base-content/70 mb-8 leading-relaxed">
-                    {option.description}
-                  </p>
-
-                  {/* Button */}
-                  <NavLink
-                    to={option.route}
-                    className={`btn ${option.color} btn-wide group-hover:scale-105 transition-transform duration-300`}
-                  >
-                    {option.title}
-
-                    <ArrowRight size={18} />
-                  </NavLink>
+              <div key={option.id} style={s.card}>
+                {/* Icon */}
+                <div style={{
+                  ...s.iconBox,
+                  background: option.accentBg,
+                  border: `1px solid ${option.accentBorder}`,
+                }}>
+                  <Icon size={28} color={option.accent} />
                 </div>
+
+                {/* Text */}
+                <h2 style={s.cardTitle}>{option.title}</h2>
+                <p style={s.cardDesc}>{option.description}</p>
+
+                {/* Button */}
+                <NavLink to={option.route} style={{
+                  ...s.cardBtn,
+                  background: option.accentBg,
+                  border: `1px solid ${option.accentBorder}`,
+                  color: option.accent,
+                }}>
+                  {option.title}
+                  <ArrowRight size={15} />
+                </NavLink>
               </div>
             );
           })}
@@ -109,5 +110,114 @@ function Admin() {
     </div>
   );
 }
+
+const s = {
+  page: {
+    minHeight: "100vh",
+    background: "#080c14",
+    fontFamily: "'Sora', sans-serif",
+    color: "#c9d1d9",
+  },
+  navbar: {
+    height: "64px",
+    background: "#080c14",
+    borderBottom: "1px solid #1e2738",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "0 40px",
+    position: "sticky",
+    top: 0,
+    zIndex: 100,
+  },
+  logo: {
+    fontSize: "20px",
+    fontWeight: 700,
+    color: "#a5b4fc",
+  },
+  navLeft: { display: "flex", alignItems: "center", gap: "20px" },
+  backBtn: { display: "flex", alignItems: "center", gap: "6px", background: "transparent", border: "1px solid #1e2738", borderRadius: "8px", color: "#9ca3af", fontSize: "13px", fontWeight: 600, padding: "6px 14px", cursor: "pointer", fontFamily: "'Sora', sans-serif" },
+  adminBox: {
+    fontSize: "13px",
+    color: "#6b7280",
+    fontWeight: 500,
+    border: "1px solid #1e2738",
+    borderRadius: "8px",
+    padding: "6px 14px",
+    background: "#0c1018",
+  },
+  main: {
+    padding: "60px 40px",
+    maxWidth: "1400px",
+    margin: "0 auto",
+  },
+  header: {
+    textAlign: "center",
+    marginBottom: "56px",
+  },
+  heading: {
+    fontSize: "36px",
+    fontWeight: 700,
+    color: "#f9fafb",
+    marginBottom: "14px",
+  },
+  subheading: {
+    fontSize: "15px",
+    color: "#6b7280",
+    maxWidth: "520px",
+    margin: "0 auto",
+    lineHeight: 1.7,
+  },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: "24px",
+  },
+  card: {
+    background: "#0c1018",
+    border: "1px solid #1e2738",
+    borderRadius: "20px",
+    padding: "36px 32px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+    transition: "border-color 0.2s ease, transform 0.2s ease",
+  },
+  iconBox: {
+    width: "56px",
+    height: "56px",
+    borderRadius: "14px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cardTitle: {
+    fontSize: "18px",
+    fontWeight: 700,
+    color: "#f9fafb",
+    margin: 0,
+  },
+  cardDesc: {
+    fontSize: "14px",
+    color: "#6b7280",
+    lineHeight: 1.7,
+    margin: 0,
+    flex: 1,
+  },
+  cardBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "10px 18px",
+    borderRadius: "10px",
+    fontSize: "13px",
+    fontWeight: 700,
+    textDecoration: "none",
+    cursor: "pointer",
+    alignSelf: "flex-start",
+    marginTop: "8px",
+    fontFamily: "'Sora', sans-serif",
+  },
+};
 
 export default Admin;

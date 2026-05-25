@@ -4,8 +4,13 @@ const {
   register,
   login,
   logout,
+  refreshAccessToken,
   adminRegister,
   deleteProfile,
+  testMail,
+  forgotPassword,
+  resetPassword,
+  changePassword,
 } = require("../controllers/userAuthenticate");
 const userMiddleware = require("../middlewares/userMiddleware");
 const adminMiddleware = require("../middlewares/adminMiddleware");
@@ -16,6 +21,10 @@ authRouter.post("/register",limitLogin, register);
 authRouter.post("/login",limitRegister ,login);
 // before logout we need to check whether the user is authenticated or not so we will use userMiddleware
 authRouter.post("/logout", userMiddleware, logout);
+authRouter.post("/refresh", refreshAccessToken);
+authRouter.post("/forgot-password", forgotPassword);
+authRouter.post("/reset-password/:token", resetPassword);
+authRouter.post("/change-password", userMiddleware, changePassword);
 // authRouter.post('/getProfile',getProfile);
 authRouter.post(
   "/admin/Register",
@@ -39,5 +48,7 @@ authRouter.get("/check", userMiddleware, (req, res) => {
     data: reply,
   });
 });
+
+authRouter.get("/test-mail", testMail);
 
 module.exports = authRouter;

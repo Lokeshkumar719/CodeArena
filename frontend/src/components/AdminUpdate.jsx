@@ -3,7 +3,7 @@ import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import axiosClient from "../utils/axiosClient";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, NavLink } from "react-router";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "../utils/errorHandler";
 
@@ -37,18 +37,9 @@ const tagOptions = [
 ];
 
 const languageOptions = [
-  {
-    value: "cpp",
-    label: "C++",
-  },
-  {
-    value: "java",
-    label: "Java",
-  },
-  {
-    value: "javascript",
-    label: "JavaScript",
-  },
+  { value: "cpp", label: "C++" },
+  { value: "java", label: "Java" },
+  { value: "javascript", label: "JavaScript" },
 ];
 
 const problemSchema = z.object({
@@ -59,8 +50,21 @@ const problemSchema = z.object({
   outputFormat: z.string().min(1, "Output format is required"),
   constraints: z.string().min(1, "Constraints are required"),
 
+  timeLimit: z.coerce
+    .number()
+    .min(1, "Time limit must be at least 1 second"),
+
+  memoryLimit: z.coerce
+    .number()
+    .min(1024, "Memory limit must be at least 1024 KB"),
+
   tags: z
-    .array(z.string().refine((tag) => tagOptions.includes(tag), "Invalid tag"))
+    .array(
+      z.string().refine(
+        (tag) => tagOptions.includes(tag),
+        "Invalid tag"
+      )
+    )
     .min(1, "At least one tag is required"),
 
   visibleTestCases: z
@@ -69,7 +73,7 @@ const problemSchema = z.object({
         input: z.string().min(1, "Input is required"),
         output: z.string().min(1, "Output is required"),
         explanation: z.string().min(1, "Explanation is required"),
-      }),
+      })
     )
     .min(1, "At least one visible test case required"),
 
@@ -78,7 +82,7 @@ const problemSchema = z.object({
       z.object({
         input: z.string().min(1, "Input is required"),
         output: z.string().min(1, "Output is required"),
-      }),
+      })
     )
     .min(1, "At least one hidden test case required"),
 
@@ -87,27 +91,78 @@ const problemSchema = z.object({
       z.object({
         language: z.enum(["cpp", "java", "javascript"]),
         initialCode: z.string().min(1, "Initial code is required"),
-      }),
+      })
     )
-    .length(3, "All three languages required"),
+    .length(3),
 
   referenceSolution: z
     .array(
       z.object({
         language: z.enum(["cpp", "java", "javascript"]),
         completeCode: z.string().min(1, "Complete code is required"),
-      }),
+      })
     )
-    .length(3, "All three languages required"),
+    .length(3),
 });
+
+function TestCaseBlock({
+  fields,
+  register,
+  remove,
+  type,
+  visible,
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      {fields.map((field, index) => (
+        <div key={field.id} style={s.caseCard}>
+          <div style={s.caseHeader}>
+            <span style={s.caseTitle}>
+              {visible ? "Case" : "Hidden Case"} {index + 1}
+            </span>
+
+            <button
+              type="button"
+              style={s.removeBtn}
+              onClick={() => remove(index)}
+            >
+              Remove
+            </button>
+          </div>
+
+          <textarea
+            {...register(`${type}.${index}.input`)}
+            placeholder="Input"
+            rows={3}
+            style={s.codeArea}
+          />
+
+          <textarea
+            {...register(`${type}.${index}.output`)}
+            placeholder="Output"
+            rows={2}
+            style={s.codeArea}
+          />
+
+          {visible && (
+            <textarea
+              {...register(`${type}.${index}.explanation`)}
+              placeholder="Explanation"
+              rows={2}
+              style={s.textarea}
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function AdminUpdate() {
   const navigate = useNavigate();
-
   const { id } = useParams();
 
   const [loading, setLoading] = useState(true);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -121,11 +176,8 @@ function AdminUpdate() {
 
     defaultValues: {
       difficulty: "easy",
-
-      tags: [],
-      inputFormat: "",
-      outputFormat: "",
-      constraints: "",
+      timeLimit: 2,
+      memoryLimit: 256000,
 
       visibleTestCases: [
         {
@@ -142,35 +194,15 @@ function AdminUpdate() {
         },
       ],
 
-      startCode: [
-        {
-          language: "cpp",
-          initialCode: "",
-        },
-        {
-          language: "java",
-          initialCode: "",
-        },
-        {
-          language: "javascript",
-          initialCode: "",
-        },
-      ],
+      startCode: languageOptions.map((lang) => ({
+        language: lang.value,
+        initialCode: "",
+      })),
 
-      referenceSolution: [
-        {
-          language: "cpp",
-          completeCode: "",
-        },
-        {
-          language: "java",
-          completeCode: "",
-        },
-        {
-          language: "javascript",
-          completeCode: "",
-        },
-      ],
+      referenceSolution: languageOptions.map((lang) => ({
+        language: lang.value,
+        completeCode: "",
+      })),
     },
   });
 
@@ -190,14 +222,13 @@ function AdminUpdate() {
   } = useFieldArray({
     control,
     name: "hiddenTestCases",
-    keyName: "fieldId",
   });
 
   useEffect(() => {
     const fetchProblem = async () => {
       try {
         const response = await axiosClient.get(
-          `/problem/admin/problemById/${id}`,
+          `/problem/admin/problemById/${id}`
         );
 
         reset(response.data.data);
@@ -237,194 +268,262 @@ function AdminUpdate() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <span className="loading loading-spinner loading-lg"></span>
+      <div style={s.loadingContainer}>
+        Loading problem...
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">Update Problem</h1>
+    <div style={s.page}>
+      <nav style={s.navbar}>
+        <div style={s.navLeft}>
+          <button
+            onClick={() => navigate(-1)}
+            style={s.backBtn}
+          >
+            ← Back
+          </button>
 
-      <form
-        onSubmit={handleSubmit(onSubmit, () => {
-          toast.error("Please fix validation errors");
-        })}
-        className="space-y-6"
-      >
-        {/* Basic Information */}
-        <div className="card bg-base-100 shadow-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Basic Information</h2>
+          <NavLink
+            to="/"
+            style={{ textDecoration: "none" }}
+          >
+            <span style={s.logo}>LeetLab</span>
+          </NavLink>
+        </div>
 
-          <div className="space-y-4">
-            {/* Title */}
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">Title</span>
-              </label>
+        <NavLink
+          to="/admin"
+          style={s.adminLink}
+        >
+          <span style={s.adminBox}>
+            Admin Dashboard
+          </span>
+        </NavLink>
+      </nav>
+
+      <div style={s.main}>
+        <div style={s.header}>
+          <h1 style={s.heading}>Update Problem</h1>
+
+          <p style={s.subheading}>
+            Edit the details of this coding problem
+          </p>
+        </div>
+
+        <form
+          onSubmit={handleSubmit(onSubmit, () => {
+            toast.error("Please fix validation errors");
+          })}
+        >
+          <div style={s.card}>
+            <h2 style={s.cardTitle}>
+              Basic Information
+            </h2>
+
+            <div style={s.formGroup}>
+              <label style={s.label}>Title</label>
 
               <input
                 {...register("title")}
-                className={`input input-bordered ${
-                  errors.title && "input-error"
-                }`}
+                style={{
+                  ...s.input,
+                  ...(errors.title ? s.inputError : {}),
+                }}
+                placeholder="Problem title"
               />
 
               {errors.title && (
-                <span className="text-error">{errors.title.message}</span>
+                <p style={s.errorText}>
+                  {errors.title.message}
+                </p>
               )}
             </div>
 
-            {/* Description */}
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">Description</span>
+            <div style={s.formGroup}>
+              <label style={s.label}>
+                Description
               </label>
 
               <textarea
                 {...register("description")}
-                className={`textarea textarea-bordered h-32 ${
-                  errors.description && "textarea-error"
-                }`}
+                rows={5}
+                style={{
+                  ...s.textarea,
+                  ...(errors.description
+                    ? s.inputError
+                    : {}),
+                }}
+                placeholder="Problem description..."
               />
 
               {errors.description && (
-                <span className="text-error">{errors.description.message}</span>
+                <p style={s.errorText}>
+                  {errors.description.message}
+                </p>
               )}
             </div>
-            {/* Input Format */}
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">Input Format</span>
+
+            <div style={s.formGroup}>
+              <label style={s.label}>
+                Input Format
               </label>
 
               <textarea
                 {...register("inputFormat")}
-                className={`textarea textarea-bordered h-24 ${
-                  errors.inputFormat && "textarea-error"
-                }`}
+                rows={3}
+                style={s.textarea}
               />
-
-              {errors.inputFormat && (
-                <span className="text-error">{errors.inputFormat.message}</span>
-              )}
             </div>
 
-            {/* Output Format */}
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">Output Format</span>
+            <div style={s.formGroup}>
+              <label style={s.label}>
+                Output Format
               </label>
 
               <textarea
                 {...register("outputFormat")}
-                className={`textarea textarea-bordered h-24 ${
-                  errors.outputFormat && "textarea-error"
-                }`}
+                rows={3}
+                style={s.textarea}
               />
-
-              {errors.outputFormat && (
-                <span className="text-error">
-                  {errors.outputFormat.message}
-                </span>
-              )}
             </div>
 
-            {/* Constraints */}
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">Constraints</span>
+            <div style={s.formGroup}>
+              <label style={s.label}>
+                Constraints
               </label>
 
               <textarea
                 {...register("constraints")}
-                className={`textarea textarea-bordered h-24 ${
-                  errors.constraints && "textarea-error"
-                }`}
+                rows={3}
+                style={s.textarea}
               />
-
-              {errors.constraints && (
-                <span className="text-error">{errors.constraints.message}</span>
-              )}
             </div>
 
-            <div className="flex gap-4">
-              {/* Difficulty */}
-              <div className="form-control w-1/2">
-                <label className="label">
-                  <span className="label-text">Difficulty</span>
+            <div style={s.row}>
+              <div style={s.formGroupFlex}>
+                <label style={s.label}>
+                  Time Limit
+                </label>
+
+                <input
+                  type="number"
+                  min="1"
+                  {...register("timeLimit")}
+                  style={{
+                    ...s.input,
+                    ...(errors.timeLimit
+                      ? s.inputError
+                      : {}),
+                  }}
+                />
+              </div>
+
+              <div style={s.formGroupFlex}>
+                <label style={s.label}>
+                  Memory Limit
+                </label>
+
+                <input
+                  type="number"
+                  min="1024"
+                  {...register("memoryLimit")}
+                  style={{
+                    ...s.input,
+                    ...(errors.memoryLimit
+                      ? s.inputError
+                      : {}),
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={s.row}>
+              <div style={s.formGroupFlex}>
+                <label style={s.label}>
+                  Difficulty
                 </label>
 
                 <select
                   {...register("difficulty")}
-                  className={`select select-bordered ${
-                    errors.difficulty && "select-error"
-                  }`}
+                  style={s.select}
                 >
                   <option value="easy">Easy</option>
-                  <option value="medium">Medium</option>
+                  <option value="medium">
+                    Medium
+                  </option>
                   <option value="hard">Hard</option>
                 </select>
               </div>
 
-              {/* Tags */}
               <Controller
                 name="tags"
                 control={control}
                 render={({ field }) => (
-                  <div className="form-control w-1/2">
-                    <label className="label">
-                      <span className="label-text">Tags</span>
+                  <div
+                    style={{
+                      ...s.formGroupFlex,
+                      flex: 2,
+                    }}
+                  >
+                    <label style={s.label}>
+                      Tags
                     </label>
 
                     <select
                       multiple
                       value={field.value || []}
-                      onChange={(e) => {
-                        const values = Array.from(
-                          e.target.selectedOptions,
-                          (option) => option.value,
-                        );
-
-                        field.onChange(values);
+                      onChange={(e) =>
+                        field.onChange(
+                          Array.from(
+                            e.target.selectedOptions,
+                            (o) => o.value
+                          )
+                        )
+                      }
+                      style={{
+                        ...s.select,
+                        height: "160px",
                       }}
-                      className={`select select-bordered h-64 ${
-                        errors.tags && "select-error"
-                      }`}
                     >
                       {tagOptions.map((tag) => (
-                        <option key={tag} value={tag}>
+                        <option
+                          key={tag}
+                          value={tag}
+                        >
                           {tag}
                         </option>
                       ))}
                     </select>
 
-                    <span className="text-sm opacity-70 mt-1">
-                      Hold Cmd (Mac) or Ctrl (Windows) to select multiple tags
-                    </span>
-
-                    {errors.tags && (
-                      <span className="text-error">{errors.tags.message}</span>
+                    {field.value?.length > 0 && (
+                      <div style={s.tagWrapper}>
+                        {field.value.map((tag) => (
+                          <span
+                            key={tag}
+                            style={s.tagPill}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
                     )}
                   </div>
                 )}
               />
             </div>
           </div>
-        </div>
 
-        {/* Test Cases */}
-        <div className="card bg-base-100 shadow-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Test Cases</h2>
-
-          {/* Visible Test Cases */}
-          <div className="space-y-4 mb-6">
-            <div className="flex justify-between items-center">
-              <h3 className="font-medium">Visible Test Cases</h3>
+          <div style={s.card}>
+            <div style={s.sectionHeader}>
+              <h2 style={s.cardTitle}>
+                Visible Test Cases
+              </h2>
 
               <button
                 type="button"
+                style={s.addBtn}
                 onClick={() =>
                   appendVisible({
                     input: "",
@@ -432,244 +531,362 @@ function AdminUpdate() {
                     explanation: "",
                   })
                 }
-                className="btn btn-sm btn-primary"
               >
-                Add Visible Case
+                + Add Case
               </button>
             </div>
 
-            {visibleFields.map((field, index) => (
-              <div key={field.id} className="border p-4 rounded-lg space-y-3">
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => removeVisible(index)}
-                    className="btn btn-xs btn-error"
-                  >
-                    Remove
-                  </button>
-                </div>
-
-                <textarea
-                  {...register(`visibleTestCases.${index}.input`)}
-                  placeholder="Input"
-                  className={`textarea textarea-bordered w-full font-mono whitespace-pre ${
-                    errors.visibleTestCases?.[index]?.input
-                      ? "textarea-error"
-                      : ""
-                  }`}
-                  rows={4}
-                />
-
-                {errors.visibleTestCases?.[index]?.input && (
-                  <span className="text-error text-sm">
-                    {errors.visibleTestCases[index].input.message}
-                  </span>
-                )}
-
-                <textarea
-                  {...register(`visibleTestCases.${index}.output`)}
-                  placeholder="Output"
-                  className={`textarea textarea-bordered w-full font-mono whitespace-pre ${
-                    errors.visibleTestCases?.[index]?.output
-                      ? "textarea-error"
-                      : ""
-                  }`}
-                  rows={3}
-                />
-
-                {errors.visibleTestCases?.[index]?.output && (
-                  <span className="text-error text-sm">
-                    {errors.visibleTestCases[index].output.message}
-                  </span>
-                )}
-
-                <textarea
-                  {...register(`visibleTestCases.${index}.explanation`)}
-                  placeholder="Explanation"
-                  className={`textarea textarea-bordered w-full whitespace-pre ${
-                    errors.visibleTestCases?.[index]?.explanation
-                      ? "textarea-error"
-                      : ""
-                  }`}
-                  rows={3}
-                />
-
-                {errors.visibleTestCases?.[index]?.explanation && (
-                  <span className="text-error text-sm">
-                    {errors.visibleTestCases[index].explanation.message}
-                  </span>
-                )}
-              </div>
-            ))}
-            {errors.visibleTestCases?.message && (
-              <span className="text-error">
-                {errors.visibleTestCases.message}
-              </span>
-            )}
+            <TestCaseBlock
+              fields={visibleFields}
+              register={register}
+              remove={removeVisible}
+              type="visibleTestCases"
+              visible
+            />
           </div>
 
-          {/* Hidden Test Cases */}
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="font-medium">Hidden Test Cases</h3>
+          <div style={s.card}>
+            <div style={s.sectionHeader}>
+              <h2 style={s.cardTitle}>
+                Hidden Test Cases
+              </h2>
 
               <button
                 type="button"
+                style={s.addBtn}
                 onClick={() =>
                   appendHidden({
                     input: "",
                     output: "",
                   })
                 }
-                className="btn btn-sm btn-primary"
               >
-                Add Hidden Case
+                + Add Case
               </button>
             </div>
 
-            {hiddenFields.map((field, index) => (
-              <div
-                key={field.fieldId}
-                className="border p-4 rounded-lg space-y-3"
-              >
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => removeHidden(index)}
-                    className="btn btn-xs btn-error"
-                  >
-                    Remove
-                  </button>
-                </div>
-
-                <textarea
-                  {...register(`hiddenTestCases.${index}.input`)}
-                  placeholder="Input"
-                  className={`textarea textarea-bordered w-full font-mono whitespace-pre ${
-                    errors.hiddenTestCases?.[index]?.input
-                      ? "textarea-error"
-                      : ""
-                  }`}
-                  rows={4}
-                />
-
-                {errors.hiddenTestCases?.[index]?.input && (
-                  <span className="text-error text-sm">
-                    {errors.hiddenTestCases[index].input.message}
-                  </span>
-                )}
-
-                <textarea
-                  {...register(`hiddenTestCases.${index}.output`)}
-                  placeholder="Output"
-                  className={`textarea textarea-bordered w-full font-mono whitespace-pre ${
-                    errors.hiddenTestCases?.[index]?.output
-                      ? "textarea-error"
-                      : ""
-                  }`}
-                  rows={3}
-                />
-
-                {errors.hiddenTestCases?.[index]?.output && (
-                  <span className="text-error text-sm">
-                    {errors.hiddenTestCases[index].output.message}
-                  </span>
-                )}
-              </div>
-            ))}
-            {errors.hiddenTestCases?.message && (
-              <span className="text-error">
-                {errors.hiddenTestCases.message}
-              </span>
-            )}
+            <TestCaseBlock
+              fields={hiddenFields}
+              register={register}
+              remove={removeHidden}
+              type="hiddenTestCases"
+            />
           </div>
-        </div>
 
-        {/* Code Templates */}
-        <div className="card bg-base-100 shadow-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Code Templates</h2>
+          <div style={s.card}>
+            <h2 style={s.cardTitle}>
+              Code Templates
+            </h2>
 
-          <div className="space-y-6">
-            {languageOptions.map((language, index) => (
-              <div key={language.value} className="space-y-2">
-                <h3 className="font-medium">{language.label}</h3>
+            <div style={s.langContainer}>
+              {languageOptions.map((lang, index) => (
+                <div key={lang.value}>
+                  <span style={s.langBadge}>
+                    {lang.label}
+                  </span>
 
-                {/* Initial Code */}
-                {/* Initial Code */}
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text">Initial Code</span>
-                  </label>
-
-                  <pre className="bg-base-300 p-4 rounded-lg">
+                  <div style={{ marginTop: "14px" }}>
                     <textarea
-                      {...register(`startCode.${index}.initialCode`)}
-                      className={`w-full bg-transparent font-mono whitespace-pre ${
-                        errors.startCode?.[index]?.initialCode
-                          ? "textarea-error"
-                          : ""
-                      }`}
-                      rows={6}
+                      {...register(
+                        `startCode.${index}.initialCode`
+                      )}
+                      rows={7}
+                      style={s.codeArea}
+                      placeholder={`// ${lang.label} starter code`}
                     />
-                  </pre>
 
-                  {errors.startCode?.[index]?.initialCode && (
-                    <span className="text-error text-sm">
-                      {errors.startCode[index].initialCode.message}
-                    </span>
-                  )}
-                </div>
-
-                {/* Reference Solution */}
-                {/* Reference Solution */}
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text">Reference Solution</span>
-                  </label>
-
-                  <pre className="bg-base-300 p-4 rounded-lg">
                     <textarea
-                      {...register(`referenceSolution.${index}.completeCode`)}
-                      className={`w-full bg-transparent font-mono whitespace-pre ${
-                        errors.referenceSolution?.[index]?.completeCode
-                          ? "textarea-error"
-                          : ""
-                      }`}
-                      rows={6}
+                      {...register(
+                        `referenceSolution.${index}.completeCode`
+                      )}
+                      rows={7}
+                      style={s.codeArea}
+                      placeholder={`// ${lang.label} solution`}
                     />
-                  </pre>
-
-                  {errors.referenceSolution?.[index]?.completeCode && (
-                    <span className="text-error text-sm">
-                      {errors.referenceSolution[index].completeCode.message}
-                    </span>
-                  )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className={`btn btn-primary w-full ${
-            isSubmitting ? "btn-disabled" : ""
-          }`}
-        >
-          {isSubmitting ? (
-            <>
-              <span className="loading loading-spinner loading-sm"></span>
-              Updating Problem...
-            </>
-          ) : (
-            "Update Problem"
-          )}
-        </button>
-      </form>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            style={{
+              ...s.submitBtn,
+              opacity: isSubmitting ? 0.7 : 1,
+            }}
+          >
+            {isSubmitting
+              ? "Updating Problem..."
+              : "Update Problem"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
+
+const s = {
+  page: {
+    minHeight: "100vh",
+    background: "#080c14",
+    color: "#c9d1d9",
+    fontFamily: "'Sora', sans-serif",
+  },
+
+  loadingContainer: {
+    minHeight: "100vh",
+    background: "#080c14",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    color: "#9ca3af",
+  },
+
+  navbar: {
+    height: "64px",
+    borderBottom: "1px solid #1e2738",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "0 40px",
+  },
+
+  navLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: "20px",
+  },
+
+  backBtn: {
+    background: "transparent",
+    border: "1px solid #1e2738",
+    borderRadius: "8px",
+    color: "#9ca3af",
+    padding: "8px 14px",
+    cursor: "pointer",
+  },
+
+  logo: {
+    fontSize: "20px",
+    fontWeight: 700,
+    color: "#a5b4fc",
+  },
+
+  adminLink: {
+    textDecoration: "none",
+  },
+
+  adminBox: {
+    border: "1px solid #1e2738",
+    borderRadius: "8px",
+    padding: "8px 14px",
+    color: "#6b7280",
+  },
+
+  main: {
+    maxWidth: "900px",
+    margin: "0 auto",
+    padding: "40px",
+  },
+
+  header: {
+    marginBottom: "32px",
+  },
+
+  heading: {
+    fontSize: "28px",
+    fontWeight: 700,
+    color: "#f9fafb",
+  },
+
+  subheading: {
+    color: "#6b7280",
+    marginTop: "6px",
+  },
+
+  card: {
+    background: "#0c1018",
+    border: "1px solid #1e2738",
+    borderRadius: "16px",
+    padding: "28px",
+    marginBottom: "24px",
+  },
+
+  cardTitle: {
+    fontSize: "18px",
+    fontWeight: 700,
+    marginBottom: "18px",
+  },
+
+  formGroup: {
+    marginBottom: "16px",
+  },
+
+  formGroupFlex: {
+    flex: 1,
+    minWidth: "180px",
+  },
+
+  row: {
+    display: "flex",
+    gap: "20px",
+    flexWrap: "wrap",
+    marginBottom: "20px",
+  },
+
+  label: {
+    display: "block",
+    marginBottom: "8px",
+    fontSize: "12px",
+    color: "#6b7280",
+    fontWeight: 700,
+    textTransform: "uppercase",
+  },
+
+  input: {
+    width: "100%",
+    background: "#080c14",
+    border: "1px solid #1e2738",
+    borderRadius: "10px",
+    color: "#e2e8f0",
+    padding: "10px 14px",
+    boxSizing: "border-box",
+  },
+
+  textarea: {
+    width: "100%",
+    background: "#080c14",
+    border: "1px solid #1e2738",
+    borderRadius: "10px",
+    color: "#e2e8f0",
+    padding: "10px 14px",
+    boxSizing: "border-box",
+    resize: "vertical",
+    marginBottom: "10px",
+  },
+
+  codeArea: {
+    width: "100%",
+    background: "#080c14",
+    border: "1px solid #1e2738",
+    borderRadius: "10px",
+    color: "#e2e8f0",
+    padding: "10px 14px",
+    boxSizing: "border-box",
+    resize: "vertical",
+    marginBottom: "10px",
+    fontFamily: "monospace",
+  },
+
+  select: {
+    width: "100%",
+    background: "#080c14",
+    border: "1px solid #1e2738",
+    borderRadius: "10px",
+    color: "#e2e8f0",
+    padding: "10px 14px",
+  },
+
+  inputError: {
+    borderColor: "#ef4444",
+  },
+
+  errorText: {
+    color: "#f87171",
+    fontSize: "12px",
+    marginTop: "5px",
+  },
+
+  tagWrapper: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "6px",
+    marginTop: "10px",
+  },
+
+  tagPill: {
+    background: "rgba(99,102,241,0.1)",
+    border: "1px solid rgba(99,102,241,0.2)",
+    borderRadius: "999px",
+    color: "#a5b4fc",
+    padding: "4px 10px",
+    fontSize: "12px",
+  },
+
+  sectionHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "18px",
+  },
+
+  addBtn: {
+    background: "rgba(99,102,241,0.1)",
+    border: "1px solid rgba(99,102,241,0.25)",
+    borderRadius: "8px",
+    color: "#a5b4fc",
+    padding: "8px 14px",
+    cursor: "pointer",
+  },
+
+  removeBtn: {
+    background: "rgba(239,68,68,0.08)",
+    border: "1px solid rgba(239,68,68,0.2)",
+    borderRadius: "6px",
+    color: "#f87171",
+    padding: "4px 10px",
+    cursor: "pointer",
+  },
+
+  caseCard: {
+    background: "#080c14",
+    border: "1px solid #1e2738",
+    borderRadius: "12px",
+    padding: "16px",
+  },
+
+  caseHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "12px",
+  },
+
+  caseTitle: {
+    fontSize: "12px",
+    fontWeight: 700,
+    color: "#4b5563",
+    textTransform: "uppercase",
+  },
+
+  langContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "28px",
+  },
+
+  langBadge: {
+    background: "rgba(234,179,8,0.1)",
+    border: "1px solid rgba(234,179,8,0.25)",
+    borderRadius: "8px",
+    color: "#eab308",
+    padding: "4px 12px",
+    fontSize: "12px",
+    fontWeight: 600,
+  },
+
+  submitBtn: {
+    width: "100%",
+    background: "rgba(99,102,241,0.15)",
+    border: "1px solid rgba(99,102,241,0.35)",
+    borderRadius: "10px",
+    color: "#a5b4fc",
+    padding: "14px",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+};
 
 export default AdminUpdate;
