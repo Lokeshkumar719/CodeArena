@@ -118,7 +118,7 @@ const AdminVideo = () => {
                         style={{
                           ...s.deleteBtn,
                           opacity: deletingId === problem._id ? 0.6 : 1,
-                          cursor:  deletingId === problem._id ? "not-allowed" : "pointer",
+                          cursor: deletingId === problem._id ? "not-allowed" : "pointer",
                         }}
                       >
                         {deletingId === problem._id ? "Deleting..." : "✕ Delete Video"}
@@ -133,17 +133,39 @@ const AdminVideo = () => {
 
         {/* Pagination */}
         <div style={s.pagination}>
-          <button
-            style={{ ...s.pageBtn, opacity: currentPage === 1 ? 0.4 : 1 }}
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage(p => p - 1)}
-          >← Prev</button>
-          <span style={s.pageInfo}>Page {currentPage} of {totalPages}</span>
-          <button
-            style={{ ...s.pageBtn, opacity: currentPage === totalPages ? 0.4 : 1 }}
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage(p => p + 1)}
-          >Next →</button>
+          <p style={s.showingText}>
+            Showing {(currentPage - 1) * 5 + 1}–{Math.min(currentPage * 5, (currentPage - 1) * 5 + problems.length)} of {totalPages * 5} problems
+          </p>
+          <div style={s.pageRow}>
+            <button
+              style={{ ...s.pageBtn, opacity: currentPage === 1 ? 0.4 : 1 }}
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            >
+              ← Prev
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                style={{
+                  ...s.pageBtn,
+                  ...(page === currentPage ? s.pageBtnActive : {}),
+                }}
+              >
+                {page}
+              </button>
+            ))}
+
+            <button
+              style={{ ...s.pageBtn, opacity: currentPage === totalPages ? 0.4 : 1 }}
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            >
+              Next →
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -151,39 +173,41 @@ const AdminVideo = () => {
 };
 
 const s = {
-  page:      { minHeight: "100vh", background: "#080c14", fontFamily: "'Sora', sans-serif", color: "#c9d1d9" },
-  navbar:    { height: "64px", background: "#080c14", borderBottom: "1px solid #1e2738", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 40px", position: "sticky", top: 0, zIndex: 100 },
-  navLeft:   { display: "flex", alignItems: "center", gap: "20px" },
-  backBtn:   { display: "flex", alignItems: "center", gap: "6px", background: "transparent", border: "1px solid #1e2738", borderRadius: "8px", color: "#9ca3af", fontSize: "13px", fontWeight: 600, padding: "6px 14px", cursor: "pointer", fontFamily: "'Sora', sans-serif" },
-  logo:      { fontSize: "20px", fontWeight: 700, color: "#a5b4fc" },
+  page: { minHeight: "100vh", background: "#080c14", fontFamily: "'Sora', sans-serif", color: "#c9d1d9" },
+  navbar: { height: "64px", background: "#080c14", borderBottom: "1px solid #1e2738", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 40px", position: "sticky", top: 0, zIndex: 100 },
+  navLeft: { display: "flex", alignItems: "center", gap: "20px" },
+  backBtn: { display: "flex", alignItems: "center", gap: "6px", background: "transparent", border: "1px solid #1e2738", borderRadius: "8px", color: "#9ca3af", fontSize: "13px", fontWeight: 600, padding: "6px 14px", cursor: "pointer", fontFamily: "'Sora', sans-serif" },
+  logo: { fontSize: "20px", fontWeight: 700, color: "#a5b4fc" },
   adminLink: { textDecoration: "none" },
-  adminBox:  { fontSize: "13px", color: "#6b7280", fontWeight: 500, border: "1px solid #1e2738", borderRadius: "8px", padding: "6px 14px", background: "#0c1018" },
-  main:      { padding: "48px 40px", maxWidth: "1200px", margin: "0 auto" },
-  header:    { marginBottom: "36px" },
-  heading:   { fontSize: "28px", fontWeight: 700, color: "#f9fafb", marginBottom: "8px" },
-  subheading:{ fontSize: "14px", color: "#6b7280" },
+  adminBox: { fontSize: "13px", color: "#6b7280", fontWeight: 500, border: "1px solid #1e2738", borderRadius: "8px", padding: "6px 14px", background: "#0c1018" },
+  main: { padding: "48px 40px", maxWidth: "1200px", margin: "0 auto" },
+  header: { marginBottom: "36px" },
+  heading: { fontSize: "28px", fontWeight: 700, color: "#f9fafb", marginBottom: "8px" },
+  subheading: { fontSize: "14px", color: "#6b7280" },
   tableWrap: { background: "#0c1018", border: "1px solid #1e2738", borderRadius: "16px", overflow: "hidden" },
-  table:     { width: "100%", borderCollapse: "collapse" },
-  th:        { padding: "14px 20px", textAlign: "left", fontSize: "12px", fontWeight: 700, color: "#4b5563", textTransform: "uppercase", letterSpacing: "0.06em", background: "#0a0e18", borderBottom: "1px solid #1e2738" },
-  tr:        { borderBottom: "1px solid #1e2738" },
-  td:        { padding: "16px 20px", fontSize: "14px", color: "#9ca3af", verticalAlign: "middle" },
-  tagRow:    { display: "flex", flexWrap: "wrap", gap: "6px" },
-  tag:       { background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: "999px", color: "#a5b4fc", fontSize: "11px", fontWeight: 600, padding: "3px 9px" },
+  table: { width: "100%", borderCollapse: "collapse" },
+  th: { padding: "14px 20px", textAlign: "left", fontSize: "12px", fontWeight: 700, color: "#4b5563", textTransform: "uppercase", letterSpacing: "0.06em", background: "#0a0e18", borderBottom: "1px solid #1e2738" },
+  tr: { borderBottom: "1px solid #1e2738" },
+  td: { padding: "16px 20px", fontSize: "14px", color: "#9ca3af", verticalAlign: "middle" },
+  tagRow: { display: "flex", flexWrap: "wrap", gap: "6px" },
+  tag: { background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: "999px", color: "#a5b4fc", fontSize: "11px", fontWeight: 600, padding: "3px 9px" },
   actionRow: { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" },
   uploadBtn: { background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: "8px", color: "#a5b4fc", fontSize: "13px", fontWeight: 600, padding: "7px 16px", cursor: "pointer", fontFamily: "'Sora', sans-serif", whiteSpace: "nowrap" },
   deleteBtn: { background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "8px", color: "#f87171", fontSize: "13px", fontWeight: 600, padding: "7px 16px", fontFamily: "'Sora', sans-serif", whiteSpace: "nowrap" },
-  pagination:{ display: "flex", justifyContent: "center", alignItems: "center", gap: "16px", marginTop: "32px" },
-  pageBtn:   { background: "#0c1018", border: "1px solid #1e2738", borderRadius: "8px", color: "#9ca3af", fontSize: "13px", fontWeight: 600, padding: "8px 18px", cursor: "pointer", fontFamily: "'Sora', sans-serif" },
-  pageInfo:  { fontSize: "13px", color: "#4b5563", fontWeight: 500 },
+  pagination: { display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", marginTop: "32px" },
+  pageBtn: { background: "#0c1018", border: "1px solid #1e2738", borderRadius: "8px", color: "#9ca3af", fontSize: "13px", fontWeight: 600, padding: "8px 14px", cursor: "pointer", fontFamily: "'Sora', sans-serif", minWidth: "40px" },
+  showingText: { fontSize: "13px", color: "#4b5563", fontWeight: 500, margin: 0 },
+  pageRow: { display: "flex", alignItems: "center", gap: "8px" },
+  pageBtnActive: { background: "#4f46e5", border: "1px solid #6366f1", color: "#fff" },
 };
 
 const getDifficultyStyle = (difficulty) => {
   const base = { borderRadius: "999px", fontSize: "11px", fontWeight: 600, padding: "3px 10px", textTransform: "capitalize" };
   switch (difficulty?.toLowerCase()) {
-    case "easy":   return { ...base, background: "rgba(34,197,94,0.1)",  color: "#22c55e", border: "1px solid rgba(34,197,94,0.2)" };
+    case "easy": return { ...base, background: "rgba(34,197,94,0.1)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.2)" };
     case "medium": return { ...base, background: "rgba(234,179,8,0.1)", color: "#eab308", border: "1px solid rgba(234,179,8,0.2)" };
-    case "hard":   return { ...base, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" };
-    default:       return { ...base, background: "rgba(99,102,241,0.1)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.2)" };
+    case "hard": return { ...base, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" };
+    default: return { ...base, background: "rgba(99,102,241,0.1)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.2)" };
   }
 };
 
