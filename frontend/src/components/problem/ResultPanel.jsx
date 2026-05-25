@@ -1,12 +1,31 @@
-function ResultPanel({
-  submitResult
-}){
+function ResultPanel({ submitResult }) {
+
+  const getVerdictMessage=(status)=>{
+    switch(status){
+
+      case "accepted":
+        return "🎉 Accepted";
+
+      case "wrong_answer":
+        return "✗ Wrong Answer";
+
+      case "compile_error":
+        return "⚠ Compile Error";
+
+      case "runtime_error":
+        return "⚠ Runtime Error";
+
+      case "time_limit_exceeded":
+        return "⏳ Time Limit Exceeded";
+
+      default:
+        return "✗ Submission Failed";
+    }
+  };
+
   return (
     <div className="result-panel">
-      <p
-        className="section-title"
-        style={{fontSize:'14px'}}
-      >
+      <p className="section-title" style={{ fontSize: "14px" }}>
         Submission Result
       </p>
 
@@ -14,32 +33,40 @@ function ResultPanel({
         <div
           className={`result-card ${
             submitResult.accepted
-              ? 'result-success'
-              : 'result-error'
+              ? "result-success"
+              : "result-error"
           }`}
         >
           <p className="result-heading">
-            {submitResult.accepted
-              ? '🎉 Accepted'
-              : `✗ ${submitResult.error}`
-            }
+            {getVerdictMessage(submitResult.status)}
+          </p>
+
+          {submitResult.error && (
+            <p
+              className="result-meta"
+              style={{
+                color:"#ff7b72",
+                marginTop:"8px",
+                whiteSpace:"pre-wrap"
+              }}
+            >
+              {submitResult.error}
+            </p>
+          )}
+
+          <p className="result-meta">
+            Test Cases:{" "}
+            {submitResult.passedTestCases}/
+            {submitResult.totalTestCases}
           </p>
 
           <p className="result-meta">
-            Test Cases: {submitResult.passedTestCases}/{submitResult.totalTestCases}
+            Runtime: {submitResult.runtime} sec
           </p>
 
-          {submitResult.accepted && (
-            <>
-              <p className="result-meta">
-                Runtime: {submitResult.runtime} sec
-              </p>
-
-              <p className="result-meta">
-                Memory: {submitResult.memory} KB
-              </p>
-            </>
-          )}
+          <p className="result-meta">
+            Memory: {submitResult.memory} KB
+          </p>
         </div>
       ) : (
         <p className="result-empty">

@@ -1,183 +1,290 @@
-const redisClient = require("../config/redis");
+const { redisClient } = require("../config/redis");
 const User = require("../models/user");
 const validate = require("../utils/validate");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const submission = require("../models/submission");
+const validatePassword = require("../utils/auth/validatePassword");
 const asyncHandler = require("../utils/asyncHandler");
+const sendTokenResponse = require("../utils/sendTokenResponse");
+const removeRefreshSession = require("../utils/auth/removeRefreshSession");
+const STATUS_CODES = require("../constants/statusCodes");
+const ApiError = require("../utils/ApiError");
+const clearAuthCookies = require("../utils/auth/clearAuthCookies");
 
-// REGISTER
+const { registerUser, loginUser } = require("../services/auth/authService");
+const refreshUserSession = require("../services/auth/refreshSessionService");
+
+const { verifyRefreshToken } = require("../services/auth/tokenService");
+const {
+  accessTokenCookieOptions,
+  refreshTokenCookieOptions,
+} = require("../utils/auth/cookieOptions");
+const sendEmail = require("../services/auth/emailService");
+const crypto = require("crypto");
+const bcrypt = require("bcrypt");
+
+
+
 const register = asyncHandler(async (req, res) => {
-  // validate incoming user data before processing
-  validate(req.body);
-
-  // prevent users from self-registering as admin
-  req.body.role = "user";
-
-  // hash password before storing in database
-  const { password } = req.body;
-  req.body.password = await bcrypt.hash(password, 10);
-
-  const user = await User.create(req.body);
-
-  // user data sent back to frontend
-  const reply = {
-    firstName: user.firstName,
-    emailId: user.emailId,
-    _id: user._id,
-    role: user.role,
-  };
-
-  // JWT payload stores identity and authorization-related data
-  const token = jwt.sign(
-    {
-      id: user._id,
-      emailId: user.emailId,
-      role: user.role,
-    },
-    process.env.JWT_KEY,
-    {
-      expiresIn: "1d",
-    },
+  await validate(req.body);
+  const { user, accessToken, refreshToken } = await registerUser(
+    req.body,
+    "user",
   );
-
-  // store JWT securely inside HTTP-only cookie
-  res.cookie("token", token, {
-    maxAge: 24 * 60 * 60 * 1000,
-    httpOnly: true,
-    sameSite: "strict",
-  });
-
-  res.status(201).json({
-    user: reply,
-    message: "Logged in Successfully",
-  });
+  // set access token cookie
+  res.cookie("accessToken", accessToken, accessTokenCookieOptions);
+  // set refresh token cookie
+  res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
+  return sendTokenResponse(
+    res,
+    user,
+    "User registered successfully",
+    STATUS_CODES.CREATED,
+  );
 });
 
-// LOGIN
 const login = asyncHandler(async (req, res) => {
   const { emailId, password } = req.body;
-
   if (!emailId || !password) {
-    throw new Error("Invalid Credentials");
+    throw new ApiError(
+      STATUS_CODES.BAD_REQUEST,
+      "Email and password are required",
+    );
   }
-
-  // find user using email
   const user = await User.findOne({ emailId });
-
   if (!user) {
-    throw new Error("Invalid Credentials");
+    throw new ApiError(STATUS_CODES.UNAUTHORIZED, "Invalid credentials");
   }
-
-  // compare entered password with hashed password stored in DB
   const match = await bcrypt.compare(password, user.password);
-
   if (!match) {
-    throw new Error("Invalid Credentials");
+    throw new ApiError(STATUS_CODES.UNAUTHORIZED, "Invalid credentials");
   }
+  const { accessToken, refreshToken } = await loginUser(user);
+  // set access token cookie
+  res.cookie("accessToken", accessToken, accessTokenCookieOptions);
+  // set refresh token cookie
+  res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
 
-  // user data sent back to frontend
-  const reply = {
-    firstName: user.firstName,
-    emailId: user.emailId,
-    _id: user._id,
-    role: user.role,
-  };
-
-  // JWT payload stores identity and authorization-related data
-  const token = jwt.sign(
-    {
-      id: user._id,
-      emailId: user.emailId,
-      role: user.role,
-    },
-    process.env.JWT_KEY,
-    {
-      expiresIn: "1d",
-    },
+  return sendTokenResponse(
+    res,
+    user,
+    "User logged in successfully",
+    STATUS_CODES.OK,
   );
-
-  // HTTP-only cookie prevents frontend JS from accessing JWT
-  res.cookie("token", token, {
-    maxAge: 24 * 60 * 60 * 1000,
-    httpOnly: true,
-    sameSite: "strict",
-  });
-
-  res.status(201).json({
-    user: reply,
-    message: "Logged in Successfully",
-  });
 });
 
-// LOGOUT
 const logout = asyncHandler(async (req, res) => {
-  const { token } = req.cookies;
-
-  const payload = jwt.decode(token);
-
-  await redisClient.set(`token:${token}`, "blocked");
-
-  redisClient.expireAt(`token:${token}`, payload.exp);
-
-  res.cookie("token", null, {
-    expires: new Date(Date.now()),
+  const { refreshToken } = req.cookies;
+  if (refreshToken) {
+    try {
+      const payload = verifyRefreshToken(refreshToken);
+      const { id } = payload;
+      await redisClient.del(`refreshToken:${id}`);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+  clearAuthCookies(res);
+  return res.status(STATUS_CODES.OK).json({
+    success: true,
+    message: "User logged out successfully",
   });
-
-  res.status(200).send("Logged Out Successfully");
 });
 
-// only allow existing admins to register new admins and also validate the request body for admin registration and hash the password before saving to database and send the JWT with role as "admin" in the payload
-const adminRegister = asyncHandler(async (req, res) => {
-  // validate the request body
-  validate(req.body);
+const refreshAccessToken = asyncHandler(async (req, res) => {
 
-  // important to set the role before creating the user because admin will not be registered through this route and we are not allowing users to set their role by themselves so we will set the role as "admin" by default
-  req.body.role = "admin";
+  const { refreshToken } = req.cookies;
 
-  // extract the password from request body and hash it before saving to database
-  const { password } = req.body;
+  const {
+    accessToken,
+    refreshToken:newRefreshToken,
+  } = await refreshUserSession(refreshToken);
 
-  // hash the password
-  req.body.password = await bcrypt.hash(password, 10);
-
-  const user = await User.create(req.body);
-
-  // send the JWT and assign the role to the user in the JWT payload so that we can use it in the future for authorization
-  const token = jwt.sign(
-    {
-      id: user._id,
-      emailId: user.emailId,
-      role: "admin",
-    },
-    process.env.JWT_KEY,
-    {
-      expiresIn: 60 * 60,
-    },
+  // set new access token cookie
+  res.cookie(
+    "accessToken",
+    accessToken,
+    accessTokenCookieOptions,
   );
 
-  res.cookie("token", token, {
-    maxAge: 60 * 60 * 1000,
-    httpOnly: true,
-    sameSite: "strict",
-  });
+  // rotate refresh token cookie
+  res.cookie(
+    "refreshToken",
+    newRefreshToken,
+    refreshTokenCookieOptions,
+  );
 
-  res.status(201).send("Admin Registered Successfully");
+  return res.status(STATUS_CODES.OK).json({
+    success:true,
+    message:"Access token refreshed successfully",
+  });
+});
+
+const forgotPassword = asyncHandler(async (req, res) => {
+  const { emailId } = req.body;
+  const user = await User.findOne({ emailId });
+  if (!user) {
+    throw new ApiError(
+      STATUS_CODES.NOT_FOUND,
+      "If account exists, reset email sent.",
+    );
+  }
+  const resetToken = user.createResetPasswordToken();
+  await user.save({
+    validateBeforeSave: false,
+  });
+  const resetPasswordUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+  try {
+    await sendEmail({
+      to: user.emailId,
+      subject: "CodeArena Password Reset",
+      html: `
+        <h2>Password Reset Request</h2>
+        <p>Click the link below to reset your password:</p>
+        <a href="${resetPasswordUrl}">
+          Reset Password
+        </a>
+        <p>This link will expire in 10 minutes.</p>
+      `,
+    });
+    return res.status(STATUS_CODES.OK).json({
+      success: true,
+      message: "Password reset email sent successfully",
+    });
+  } catch (err) {
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save({
+      validateBeforeSave: false,
+    });
+    throw new ApiError(
+      STATUS_CODES.INTERNAL_SERVER_ERROR,
+      "Email could not be sent",
+    );
+  }
+});
+
+const resetPassword = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+  const { password } = req.body;
+  validatePassword(password);
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+  // get only those users whose
+  // resetPasswordExpires > current time
+  // and token matches
+  const user = await User.findOne({
+    resetPasswordToken: hashedToken,
+    resetPasswordExpires: {
+      $gt: Date.now(),
+    },
+  });
+  if (!user) {
+    throw new ApiError(
+      STATUS_CODES.BAD_REQUEST,
+      "Invalid or expired reset token",
+    );
+  }
+  user.password = password;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpires = undefined;
+  await user.save();
+  // invalidate refresh session
+  await removeRefreshSession(user._id);
+
+  // clear auth cookies
+  clearAuthCookies(res);
+  return res.status(STATUS_CODES.OK).json({
+    success: true,
+    message: "Password reset successful",
+  });
+});
+
+const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  validatePassword(newPassword);
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    throw new ApiError(STATUS_CODES.NOT_FOUND, "User not found");
+  }
+  const isPasswordCorrect = await bcrypt.compare(
+    currentPassword,
+    user.password,
+  );
+  if (!isPasswordCorrect) {
+    throw new ApiError(
+      STATUS_CODES.BAD_REQUEST,
+      "Current password is incorrect",
+    );
+  }
+  const isSamePassword = await bcrypt.compare(newPassword, user.password);
+  if (isSamePassword) {
+    throw new ApiError(
+      STATUS_CODES.BAD_REQUEST,
+      "New password cannot be same as current password",
+    );
+  }
+  user.password = newPassword;
+  await user.save();
+  // invalidate refresh session from Redis
+  await removeRefreshSession(user._id);
+  // clear auth cookies
+  clearAuthCookies(res);
+  return res.status(STATUS_CODES.OK).json({
+    success: true,
+    message: "Password changed successfully. Please login again.",
+  });
+});
+
+const adminRegister = asyncHandler(async (req, res) => {
+  await validate(req.body);
+  const { user, accessToken, refreshToken } = await registerUser(
+    req.body,
+    "admin",
+  );
+  // set access token cookie
+  res.cookie("accessToken", accessToken, accessTokenCookieOptions);
+  // set refresh token cookie
+  res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
+  return sendTokenResponse(
+    res,
+    user,
+    "Admin registered successfully",
+    STATUS_CODES.CREATED,
+  );
 });
 
 const deleteProfile = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-
-  // delete From userSchema
+  await redisClient.del(`refreshToken:${userId}`);
   await User.findByIdAndDelete(userId);
+  clearAuthCookies(res);
+  return res.status(STATUS_CODES.OK).json({
+    success: true,
+    message: "User deleted successfully",
+  });
+});
 
-  res.status(200).send("User deleted Successfully");
+const testMail = asyncHandler(async (req, res) => {
+  console.log("i am inside testMail");
+  const response = await sendEmail({
+    to: "lokesh6182005@gmail.com",
+    subject: "CodeArena Test Mail",
+    html: "<h1>Email service working successfully</h1>",
+  });
+
+  return res.status(200).json({
+    success: true,
+    response,
+  });
 });
 
 module.exports = {
   register,
   login,
   logout,
+  refreshAccessToken,
   adminRegister,
   deleteProfile,
+  testMail,
+  forgotPassword,
+  resetPassword,
+  changePassword,
 };
