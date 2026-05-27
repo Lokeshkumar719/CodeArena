@@ -12,10 +12,11 @@ const {
   getProblemByIdAdmin
 } = require("../controllers/problemsControllers");
 const userMiddleware = require("../middlewares/userMiddleware");
+const {limitSubmitCode}=require("../middlewares/rateLimitMiddleware");
 // create fetch update delete problem routes here and export the router
 
-problemRouter.post("/create",userMiddleware,adminMiddleware, createProblem);
-problemRouter.put("/update/:id",userMiddleware,adminMiddleware, updateProblem);
+problemRouter.post("/create",userMiddleware,adminMiddleware,limitSubmitCode, createProblem);
+problemRouter.put("/update/:id",userMiddleware,adminMiddleware,limitSubmitCode, updateProblem);
 problemRouter.delete("/delete/:id",userMiddleware,adminMiddleware, deleteProblem);
 problemRouter.get("/admin/problemById/:id",userMiddleware,adminMiddleware,getProblemByIdAdmin);
 

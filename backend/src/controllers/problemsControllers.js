@@ -9,6 +9,7 @@ const validateReferenceSolutions = require("../services/problem/validateReferenc
 const validateObjectId = require("../utils/validateObjectId");
 const attachVideoDetails = require("../services/problem/attachVideoDetails");
 const {listProblems} = require("../services/problem/listingProblems");
+const getNextProblemNo = require("../utils/getNextProblemNo");
 
 const createProblem = asyncHandler(async (req, res) => {
   const { referenceSolution, visibleTestCases, hiddenTestCases } = req.body;
@@ -39,7 +40,10 @@ const createProblem = asyncHandler(async (req, res) => {
 
   await validateReferenceSolutions(referenceSolution, allTestCases);
 
+  const problemNo = await getNextProblemNo();
+
   await Problem.create({
+    problemNo,
     ...req.body,
     problemCreator: req.user._id,
   });
