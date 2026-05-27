@@ -6,7 +6,7 @@ const {
   updateProblem,
   deleteProblem,
   getProblemById,
-  getAllProblems,
+  getProblems,
   solvedProblems,
   submittedProblem,
   getProblemByIdAdmin
@@ -22,7 +22,7 @@ problemRouter.get("/admin/problemById/:id",userMiddleware,adminMiddleware,getPro
 // fetch problem by id,fetch all problems routes and also fetch all problems solved by a user route here and export the router
 
 problemRouter.get("/problemById/:id", userMiddleware, getProblemById);
-problemRouter.get("/getAllProblems", userMiddleware, getAllProblems);
+problemRouter.get("/getProblems", userMiddleware, getProblems);
 problemRouter.get("/problemSolvedByUser", userMiddleware, solvedProblems);
 problemRouter.get("/problemSubmmision/:id", userMiddleware, submittedProblem);
 

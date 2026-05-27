@@ -1,4 +1,4 @@
-const Problem = require("../models/problems");
+const {Problem} = require("../models/problem");
 const User = require("../models/user");
 const Submission = require("../models/submission");
 const SolutionVideo = require("../models/solutionVideo");
@@ -8,6 +8,7 @@ const ApiError = require("../utils/ApiError");
 const validateReferenceSolutions = require("../services/problem/validateReferenceSolutions");
 const validateObjectId = require("../utils/validateObjectId");
 const attachVideoDetails = require("../services/problem/attachVideoDetails");
+const {listProblems} = require("../services/problem/listingProblems");
 
 const createProblem = asyncHandler(async (req, res) => {
   const { referenceSolution, visibleTestCases, hiddenTestCases } = req.body;
@@ -150,7 +151,7 @@ const getProblemByIdAdmin = asyncHandler(async (req, res) => {
   validateObjectId(id);
 
   const reqdProblem = await Problem.findById(id).select(
-    "_id title description inputFormat outputFormat constraints timeLimit memoryLimit difficulty tags visibleTestCases hiddenTestCases startCode referenceSolution",
+    "_id problemNo title description inputFormat outputFormat constraints timeLimit memoryLimit difficulty tags visibleTestCases hiddenTestCases startCode referenceSolution",
   );
 
   if (!reqdProblem) {
@@ -171,7 +172,7 @@ const getProblemById = asyncHandler(async (req, res) => {
   validateObjectId(id);
 
   const reqdProblem = await Problem.findById(id).select(
-    "_id title description inputFormat outputFormat constraints timeLimit memoryLimit difficulty tags visibleTestCases startCode referenceSolution",
+    "_id problemNo title description inputFormat outputFormat constraints timeLimit memoryLimit difficulty tags visibleTestCases startCode referenceSolution",
   );
 
   if (!reqdProblem) {
@@ -186,34 +187,38 @@ const getProblemById = asyncHandler(async (req, res) => {
   });
 });
 
-const getAllProblems = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
 
-  const limit = parseInt(req.query.limit) || 5;
+/**
+ * GET /problems
+ * Controller is intentionally thin — only handles HTTP layer concerns.
+ * All logic lives in the service.
+ */
+async function getProblems(req, res) {
+  try {
+    // Auth middleware guarantees req.user exists for protected routes
+    const userId = req.user?._id ?? null;
 
-  const skip = (page - 1) * limit;
+    const result = await listProblems(req.query, userId);
 
-  const totalProblems = await Problem.countDocuments();
+    if (!result.success) {
+      return res.status(STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        errors: result.errors,
+      });
+    }
 
-  const allProblems = await Problem.find({})
-    .select("_id title difficulty tags")
-    .skip(skip)
-    .limit(limit);
-
-  if (!allProblems || allProblems.length === 0) {
-    throw new ApiError(STATUS_CODES.NOT_FOUND, "No problems found");
+    return res.status(STATUS_CODES.OK).json({
+      success: true,
+      ...result.data,
+    });
+  } catch (err) {
+    console.error("[listProblems] Unexpected error:", err);
+    return res.status(500).json({
+      success: false,
+      errors: ["Internal server error. Please try again."],
+    });
   }
-
-  return res.status(STATUS_CODES.OK).json({
-    success: true,
-    data: {
-      problems: allProblems,
-      currentPage: page,
-      totalPages: Math.ceil(totalProblems / limit),
-      totalProblems,
-    },
-  });
-});
+}
 
 const solvedProblems = asyncHandler(async (req, res) => {
   const userId = req.user._id;
@@ -246,8 +251,8 @@ module.exports = {
   updateProblem,
   deleteProblem,
   getProblemById,
-  getProblemByIdAdmin,
-  getAllProblems,
+  getProblems,
   solvedProblems,
   submittedProblem,
+  getProblemByIdAdmin,
 };
