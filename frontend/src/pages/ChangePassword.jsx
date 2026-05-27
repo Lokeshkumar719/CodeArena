@@ -7,6 +7,7 @@ import { z } from "zod";
 import toast from "react-hot-toast";
 import axiosClient from "../utils/axiosClient";
 import { resetAuthState } from "../authSlice";
+import useRateLimit from "../hooks/useRateLimit.jsx";
 
 const changePasswordSchema = z
   .object({
@@ -24,6 +25,7 @@ function ChangePassword() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { cooldown, startCooldown } = useRateLimit();
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -47,11 +49,18 @@ function ChangePassword() {
       reset();
       navigate("/login");
     } catch (err) {
+      if (err.rateLimitedFor) {
+        startCooldown(err.rateLimitedFor);
+        toast.error(err.response?.data?.message || "Too many requests. Please slow down.");
+        return;
+      }
       toast.error(err?.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
   };
+
+  const isDisabled = loading || cooldown > 0;
 
   return (
     <div style={s.page}>
@@ -145,17 +154,19 @@ function ChangePassword() {
 
           <button
             type="submit"
-            disabled={loading}
-            style={{ ...s.submitBtn, opacity: loading ? 0.7 : 1 }}
+            disabled={isDisabled}
+            style={{ ...s.submitBtn, opacity: isDisabled ? 0.7 : 1 }}
           >
-            {loading ? "Updating..." : "Change Password"}
+            {loading
+              ? "Updating..."
+              : cooldown > 0
+              ? `Wait ${cooldown}s`
+              : "Change Password"}
           </button>
         </form>
 
         <div style={s.footer}>
-          <NavLink to="/" style={s.link}>
-            Back to Home
-          </NavLink>
+          <NavLink to="/" style={s.link}>Back to Home</NavLink>
         </div>
       </div>
     </div>

@@ -1,16 +1,29 @@
 const Counter = require("../models/counter");
+const ReusableProblemNo = require("../models/reusableProblemNo");
 
-/**
- * Atomically increments and returns the next problem number.
- * findOneAndUpdate with upsert:true creates the counter doc on first use.
- * new:true returns the updated doc (post-increment value).
- */
 async function getNextProblemNo() {
-  const counter = await Counter.findOneAndUpdate(
-    { _id: "problemNo" },               // find the problemNo counter
-    { $inc: { seq: 1 } },               // atomically increment by 1
-    { new: true, upsert: true }         // create if doesn't exist, return updated
+
+  // STEP 1:
+  // Try reusing smallest available number
+
+  const reusable = await ReusableProblemNo.findOneAndDelete(
+    {},
+    { sort: { value: 1 } } // smallest first
   );
+
+  if (reusable) {
+    return reusable.value;
+  }
+
+  // STEP 2:
+  // Otherwise increment counter atomically
+
+  const counter = await Counter.findOneAndUpdate(
+    { _id: "problemNo" },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  );
+
   return counter.seq;
 }
 
