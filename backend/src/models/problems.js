@@ -73,7 +73,7 @@ const problemSchema = new Schema({
   memoryLimit: {
     type: Number,
     required: true,
-    default: 256000,
+    default: 262144,
   },
   visibleTestCases: [
     {

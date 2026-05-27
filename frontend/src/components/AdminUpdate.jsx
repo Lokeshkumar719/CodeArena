@@ -50,21 +50,14 @@ const problemSchema = z.object({
   outputFormat: z.string().min(1, "Output format is required"),
   constraints: z.string().min(1, "Constraints are required"),
 
-  timeLimit: z.coerce
-    .number()
-    .min(1, "Time limit must be at least 1 second"),
+  timeLimit: z.coerce.number().min(1, "Time limit must be at least 1 second"),
 
   memoryLimit: z.coerce
     .number()
     .min(1024, "Memory limit must be at least 1024 KB"),
 
   tags: z
-    .array(
-      z.string().refine(
-        (tag) => tagOptions.includes(tag),
-        "Invalid tag"
-      )
-    )
+    .array(z.string().refine((tag) => tagOptions.includes(tag), "Invalid tag"))
     .min(1, "At least one tag is required"),
 
   visibleTestCases: z
@@ -73,7 +66,7 @@ const problemSchema = z.object({
         input: z.string().min(1, "Input is required"),
         output: z.string().min(1, "Output is required"),
         explanation: z.string().min(1, "Explanation is required"),
-      })
+      }),
     )
     .min(1, "At least one visible test case required"),
 
@@ -82,7 +75,7 @@ const problemSchema = z.object({
       z.object({
         input: z.string().min(1, "Input is required"),
         output: z.string().min(1, "Output is required"),
-      })
+      }),
     )
     .min(1, "At least one hidden test case required"),
 
@@ -91,7 +84,7 @@ const problemSchema = z.object({
       z.object({
         language: z.enum(["cpp", "java", "javascript"]),
         initialCode: z.string().min(1, "Initial code is required"),
-      })
+      }),
     )
     .length(3),
 
@@ -100,18 +93,12 @@ const problemSchema = z.object({
       z.object({
         language: z.enum(["cpp", "java", "javascript"]),
         completeCode: z.string().min(1, "Complete code is required"),
-      })
+      }),
     )
     .length(3),
 });
 
-function TestCaseBlock({
-  fields,
-  register,
-  remove,
-  type,
-  visible,
-}) {
+function TestCaseBlock({ fields, register, remove, type, visible }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
       {fields.map((field, index) => (
@@ -161,6 +148,7 @@ function TestCaseBlock({
 function AdminUpdate() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const draftKey = `updateProblemDraft-${id}`;
 
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -169,6 +157,7 @@ function AdminUpdate() {
     register,
     control,
     handleSubmit,
+    watch,
     reset,
     formState: { errors },
   } = useForm({
@@ -177,7 +166,7 @@ function AdminUpdate() {
     defaultValues: {
       difficulty: "easy",
       timeLimit: 2,
-      memoryLimit: 256000,
+      memoryLimit: 262144,
 
       visibleTestCases: [
         {
@@ -227,8 +216,16 @@ function AdminUpdate() {
   useEffect(() => {
     const fetchProblem = async () => {
       try {
+        const savedDraft = sessionStorage.getItem(draftKey);
+
+        if (savedDraft) {
+          reset(JSON.parse(savedDraft));
+          setLoading(false);
+          return;
+        }
+
         const response = await axiosClient.get(
-          `/problem/admin/problemById/${id}`
+          `/problem/admin/problemById/${id}`,
         );
 
         reset(response.data.data);
@@ -244,13 +241,48 @@ function AdminUpdate() {
     };
 
     fetchProblem();
-  }, [id, reset]);
+  }, [id, reset, draftKey]);
+
+  // Auto-save draft to sessionStorage with debounce
+  const watchedData = watch();
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (watchedData.title || watchedData.description) {
+        sessionStorage.setItem(draftKey, JSON.stringify(watchedData));
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [watchedData, draftKey]);
+
+  // Clear draft on navigate away, but NOT on page refresh
+  useEffect(() => {
+    let isUnloading = false;
+
+    const handleBeforeUnload = () => {
+      isUnloading = true;
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+
+      // Only clear draft if navigating away, NOT on page refresh
+      if (!isUnloading) {
+        sessionStorage.removeItem(draftKey);
+      }
+    };
+  }, [draftKey]);
 
   const onSubmit = async (data) => {
     try {
       setIsSubmitting(true);
 
       await axiosClient.put(`/problem/update/${id}`, data);
+
+      sessionStorage.removeItem(draftKey);
 
       toast.success("Problem updated successfully!");
 
@@ -267,39 +299,24 @@ function AdminUpdate() {
   };
 
   if (loading) {
-    return (
-      <div style={s.loadingContainer}>
-        Loading problem...
-      </div>
-    );
+    return <div style={s.loadingContainer}>Loading problem...</div>;
   }
 
   return (
     <div style={s.page}>
       <nav style={s.navbar}>
         <div style={s.navLeft}>
-          <button
-            onClick={() => navigate(-1)}
-            style={s.backBtn}
-          >
+          <button onClick={() => navigate(-1)} style={s.backBtn}>
             ← Back
           </button>
 
-          <NavLink
-            to="/"
-            style={{ textDecoration: "none" }}
-          >
+          <NavLink to="/" style={{ textDecoration: "none" }}>
             <span style={s.logo}>CodeArena</span>
           </NavLink>
         </div>
 
-        <NavLink
-          to="/admin"
-          style={s.adminLink}
-        >
-          <span style={s.adminBox}>
-            Admin Dashboard
-          </span>
+        <NavLink to="/admin" style={s.adminLink}>
+          <span style={s.adminBox}>Admin Dashboard</span>
         </NavLink>
       </nav>
 
@@ -307,9 +324,7 @@ function AdminUpdate() {
         <div style={s.header}>
           <h1 style={s.heading}>Update Problem</h1>
 
-          <p style={s.subheading}>
-            Edit the details of this coding problem
-          </p>
+          <p style={s.subheading}>Edit the details of this coding problem</p>
         </div>
 
         <form
@@ -318,9 +333,7 @@ function AdminUpdate() {
           })}
         >
           <div style={s.card}>
-            <h2 style={s.cardTitle}>
-              Basic Information
-            </h2>
+            <h2 style={s.cardTitle}>Basic Information</h2>
 
             <div style={s.formGroup}>
               <label style={s.label}>Title</label>
@@ -335,40 +348,30 @@ function AdminUpdate() {
               />
 
               {errors.title && (
-                <p style={s.errorText}>
-                  {errors.title.message}
-                </p>
+                <p style={s.errorText}>{errors.title.message}</p>
               )}
             </div>
 
             <div style={s.formGroup}>
-              <label style={s.label}>
-                Description
-              </label>
+              <label style={s.label}>Description</label>
 
               <textarea
                 {...register("description")}
                 rows={5}
                 style={{
                   ...s.textarea,
-                  ...(errors.description
-                    ? s.inputError
-                    : {}),
+                  ...(errors.description ? s.inputError : {}),
                 }}
                 placeholder="Problem description..."
               />
 
               {errors.description && (
-                <p style={s.errorText}>
-                  {errors.description.message}
-                </p>
+                <p style={s.errorText}>{errors.description.message}</p>
               )}
             </div>
 
             <div style={s.formGroup}>
-              <label style={s.label}>
-                Input Format
-              </label>
+              <label style={s.label}>Input Format</label>
 
               <textarea
                 {...register("inputFormat")}
@@ -378,9 +381,7 @@ function AdminUpdate() {
             </div>
 
             <div style={s.formGroup}>
-              <label style={s.label}>
-                Output Format
-              </label>
+              <label style={s.label}>Output Format</label>
 
               <textarea
                 {...register("outputFormat")}
@@ -390,9 +391,7 @@ function AdminUpdate() {
             </div>
 
             <div style={s.formGroup}>
-              <label style={s.label}>
-                Constraints
-              </label>
+              <label style={s.label}>Constraints</label>
 
               <textarea
                 {...register("constraints")}
@@ -403,9 +402,7 @@ function AdminUpdate() {
 
             <div style={s.row}>
               <div style={s.formGroupFlex}>
-                <label style={s.label}>
-                  Time Limit
-                </label>
+                <label style={s.label}>Time Limit</label>
 
                 <input
                   type="number"
@@ -413,17 +410,13 @@ function AdminUpdate() {
                   {...register("timeLimit")}
                   style={{
                     ...s.input,
-                    ...(errors.timeLimit
-                      ? s.inputError
-                      : {}),
+                    ...(errors.timeLimit ? s.inputError : {}),
                   }}
                 />
               </div>
 
               <div style={s.formGroupFlex}>
-                <label style={s.label}>
-                  Memory Limit
-                </label>
+                <label style={s.label}>Memory Limit</label>
 
                 <input
                   type="number"
@@ -431,9 +424,7 @@ function AdminUpdate() {
                   {...register("memoryLimit")}
                   style={{
                     ...s.input,
-                    ...(errors.memoryLimit
-                      ? s.inputError
-                      : {}),
+                    ...(errors.memoryLimit ? s.inputError : {}),
                   }}
                 />
               </div>
@@ -441,18 +432,11 @@ function AdminUpdate() {
 
             <div style={s.row}>
               <div style={s.formGroupFlex}>
-                <label style={s.label}>
-                  Difficulty
-                </label>
+                <label style={s.label}>Difficulty</label>
 
-                <select
-                  {...register("difficulty")}
-                  style={s.select}
-                >
+                <select {...register("difficulty")} style={s.select}>
                   <option value="easy">Easy</option>
-                  <option value="medium">
-                    Medium
-                  </option>
+                  <option value="medium">Medium</option>
                   <option value="hard">Hard</option>
                 </select>
               </div>
@@ -467,19 +451,14 @@ function AdminUpdate() {
                       flex: 2,
                     }}
                   >
-                    <label style={s.label}>
-                      Tags
-                    </label>
+                    <label style={s.label}>Tags</label>
 
                     <select
                       multiple
                       value={field.value || []}
                       onChange={(e) =>
                         field.onChange(
-                          Array.from(
-                            e.target.selectedOptions,
-                            (o) => o.value
-                          )
+                          Array.from(e.target.selectedOptions, (o) => o.value),
                         )
                       }
                       style={{
@@ -488,10 +467,7 @@ function AdminUpdate() {
                       }}
                     >
                       {tagOptions.map((tag) => (
-                        <option
-                          key={tag}
-                          value={tag}
-                        >
+                        <option key={tag} value={tag}>
                           {tag}
                         </option>
                       ))}
@@ -500,10 +476,7 @@ function AdminUpdate() {
                     {field.value?.length > 0 && (
                       <div style={s.tagWrapper}>
                         {field.value.map((tag) => (
-                          <span
-                            key={tag}
-                            style={s.tagPill}
-                          >
+                          <span key={tag} style={s.tagPill}>
                             {tag}
                           </span>
                         ))}
@@ -517,9 +490,7 @@ function AdminUpdate() {
 
           <div style={s.card}>
             <div style={s.sectionHeader}>
-              <h2 style={s.cardTitle}>
-                Visible Test Cases
-              </h2>
+              <h2 style={s.cardTitle}>Visible Test Cases</h2>
 
               <button
                 type="button"
@@ -547,9 +518,7 @@ function AdminUpdate() {
 
           <div style={s.card}>
             <div style={s.sectionHeader}>
-              <h2 style={s.cardTitle}>
-                Hidden Test Cases
-              </h2>
+              <h2 style={s.cardTitle}>Hidden Test Cases</h2>
 
               <button
                 type="button"
@@ -574,31 +543,23 @@ function AdminUpdate() {
           </div>
 
           <div style={s.card}>
-            <h2 style={s.cardTitle}>
-              Code Templates
-            </h2>
+            <h2 style={s.cardTitle}>Code Templates</h2>
 
             <div style={s.langContainer}>
               {languageOptions.map((lang, index) => (
                 <div key={lang.value}>
-                  <span style={s.langBadge}>
-                    {lang.label}
-                  </span>
+                  <span style={s.langBadge}>{lang.label}</span>
 
                   <div style={{ marginTop: "14px" }}>
                     <textarea
-                      {...register(
-                        `startCode.${index}.initialCode`
-                      )}
+                      {...register(`startCode.${index}.initialCode`)}
                       rows={7}
                       style={s.codeArea}
                       placeholder={`// ${lang.label} starter code`}
                     />
 
                     <textarea
-                      {...register(
-                        `referenceSolution.${index}.completeCode`
-                      )}
+                      {...register(`referenceSolution.${index}.completeCode`)}
                       rows={7}
                       style={s.codeArea}
                       placeholder={`// ${lang.label} solution`}
@@ -617,9 +578,7 @@ function AdminUpdate() {
               opacity: isSubmitting ? 0.7 : 1,
             }}
           >
-            {isSubmitting
-              ? "Updating Problem..."
-              : "Update Problem"}
+            {isSubmitting ? "Updating Problem..." : "Update Problem"}
           </button>
         </form>
       </div>

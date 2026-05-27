@@ -18,6 +18,12 @@ function ResultPanel({ submitResult }) {
       case "time_limit_exceeded":
         return "⏳ Time Limit Exceeded";
 
+      case "memory_limit_exceeded":
+        return "🧠 Memory Limit Exceeded";
+
+      case "output_limit_exceeded":
+        return "📄 Output Limit Exceeded";
+
       default:
         return "✗ Submission Failed";
     }

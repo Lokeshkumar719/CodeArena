@@ -127,7 +127,7 @@ function AdminPanel() {
       outputFormat: "",
       constraints: "",
       timeLimit: 2,
-      memoryLimit: 256000,
+      memoryLimit: 262144,
 
       visibleTestCases: [
         {
