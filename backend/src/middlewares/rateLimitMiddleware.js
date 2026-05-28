@@ -138,6 +138,16 @@ const loginLimiter = new RateLimiterRedis({
 });
 const LOGIN_LIMIT = 10;
 
+const changePasswordLimiter = new RateLimiterRedis({
+  storeClient: redisClient,
+  useRedisPackage: true,
+  keyPrefix: "rl:change-password",
+  points: 5,           // 5 attempts ...
+  duration: 15 * 60,   // ... per 15 minutes
+});
+
+const CHANGE_PASSWORD_LIMIT = 5;
+
 // --- REGISTER  (/user/register) -------------------------------------------
 // More lenient than login — registering 5 times is suspicious but
 // less directly dangerous than brute-forcing credentials.
@@ -242,6 +252,21 @@ const limitLogin = async (req, res, next) => {
   }
 };
 
+const limitChangePassword = async (req, res, next) => {
+  const key = req.user._id.toString();  // ← authenticated user, not IP
+  try {
+    const result = await changePasswordLimiter.consume(key);
+    res.set(buildHeaders(CHANGE_PASSWORD_LIMIT, result.remainingPoints));
+    return next();
+  } catch (rateLimiterRes) {
+    if (rateLimiterRes instanceof Error) {
+      console.error("[rateLimitMiddleware] changePasswordLimiter error:", rateLimiterRes);
+      return next();
+    }
+    return tooManyRequests(res, CHANGE_PASSWORD_LIMIT, rateLimiterRes.msBeforeNext);
+  }
+};
+
 /**
  * Middleware: limit REGISTER attempts.
  * Applied to: POST /user/register
@@ -268,4 +293,5 @@ module.exports = {
   limitSubmitCode,
   limitLogin,
   limitRegister,
+  limitChangePassword
 };
