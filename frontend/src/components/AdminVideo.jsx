@@ -52,6 +52,17 @@ const AdminVideo = () => {
   });
 
   const [tagsOpen, setTagsOpen] = useState(false);
+  const tagDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (tagDropdownRef.current && !tagDropdownRef.current.contains(e.target)) {
+        setTagsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
 
   const debouncedSearch = useDebounce(searchInput, 400);
 
@@ -151,6 +162,7 @@ const AdminVideo = () => {
     });
 
     setCurrentPage(1);
+    setTagsOpen(false);
   };
 
   const hasActiveFilters =
@@ -174,10 +186,12 @@ const AdminVideo = () => {
       );
 
       toast.success(response.data.message);
-
-      setProblems((prev) =>
-        prev.filter((p) => p._id !== problemId)
-      );
+      const isLastItemOnPage = problems.length === 1 && currentPage > 1;
+      if (isLastItemOnPage) {
+        setCurrentPage((p) => p - 1);   // triggers re-fetch via useEffect
+      } else {
+        fetchProblems(currentPage, debouncedSearch, filters);
+      }
 
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -290,7 +304,7 @@ const AdminVideo = () => {
           </select>
 
           {/* Tags */}
-          <div style={s.tagDropdownWrapper}>
+          <div style={s.tagDropdownWrapper} ref={tagDropdownRef}>
             <button
               type="button"
               style={{
@@ -309,7 +323,22 @@ const AdminVideo = () => {
               </span>
 
               <span style={{ marginLeft: "auto", fontSize: "10px" }}>
-                ▾
+                <svg
+                  style={{ marginLeft: "auto", flexShrink: 0 }}
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#6b7280"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  {tagsOpen
+                    ? <path d="M18 15l-6-6-6 6" />   // chevron up
+                    : <path d="M6 9l6 6 6-6" />      // chevron down
+                  }
+                </svg>
               </span>
             </button>
 

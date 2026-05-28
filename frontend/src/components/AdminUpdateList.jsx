@@ -50,6 +50,17 @@ const AdminUpdateList = () => {
   });
 
   const [tagsOpen, setTagsOpen] = useState(false);
+  const tagDropdownRef = useRef(null);
+
+  useEffect(() => {
+  const handleOutsideClick = (e) => {
+    if (tagDropdownRef.current && !tagDropdownRef.current.contains(e.target)) {
+      setTagsOpen(false);
+    }
+  };
+  document.addEventListener("mousedown", handleOutsideClick);
+  return () => document.removeEventListener("mousedown", handleOutsideClick);
+}, []);
 
   const debouncedSearch = useDebounce(searchInput, 400);
 
@@ -149,6 +160,7 @@ const AdminUpdateList = () => {
     });
 
     setCurrentPage(1);
+    setTagsOpen(false); 
   };
 
   const hasActiveFilters =
@@ -259,7 +271,7 @@ const AdminUpdateList = () => {
           </select>
 
           {/* Tags */}
-          <div style={s.tagDropdownWrapper}>
+          <div style={s.tagDropdownWrapper} ref={tagDropdownRef}>
             <button
               type="button"
               style={{
@@ -278,7 +290,22 @@ const AdminUpdateList = () => {
               </span>
 
               <span style={{ marginLeft: "auto", fontSize: "10px" }}>
-                ▾
+                <svg
+                  style={{ marginLeft: "auto", flexShrink: 0 }}
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#6b7280"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  {tagsOpen
+                    ? <path d="M18 15l-6-6-6 6" />   // chevron up
+                    : <path d="M6 9l6 6 6-6" />      // chevron down
+                  }
+                </svg>
               </span>
             </button>
 
