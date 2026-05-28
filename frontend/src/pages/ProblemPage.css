@@ -49,7 +49,6 @@
 }
 
 .top-bar-spacer {
-  /* mirror width of back button to keep title centered */
   width: 72px;
   flex-shrink: 0;
 }
@@ -102,39 +101,63 @@
 /* ── DRAGGABLE DIVIDER ── */
 
 .divider {
-  flex: 0 0 5px;
-  width: 5px;
-  min-width: 5px;
+  flex: 0 0 12px;
+  width: 12px;
+  min-width: 12px;
   height: 100%;
   align-self: stretch;
   cursor: col-resize;
   position: relative;
   z-index: 50;
-  background: transparent;
+  background: #0d1117;
+  border-left: 1px solid #1e2738;
+  border-right: 1px solid #1e2738;
   touch-action: none;
-  -webkit-user-select: none;
-  -ms-user-select: none;
   user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.2s ease;
 }
 
+/* grip dots */
 .divider::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px;
+  height: 30px;
+  background-image: radial-gradient(circle, #3d4a63 1.2px, transparent 1.2px);
+  background-size: 3px 7px;
+  background-repeat: repeat-y;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+/* active highlight line */
+.divider::after {
   content: "";
   position: absolute;
   top: 0;
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 1px;
-  background: #1e2738;
+  width: 2px;
+  background: transparent;
   transition: background 0.2s ease;
-}
-
-.divider:hover::before {
-  background: #4f46e5;
+  border-radius: 2px;
 }
 
 .divider:hover {
-  background: rgba(79, 70, 229, 0.06);
+  background: #111827;
+}
+
+.divider:hover::before {
+  opacity: 1;
+}
+
+.divider:hover::after {
+  background: #4f46e5;
 }
 
 /* ── Tabs ── */
@@ -345,18 +368,15 @@
   font-weight: 700;
 }
 
-/* ── Editor — no wrapping allowed ── */
+/* ── Editor ── */
 
 .editor-wrap {
   flex: 1;
   overflow: hidden;
-  /* Prevent any CSS-level text wrapping inside monaco container */
   white-space: nowrap;
 }
 
 .editor-wrap * {
-  /* Monaco sets its own white-space internally; this stops
-     any outer container from forcing wraps on the editor DOM */
   max-width: none !important;
 }
 
@@ -396,7 +416,7 @@
 
 .submit-btn {
   padding: 8px 20px;
-  background: #17be76da;
+  background: #4f46e5;
   border: 1px solid #6366f1;
   border-radius: 8px;
   color: white;
@@ -407,9 +427,9 @@
   font-family: 'Sora', sans-serif;
 }
 
-.submit-btn:hover {
+/* .submit-btn:hover {
   background: #6366f1;
-}
+} */
 
 /* ── Result Panel ── */
 
@@ -457,6 +477,7 @@
 }
 
 /* ── Empty state ── */
+
 .result-empty {
   font-size: 13px;
   color: #4b5563;

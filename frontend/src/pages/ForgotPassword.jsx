@@ -5,6 +5,7 @@ import { useState } from "react";
 import { NavLink } from "react-router";
 import toast from "react-hot-toast";
 import axiosClient from "../utils/axiosClient";
+import useRateLimit from "../hooks/useRateLimit.jsx";
 
 const forgotPasswordSchema = z.object({
   emailId: z.string().email("Invalid Email"),
@@ -12,6 +13,7 @@ const forgotPasswordSchema = z.object({
 
 function ForgotPassword() {
   const [loading, setLoading] = useState(false);
+  const { cooldown, startCooldown } = useRateLimit();
 
   const {
     register,
@@ -29,11 +31,18 @@ function ForgotPassword() {
       toast.success(response.data.message);
       reset();
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Something went wrong");
+      if (err.rateLimitedFor) {
+        startCooldown(err.rateLimitedFor);
+        toast.error(err.response?.data?.message || "Too many requests. Please slow down.");
+        return;
+      }
+      toast.error(err?.response?.data?.message || "Something went wrong",{duration:500});
     } finally {
       setLoading(false);
     }
   };
+
+  const isDisabled = loading || cooldown > 0;
 
   return (
     <div style={s.page}>
@@ -44,7 +53,6 @@ function ForgotPassword() {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} style={s.form}>
-          {/* Email */}
           <div style={s.fieldGroup}>
             <label style={s.label}>Email</label>
             <input
@@ -60,17 +68,19 @@ function ForgotPassword() {
 
           <button
             type="submit"
-            disabled={loading}
-            style={{ ...s.submitBtn, opacity: loading ? 0.7 : 1 }}
+            disabled={isDisabled}
+            style={{ ...s.submitBtn, opacity: isDisabled ? 0.7 : 1 }}
           >
-            {loading ? "Sending..." : "Send Reset Link"}
+            {loading
+              ? "Sending..."
+              : cooldown > 0
+              ? `Wait ${cooldown}s`
+              : "Send Reset Link"}
           </button>
         </form>
 
         <div style={s.footer}>
-          <NavLink to="/login" style={s.link}>
-            Back to Login
-          </NavLink>
+          <NavLink to="/login" style={s.link}>Back to Login</NavLink>
         </div>
       </div>
     </div>
@@ -96,36 +106,12 @@ const s = {
     padding: "44px 40px",
     boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
   },
-  logoArea: {
-    textAlign: "center",
-    marginBottom: "36px",
-  },
-  logo: {
-    fontSize: "32px",
-    fontWeight: 700,
-    color: "#a5b4fc",
-    marginBottom: "6px",
-  },
-  tagline: {
-    fontSize: "13px",
-    color: "#4b5563",
-    fontWeight: 500,
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "20px",
-  },
-  fieldGroup: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-  },
-  label: {
-    fontSize: "13px",
-    fontWeight: 600,
-    color: "#9ca3af",
-  },
+  logoArea: { textAlign: "center", marginBottom: "36px" },
+  logo: { fontSize: "32px", fontWeight: 700, color: "#a5b4fc", marginBottom: "6px" },
+  tagline: { fontSize: "13px", color: "#4b5563", fontWeight: 500 },
+  form: { display: "flex", flexDirection: "column", gap: "20px" },
+  fieldGroup: { display: "flex", flexDirection: "column", gap: "8px" },
+  label: { fontSize: "13px", fontWeight: 600, color: "#9ca3af" },
   input: {
     width: "100%",
     background: "#080c14",
@@ -138,13 +124,8 @@ const s = {
     boxSizing: "border-box",
     fontFamily: "'Sora', sans-serif",
   },
-  inputError: {
-    borderColor: "rgba(239,68,68,0.5)",
-  },
-  errorMsg: {
-    fontSize: "12px",
-    color: "#f87171",
-  },
+  inputError: { borderColor: "rgba(239,68,68,0.5)" },
+  errorMsg: { fontSize: "12px", color: "#f87171" },
   submitBtn: {
     background: "#4f46e5",
     border: "1px solid #6366f1",
@@ -158,17 +139,8 @@ const s = {
     fontFamily: "'Sora', sans-serif",
     width: "100%",
   },
-  footer: {
-    textAlign: "center",
-    marginTop: "28px",
-    fontSize: "13px",
-    color: "#4b5563",
-  },
-  link: {
-    color: "#a5b4fc",
-    fontWeight: 600,
-    textDecoration: "none",
-  },
+  footer: { textAlign: "center", marginTop: "28px", fontSize: "13px", color: "#4b5563" },
+  link: { color: "#a5b4fc", fontWeight: 600, textDecoration: "none" },
 };
 
 export default ForgotPassword;

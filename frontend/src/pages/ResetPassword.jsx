@@ -41,7 +41,7 @@ function ResetPassword() {
       reset();
       navigate("/login");
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Something went wrong");
+      toast.error(err?.response?.data?.message || "Something went wrong",{duration:500});
     } finally {
       setLoading(false);
     }
@@ -91,6 +91,10 @@ function ResetPassword() {
                 type={showConfirmPassword ? "text" : "password"}
                 placeholder="••••••••"
                 {...register("confirmPassword")}
+                onPaste={(e) => {
+                  e.preventDefault();
+                  toast.error("Paste not allowed here");
+                }}
                 style={{
                   ...s.input,
                   paddingRight: "46px",

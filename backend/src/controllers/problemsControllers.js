@@ -10,6 +10,7 @@ const validateObjectId = require("../utils/validateObjectId");
 const attachVideoDetails = require("../services/problem/attachVideoDetails");
 const {listProblems} = require("../services/problem/listingProblems");
 const getNextProblemNo = require("../utils/getNextProblemNo");
+const ReusableProblemNo = require("../models/reusableProblemNo");
 
 const createProblem = asyncHandler(async (req, res) => {
   const { referenceSolution, visibleTestCases, hiddenTestCases } = req.body;
@@ -98,9 +99,10 @@ const updateProblem = asyncHandler(async (req, res) => {
     { ...req.body },
     {
       runValidators: true,
-      new: true,
+      returnDocument: "after",
     },
   );
+
 
   return res.status(STATUS_CODES.OK).json({
     success: true,
@@ -139,6 +141,11 @@ const deleteProblem = asyncHandler(async (req, res) => {
       },
     },
   );
+
+  // Save released number
+  await ReusableProblemNo.create({
+    value: problem.problemNo,
+  });
 
   // delete actual problem
   await Problem.findByIdAndDelete(id);

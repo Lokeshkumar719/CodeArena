@@ -54,7 +54,7 @@ const problemSchema = new Schema(
 
     // --- Execution config ---
     timeLimit:   { type: Number, required: true, default: 2 },       // seconds
-    memoryLimit: { type: Number, required: true, default: 256000 },  // KB
+    memoryLimit: { type: Number, required: true, default: 262144 },  // KB
 
     // --- Test cases ---
     visibleTestCases: [

@@ -7,6 +7,14 @@ const normalizeText = (text = "") => {
   return text.toLowerCase();
 };
 
+const cleanRuntimeError = (error = "") => {
+  return error
+    .replace(/run\.sh: line \d+:/g, "")
+    .replace(/LD_LIBRARY_PATH=.*?\/a\.out/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
 const detectMemoryLimitExceeded = (test) => {
   const stderr = normalizeText(test.stderr);
   const message = normalizeText(test.message);
@@ -16,7 +24,8 @@ const detectMemoryLimitExceeded = (test) => {
     stderr.includes("killed") ||
     message.includes("killed") ||
     description.includes("memory limit exceeded") ||
-    test.exit_code === 137
+    test.exit_code === 137 ||
+    test.signal === "SIGKILL"
   );
 };
 
@@ -24,18 +33,21 @@ const detectOutputLimitExceeded = (test) => {
   const stderr = normalizeText(test.stderr);
   const message = normalizeText(test.message);
 
-  return stderr.includes("output limit") || message.includes("output limit");
+  return (
+    stderr.includes("output limit") ||
+    message.includes("output limit")
+  );
 };
 
 const getRuntimeErrorResult = (test) => {
-  if (detectMemoryLimitExceeded(test)) {
+  if(detectMemoryLimitExceeded(test)) {
     return {
       status: "memory_limit_exceeded",
       errorMessage: "Memory Limit Exceeded",
     };
   }
 
-  if (detectOutputLimitExceeded(test)) {
+  if(detectOutputLimitExceeded(test)) {
     return {
       status: "output_limit_exceeded",
       errorMessage: "Output Limit Exceeded",
@@ -44,12 +56,19 @@ const getRuntimeErrorResult = (test) => {
 
   return {
     status: "runtime_error",
-    errorMessage: JUDGE0_STATUS_MESSAGES[test.status.id] || "Runtime Error",
+    errorMessage: cleanRuntimeError(
+      test.stderr ||
+      test.message ||
+      test.status?.description ||
+      JUDGE0_STATUS_MESSAGES[test.status.id] ||
+      "Runtime Error"
+    ),
   };
 };
 
 const getSubmissionResult = (test) => {
-  switch (test.status.id) {
+  switch(test.status.id) {
+
     case JUDGE0_STATUS.ACCEPTED:
       return {
         status: "accepted",
@@ -72,7 +91,8 @@ const getSubmissionResult = (test) => {
       return {
         status: "compile_error",
         errorMessage:
-          test.compile_output || JUDGE0_STATUS_MESSAGES[test.status.id],
+          test.compile_output ||
+          JUDGE0_STATUS_MESSAGES[test.status.id],
       };
 
     case JUDGE0_STATUS.RUNTIME_ERROR_SIGSEGV:
@@ -87,7 +107,8 @@ const getSubmissionResult = (test) => {
     case JUDGE0_STATUS.EXEC_FORMAT_ERROR:
       return {
         status: "internal_error",
-        errorMessage: JUDGE0_STATUS_MESSAGES[test.status.id],
+        errorMessage:
+          JUDGE0_STATUS_MESSAGES[test.status.id],
       };
 
     default:

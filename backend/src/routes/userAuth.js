@@ -7,7 +7,6 @@ const {
   refreshAccessToken,
   adminRegister,
   deleteProfile,
-  testMail,
   forgotPassword,
   resetPassword,
   changePassword,
@@ -49,6 +48,5 @@ authRouter.get("/check", userMiddleware, (req, res) => {
   });
 });
 
-authRouter.get("/test-mail", testMail);
 
 module.exports = authRouter;
