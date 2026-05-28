@@ -37,7 +37,7 @@ function Login() {
     const resultAction = await dispatch(loginUser(data));
 
     if (loginUser.fulfilled.match(resultAction)) {
-      toast.success("Login successful");
+      toast.success("Login successful", { duration: 500 });
       navigate("/");
     } else if (loginUser.rejected.match(resultAction)) {
       const payload = resultAction.payload;

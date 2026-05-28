@@ -1,5 +1,5 @@
 const cloudinary = require("cloudinary").v2;
-const Problem = require("../models/problems");
+const {Problem} = require("../models/problem");
 const SolutionVideo = require("../models/solutionVideo");
 const asyncHandler = require("../utils/asyncHandler");
 const STATUS_CODES = require("../constants/statusCodes");

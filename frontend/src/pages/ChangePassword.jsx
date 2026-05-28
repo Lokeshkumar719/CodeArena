@@ -124,6 +124,10 @@ function ChangePassword() {
                 type={showConfirmPassword ? "text" : "password"}
                 placeholder="••••••••"
                 {...register("confirmPassword")}
+                onPaste={(e) => {
+                  e.preventDefault();
+                  toast.error("Paste not allowed here");
+                }}
                 style={{
                   ...s.input,
                   paddingRight: "46px",

@@ -5,9 +5,9 @@ const getExecutionLimits = require("../utils/getExecutionLimits");
 const ApiError = require("../utils/ApiError");
 const validateSubmissionInput = require("../utils/validateSubmissionInput");
 const executeCode = require("../services/executionService");
-const { getProblemById } = require("../services/problem/problemService");
 const STATUS_CODES = require("../constants/statusCodes");
 const SUBMISSION_STATUS = require("../constants/submissionStatus");
+const {Problem} = require("../models/problem");
 
 const submitCode = asyncHandler(async (req, res) => {
   const userId = req.user._id;
@@ -27,7 +27,11 @@ const submitCode = asyncHandler(async (req, res) => {
     );
   }
 
-  const problem = await getProblemById(problemId);
+  const problem = await Problem.findById(problemId);
+
+  if (!problem) {
+    throw new ApiError(STATUS_CODES.NOT_FOUND, "Problem not found");
+  }
 
   // combine visible + hidden testcases
   const allTestcases = [
@@ -105,7 +109,11 @@ const runCode = asyncHandler(async (req, res) => {
 
   validateSubmissionInput(userId, problemId, code, language);
 
-  const problem = await getProblemById(problemId);
+  const problem = await Problem.findById(problemId);
+
+  if (!problem) {
+    throw new ApiError(STATUS_CODES.NOT_FOUND, "Problem not found");
+  }
 
   const languageId = getLanguageById(language);
 
