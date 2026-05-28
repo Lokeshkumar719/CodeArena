@@ -416,7 +416,7 @@
 
 .submit-btn {
   padding: 8px 20px;
-  background: #17be76da;
+  background: #4f46e5;
   border: 1px solid #6366f1;
   border-radius: 8px;
   color: white;
@@ -427,9 +427,9 @@
   font-family: 'Sora', sans-serif;
 }
 
-.submit-btn:hover {
+/* .submit-btn:hover {
   background: #6366f1;
-}
+} */
 
 /* ── Result Panel ── */
 

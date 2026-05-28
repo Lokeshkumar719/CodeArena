@@ -121,8 +121,16 @@ function Homepage() {
   }, [currentPage, debouncedSearch, filters]);
 
   const isFirstRender = useRef(true);
+
+  const profileDropdownRef = useRef(null);
+
   useEffect(() => {
-    if (isFirstRender.current) { isFirstRender.current = false; return; }
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+
+      return;
+    }
+
     setCurrentPage(1);
   }, [debouncedSearch, filters]);
 
@@ -146,24 +154,32 @@ function Homepage() {
   };
 
   const hasActiveFilters =
-    searchInput.trim() || filters.difficulty || filters.tags.length > 0 || filters.status;
+    searchInput.trim() ||
+    filters.difficulty ||
+    filters.tags.length > 0 ||
+    filters.status;
 
   // ── Logout ────────────────────────────────────────────────────────────────
   const handleLogout = async () => {
     const resultAction = await dispatch(logoutUser());
     if (logoutUser.fulfilled.match(resultAction)) {
-      toast.success("Logged out successfully");
+      toast.success("Logged out successfully",{duration:500});
       setDropdownOpen(false);
       return;
     }
     toast.error(resultAction.payload || "Logout failed");
   };
 
-  const { currentPage: pg, totalPages, totalProblems, hasNextPage, hasPrevPage } = pagination;
+  const {
+    currentPage: pg,
+    totalPages,
+    totalProblems,
+    hasNextPage,
+    hasPrevPage,
+  } = pagination;
 
   return (
     <div style={s.page}>
-
       {/* ── Navbar ── */}
       <nav style={s.navbar}>
         <NavLink to="/" style={{ textDecoration: "none" }}>
@@ -203,10 +219,15 @@ function Homepage() {
       </nav>
 
       <div style={s.main}>
-
         {/* ── Search bar ── */}
         <div style={s.searchWrapper}>
-          <svg style={s.searchIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+          <svg
+            style={s.searchIcon}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
             <circle cx="11" cy="11" r="8" />
             <path strokeLinecap="round" d="M21 21l-4.35-4.35" />
           </svg>
@@ -218,13 +239,15 @@ function Homepage() {
             onChange={(e) => setSearchInput(e.target.value)}
           />
           {searchInput && (
-            <button style={s.searchClear} onClick={() => setSearchInput("")}>✕</button>
+            <button style={s.searchClear} onClick={() => setSearchInput("")}>
+              ✕
+            </button>
           )}
         </div>
 
         {/* ── Filters row ── */}
         <div style={s.filterRow}>
-
+          {/* Difficulty */}
           <select
             value={filters.difficulty}
             onChange={(e) => updateFilter("difficulty", e.target.value)}
@@ -291,7 +314,10 @@ function Homepage() {
                       <button
                         key={tag}
                         onClick={() => toggleTag(tag)}
-                        style={{ ...s.tagPill, ...(active ? s.tagPillActive : {}) }}
+                        style={{
+                          ...s.tagPill,
+                          ...(active ? s.tagPillActive : {}),
+                        }}
                         type="button"
                       >
                         {tag}
@@ -313,7 +339,11 @@ function Homepage() {
           </div>
 
           {hasActiveFilters && (
-            <button style={s.clearAllBtn} onClick={clearAllFilters} type="button">
+            <button
+              style={s.clearAllBtn}
+              onClick={clearAllFilters}
+              type="button"
+            >
               ✕ Clear all
             </button>
           )}
@@ -321,7 +351,14 @@ function Homepage() {
 
         {/* ── Selected tag pills ── */}
         {filters.tags.length > 0 && (
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "20px" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "8px",
+              flexWrap: "wrap",
+              marginBottom: "20px",
+            }}
+          >
             {filters.tags.map((tag) => (
               <span key={tag} style={s.activeTagPill}>
                 {tag}
@@ -338,7 +375,9 @@ function Homepage() {
           <div style={s.emptyState}>
             No problems found.{" "}
             {hasActiveFilters && (
-              <button style={s.inlineClear} onClick={clearAllFilters}>Clear filters</button>
+              <button style={s.inlineClear} onClick={clearAllFilters}>
+                Clear filters
+              </button>
             )}
           </div>
         ) : (
@@ -350,7 +389,10 @@ function Homepage() {
                     {problem.problemNo && (
                       <span style={s.problemNo}>#{problem.problemNo}</span>
                     )}
-                    <NavLink to={`/problem/${problem._id}`} style={s.problemTitle}>
+                    <NavLink
+                      to={`/problem/${problem._id}`}
+                      style={s.problemTitle}
+                    >
                       {problem.title}
                     </NavLink>
                   </div>
@@ -373,7 +415,9 @@ function Homepage() {
         {!loading && problems.length > 0 && (
           <>
             <div style={s.paginationInfo}>
-              Showing {(pg - 1) * PAGE_LIMIT + 1}–{Math.min(pg * PAGE_LIMIT, totalProblems)} of {totalProblems} problems
+              Showing {(pg - 1) * PAGE_LIMIT + 1}–
+              {Math.min(pg * PAGE_LIMIT, totalProblems)} of {totalProblems}{" "}
+              problems
             </div>
             <div style={s.pagination}>
               <button
@@ -385,7 +429,9 @@ function Homepage() {
               </button>
 
               {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter((n) => n === 1 || n === totalPages || Math.abs(n - pg) <= 2)
+                .filter(
+                  (n) => n === 1 || n === totalPages || Math.abs(n - pg) <= 2,
+                )
                 .reduce((acc, n, i, arr) => {
                   if (i > 0 && n - arr[i - 1] > 1) acc.push("...");
                   acc.push(n);
@@ -393,16 +439,24 @@ function Homepage() {
                 }, [])
                 .map((item, i) =>
                   item === "..." ? (
-                    <span key={`ellipsis-${i}`} style={{ color: "#4b5563", padding: "0 4px" }}>…</span>
+                    <span
+                      key={`ellipsis-${i}`}
+                      style={{ color: "#4b5563", padding: "0 4px" }}
+                    >
+                      …
+                    </span>
                   ) : (
                     <button
                       key={item}
                       onClick={() => setCurrentPage(item)}
-                      style={{ ...s.pageBtn, ...(pg === item ? s.pageBtnActive : {}) }}
+                      style={{
+                        ...s.pageBtn,
+                        ...(pg === item ? s.pageBtnActive : {}),
+                      }}
                     >
                       {item}
                     </button>
-                  )
+                  ),
                 )}
 
               <button

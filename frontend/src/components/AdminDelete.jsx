@@ -313,7 +313,7 @@ const AdminDelete = () => {
               ) : (
                 problems.map((problem, index) => (
                   <tr key={problem._id} style={s.tr}>
-                    <td style={s.td}>{(pg - 1) * PAGE_LIMIT + index + 1}</td>
+                    <td style={s.td}>{problem.problemNo ?? (pg - 1) * PAGE_LIMIT + index + 1}</td>
                     <td style={{ ...s.td, color: "#e2e8f0", fontWeight: 600 }}>{problem.title}</td>
                     <td style={s.td}>
                       <span style={getDifficultyStyle(problem.difficulty)}>{problem.difficulty}</span>

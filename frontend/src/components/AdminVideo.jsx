@@ -439,7 +439,7 @@ const AdminVideo = () => {
                   <tr key={problem._id} style={s.tr}>
 
                     <td style={s.td}>
-                      {(pg - 1) * PAGE_LIMIT + index + 1}
+                      {problem.problemNo ?? (pg - 1) * PAGE_LIMIT + index + 1}
                     </td>
 
                     <td style={{

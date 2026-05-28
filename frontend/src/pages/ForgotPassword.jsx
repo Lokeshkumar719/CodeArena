@@ -36,7 +36,7 @@ function ForgotPassword() {
         toast.error(err.response?.data?.message || "Too many requests. Please slow down.");
         return;
       }
-      toast.error(err?.response?.data?.message || "Something went wrong");
+      toast.error(err?.response?.data?.message || "Something went wrong",{duration:500});
     } finally {
       setLoading(false);
     }
