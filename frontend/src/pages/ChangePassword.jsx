@@ -47,7 +47,7 @@ function ChangePassword() {
       reset();
       navigate("/login");
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Something went wrong");
+      toast.error(err?.response?.data?.message || "Something went wrong",{duration:500});
     } finally {
       setLoading(false);
     }
