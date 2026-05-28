@@ -99,9 +99,10 @@ const updateProblem = asyncHandler(async (req, res) => {
     { ...req.body },
     {
       runValidators: true,
-      new: true,
+      returnDocument: "after",
     },
   );
+
 
   return res.status(STATUS_CODES.OK).json({
     success: true,

@@ -109,7 +109,11 @@ const runCode = asyncHandler(async (req, res) => {
 
   validateSubmissionInput(userId, problemId, code, language);
 
-  const problem = await getProblemById(problemId);
+  const problem = await Problem.findById(problemId);
+
+  if (!problem) {
+    throw new ApiError(STATUS_CODES.NOT_FOUND, "Problem not found");
+  }
 
   const languageId = getLanguageById(language);
 

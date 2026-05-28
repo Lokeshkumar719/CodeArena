@@ -6,22 +6,69 @@ import { logoutUser } from "../authSlice";
 import toast from "react-hot-toast";
 
 const tagOptions = [
-  "array", "string", "stack", "queue", "hashing", "sorting", "binarySearch",
-  "twoPointers", "slidingWindow", "recursion", "backtracking", "greedy",
-  "heap", "trie", "graph", "dfs", "bfs", "dp", "bitManipulation", "math",
-  "prefixSum", "matrix", "unionFind", "segmentTree", "topologicalSort", "shortestPath",
+  "array",
+  "string",
+  "stack",
+  "queue",
+  "hashing",
+  "sorting",
+  "binarySearch",
+  "twoPointers",
+  "slidingWindow",
+  "recursion",
+  "backtracking",
+  "greedy",
+  "heap",
+  "trie",
+  "graph",
+  "dfs",
+  "bfs",
+  "dp",
+  "bitManipulation",
+  "math",
+  "prefixSum",
+  "matrix",
+  "unionFind",
+  "segmentTree",
+  "topologicalSort",
+  "shortestPath",
 ];
 
 const PAGE_LIMIT = 5;
 
 const getDifficultyStyle = (difficulty) => {
-  const base = { borderRadius: "999px", fontSize: "12px", fontWeight: 600, padding: "4px 12px" };
-  const styles = {
-    easy:   { background: "rgba(34,197,94,0.1)",  color: "#22c55e", border: "1px solid rgba(34,197,94,0.2)" },
-    medium: { background: "rgba(234,179,8,0.1)",  color: "#eab308", border: "1px solid rgba(234,179,8,0.2)" },
-    hard:   { background: "rgba(239,68,68,0.1)",  color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" },
+  const base = {
+    borderRadius: "999px",
+    fontSize: "12px",
+    fontWeight: 600,
+    padding: "4px 12px",
   };
-  return { ...base, ...(styles[difficulty?.toLowerCase()] || { background: "rgba(99,102,241,0.1)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.2)" }) };
+  const styles = {
+    easy: {
+      background: "rgba(34,197,94,0.1)",
+      color: "#22c55e",
+      border: "1px solid rgba(34,197,94,0.2)",
+    },
+    medium: {
+      background: "rgba(234,179,8,0.1)",
+      color: "#eab308",
+      border: "1px solid rgba(234,179,8,0.2)",
+    },
+    hard: {
+      background: "rgba(239,68,68,0.1)",
+      color: "#ef4444",
+      border: "1px solid rgba(239,68,68,0.2)",
+    },
+  };
+
+  return {
+    ...base,
+    ...(styles[difficulty?.toLowerCase()] || {
+      background: "rgba(99,102,241,0.1)",
+      color: "#a5b4fc",
+      border: "1px solid rgba(99,102,241,0.2)",
+    }),
+  };
 };
 
 // Debounce hook — prevents a search API call on every single keystroke
@@ -131,11 +178,13 @@ function Homepage() {
   // ── Logout ───────────────────────────────────────────────────────────────
   const handleLogout = async () => {
     const resultAction = await dispatch(logoutUser());
+
     if (logoutUser.fulfilled.match(resultAction)) {
       toast.success("Logged out successfully");
       setDropdownOpen(false);
       return;
     }
+
     toast.error(resultAction.payload || "Logout failed");
   };
 
@@ -157,11 +206,20 @@ function Homepage() {
           {dropdownOpen && (
             <div style={s.dropdown}>
               {user?.role?.toLowerCase() === "admin" && (
-                <NavLink to="/admin" style={s.dropdownItem} onClick={() => setDropdownOpen(false)}>
+                <NavLink
+                  to="/admin"
+                  style={s.dropdownItem}
+                  onClick={() => setDropdownOpen(false)}
+                >
                   ⚙️ Admin
                 </NavLink>
               )}
-              <NavLink to="/change-password" style={s.dropdownItem} onClick={() => setDropdownOpen(false)}>
+
+              <NavLink
+                to="/change-password"
+                style={s.dropdownItem}
+                onClick={() => setDropdownOpen(false)}
+              >
                 🔒 Change Password
               </NavLink>
               <button onClick={handleLogout} style={{ ...s.dropdownItem, background: "transparent", border: "none", width: "100%", textAlign: "left" }}>
@@ -316,10 +374,16 @@ function Homepage() {
                     <span style={s.solvedBadge}>✔ Solved</span>
                   )}
                 </div>
+
                 <div style={s.badgeRow}>
-                  <span style={getDifficultyStyle(problem.difficulty)}>{problem.difficulty}</span>
+                  <span style={getDifficultyStyle(problem.difficulty)}>
+                    {problem.difficulty}
+                  </span>
+
                   {problem.tags.map((tag) => (
-                    <span key={tag} style={s.tagBadge}>{tag}</span>
+                    <span key={tag} style={s.tagBadge}>
+                      {tag}
+                    </span>
                   ))}
                 </div>
               </div>
