@@ -55,7 +55,7 @@ function buildProblemQuery(params) {
   if (params.tags) {
     const requested = params.tags
       .split(",")
-      .map((t) => t.trim().toLowerCase())
+      .map((t) => t.trim())
       .filter(Boolean);
 
     const allValid = requested.every((t) => VALID_TAGS.includes(t));
