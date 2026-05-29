@@ -16,39 +16,31 @@ import useRateLimit from "../hooks/useRateLimit.jsx";
 
 import "./ProblemPage.css";
 
-const LANG_STORAGE_KEY    = (problemId)       => `lang_${problemId}`;
-const CODE_STORAGE_KEY    = (problemId, lang) => `code_${problemId}_${lang}`;
-const INITIAL_STORAGE_KEY = (problemId, lang) => `initial_${problemId}_${lang}`;
-
-const hasUserWrittenCode = (saved, initial) => {
-  if (!saved || saved.trim() === "") return false;
-  if (saved.trim() === initial.trim()) return false;
-  if (saved.trim().length > initial.trim().length) return true;
-  return false;
-};
+const LANG_STORAGE_KEY = (problemId) => `lang_${problemId}`;
+const CODE_STORAGE_KEY = (problemId, lang) => `code_${problemId}_${lang}`;
 
 const ProblemPage = () => {
-  const [problem,          setProblem]          = useState(null);
+  const [problem, setProblem] = useState(null);
   const [selectedLanguage, setSelectedLanguage] = useState("javascript");
-  const [codeMap,          setCodeMap]          = useState({});
-  const [codeReady,        setCodeReady]        = useState(false);
-  const [loading,          setLoading]          = useState(false);
-  const [isRunning,        setIsRunning]        = useState(false);
-  const [isSubmitting,     setIsSubmitting]     = useState(false);
-  const [runResult,        setRunResult]        = useState(null);
-  const [submitResult,     setSubmitResult]     = useState(null);
-  const [activeLeftTab,    setActiveLeftTab]    = useState("description");
-  const [activeRightTab,   setActiveRightTab]   = useState("code");
-  const [leftWidth,        setLeftWidth]        = useState(50);
-  const [isDragging,       setIsDragging]       = useState(false);
+  const [codeMap, setCodeMap] = useState({});
+  const [codeReady, setCodeReady] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [runResult, setRunResult] = useState(null);
+  const [submitResult, setSubmitResult] = useState(null);
+  const [activeLeftTab, setActiveLeftTab] = useState("description");
+  const [activeRightTab, setActiveRightTab] = useState("code");
+  const [leftWidth, setLeftWidth] = useState(50);
+  const [isDragging, setIsDragging] = useState(false);
 
-  const runRateLimit    = useRateLimit();
+  const runRateLimit = useRateLimit();
   const submitRateLimit = useRateLimit();
 
-  const editorRef      = useRef(null);
+  const editorRef = useRef(null);
   const splitLayoutRef = useRef(null);
-  const { problemId }  = useParams();
-  const navigate       = useNavigate();
+  const { problemId } = useParams();
+  const navigate = useNavigate();
 
   // ── Restore saved language ───────────────────────────────────────────────
   useEffect(() => {
@@ -62,15 +54,14 @@ const ProblemPage = () => {
       setLoading(true);
       setCodeReady(false);
       try {
-        const response    = await axiosClient.get(`/problem/problemById/${problemId}`);
+        const response = await axiosClient.get(`/problem/problemById/${problemId}`);
         const problemData = response.data?.data;
 
         const map = {};
         problemData?.startCode?.forEach((sc) => {
           const initial = sc.initialCode ?? "";
-          const saved   = localStorage.getItem(CODE_STORAGE_KEY(problemId, sc.language));
-          localStorage.setItem(INITIAL_STORAGE_KEY(problemId, sc.language), initial);
-          map[sc.language] = hasUserWrittenCode(saved, initial) ? saved : initial;
+          const saved = localStorage.getItem(CODE_STORAGE_KEY(problemId, sc.language));
+          map[sc.language] = map[sc.language] = saved ?? initial;
         });
 
         setProblem(problemData);
@@ -95,10 +86,10 @@ const ProblemPage = () => {
     };
     const onUp = () => setIsDragging(false);
     window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup",   onUp);
+    window.addEventListener("mouseup", onUp);
     return () => {
       window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup",   onUp);
+      window.removeEventListener("mouseup", onUp);
     };
   }, [isDragging]);
 
@@ -114,13 +105,7 @@ const ProblemPage = () => {
   const handleEditorChange = (value) => {
     const v = value ?? "";
     setCodeMap((prev) => ({ ...prev, [selectedLanguage]: v }));
-    const key     = CODE_STORAGE_KEY(problemId, selectedLanguage);
-    const initial = localStorage.getItem(INITIAL_STORAGE_KEY(problemId, selectedLanguage)) ?? "";
-    if (!hasUserWrittenCode(v, initial)) {
-      localStorage.removeItem(key);
-    } else {
-      localStorage.setItem(key, v);
-    }
+    localStorage.setItem(CODE_STORAGE_KEY(problemId, selectedLanguage), v);
   };
 
   const handleEditorDidMount = (editor) => {
@@ -186,13 +171,13 @@ const ProblemPage = () => {
   };
 
   const getLanguageForMonaco = (lang) => ({ javascript: "javascript", java: "java", cpp: "cpp" }[lang] ?? "javascript");
-  const getDifficultyBadge   = (d)    => ({ easy: "badge-easy", medium: "badge-medium", hard: "badge-hard" }[d] ?? "badge-tag");
+  const getDifficultyBadge = (d) => ({ easy: "badge-easy", medium: "badge-medium", hard: "badge-hard" }[d] ?? "badge-tag");
 
-  const LANGS      = [{ key: "javascript", label: "JavaScript" }, { key: "java", label: "Java" }, { key: "cpp", label: "C++" }];
-  const LEFT_TABS  = ["description", "editorial", "solutions", "submissions"];
+  const LANGS = [{ key: "javascript", label: "JavaScript" }, { key: "java", label: "Java" }, { key: "cpp", label: "C++" }];
+  const LEFT_TABS = ["description", "editorial", "solutions", "submissions"];
   const RIGHT_TABS = ["code", "testcase", "result"];
 
-  const runBlocked    = isRunning || isSubmitting || runRateLimit.cooldown > 0;
+  const runBlocked = isRunning || isSubmitting || runRateLimit.cooldown > 0;
   const submitBlocked = isRunning || isSubmitting || submitRateLimit.cooldown > 0;
 
   if (loading && !problem) return <LoadingScreen />;
@@ -220,8 +205,8 @@ const ProblemPage = () => {
             {problem && (
               <>
                 {activeLeftTab === "description" && <ProblemDescription problem={problem} getDifficultyBadge={getDifficultyBadge} />}
-                {activeLeftTab === "editorial"   && <Editorial secureUrl={problem.secureUrl} thumbnailUrl={problem.thumbnailUrl} duration={problem.duration} />}
-                {activeLeftTab === "solutions"   && (
+                {activeLeftTab === "editorial" && <Editorial secureUrl={problem.secureUrl} thumbnailUrl={problem.thumbnailUrl} duration={problem.duration} />}
+                {activeLeftTab === "solutions" && (
                   <div>
                     <p className="section-title">Solutions</p>
                     {problem.referenceSolution?.length > 0 ? (
@@ -285,7 +270,7 @@ const ProblemPage = () => {
             </div>
 
             {activeRightTab === "testcase" && <TestCasePanel runResult={runResult} />}
-            {activeRightTab === "result"   && <ResultPanel   submitResult={submitResult} />}
+            {activeRightTab === "result" && <ResultPanel submitResult={submitResult} />}
           </div>
 
           {/* Action Bar */}
@@ -294,15 +279,15 @@ const ProblemPage = () => {
               {isRunning
                 ? "Running..."
                 : runRateLimit.cooldown > 0
-                ? `⏳ Run (${runRateLimit.cooldown}s)`
-                : "▶ Run"}
+                  ? `⏳ Run (${runRateLimit.cooldown}s)`
+                  : "▶ Run"}
             </button>
             <button className="submit-btn" onClick={handleSubmitCode} disabled={submitBlocked}>
               {isSubmitting
                 ? "Submitting..."
                 : submitRateLimit.cooldown > 0
-                ? `⏳ Submit (${submitRateLimit.cooldown}s)`
-                : "↗ Submit"}
+                  ? `⏳ Submit (${submitRateLimit.cooldown}s)`
+                  : "↗ Submit"}
             </button>
           </div>
         </div>
