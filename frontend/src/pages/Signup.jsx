@@ -37,7 +37,7 @@ function Signup() {
   const onSubmit = async ({ firstName, emailId, password }) => {
     const resultAction = await dispatch(registerUser({ firstName, emailId, password }));
     if (registerUser.fulfilled.match(resultAction)) {
-      toast.success("Signup successful");
+      toast.success("Signup successful", { duration: 500 });
       navigate("/");
     } else if (registerUser.rejected.match(resultAction)) {
       const payload = resultAction.payload;

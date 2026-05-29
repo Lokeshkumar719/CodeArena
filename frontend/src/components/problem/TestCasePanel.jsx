@@ -1,8 +1,6 @@
 function TestCasePanel({ runResult }) {
-
-  const getVerdictMessage=(status)=>{
-    switch(status){
-
+  const getVerdictMessage = (status) => {
+    switch (status) {
       case "accepted":
         return "✓ All test cases passed";
 
@@ -18,6 +16,12 @@ function TestCasePanel({ runResult }) {
       case "time_limit_exceeded":
         return "⏳ Time Limit Exceeded";
 
+      case "memory_limit_exceeded":
+        return "🧠 Memory Limit Exceeded";
+
+      case "output_limit_exceeded":
+        return "📄 Output Limit Exceeded";
+
       default:
         return "✗ Execution Failed";
     }
@@ -32,9 +36,7 @@ function TestCasePanel({ runResult }) {
       {runResult ? (
         <div
           className={`result-card ${
-            runResult.accepted
-              ? "result-success"
-              : "result-error"
+            runResult.accepted ? "result-success" : "result-error"
           }`}
         >
           <p className="result-heading">
@@ -45,69 +47,48 @@ function TestCasePanel({ runResult }) {
             <p
               className="result-meta"
               style={{
-                color:"#ff7b72",
-                marginTop:"8px",
-                whiteSpace:"pre-wrap"
+                color: "#ff7b72",
+                marginTop: "8px",
+                whiteSpace: "pre-wrap",
               }}
             >
               {runResult.error}
             </p>
           )}
 
-          <p className="result-meta">
-            Runtime: {runResult.runtime} sec
-          </p>
+          <p className="result-meta">Runtime: {runResult.runtime} sec</p>
 
-          <p className="result-meta">
-            Memory: {runResult.memory} KB
-          </p>
+          <p className="result-meta">Memory: {runResult.memory} KB</p>
 
           <div style={{ marginTop: "12px" }}>
             {runResult.testCases?.map((tc, i) => (
               <div key={i} className="tc-card">
-
                 <div className="tc-row">
-                  <span className="tc-key">
-                    Input:
-                  </span>
+                  <span className="tc-key">Input:</span>
 
-                  <span>
-                    {tc.stdin}
-                  </span>
+                  <span style={{ whiteSpace: "pre-wrap" }}>{tc.stdin}</span>
                 </div>
 
                 <div className="tc-row">
-                  <span className="tc-key">
-                    Expected:
-                  </span>
+                  <span className="tc-key">Expected:</span>
 
-                  <span>
+                  <span style={{ whiteSpace: "pre-wrap" }}>
                     {tc.expected_output}
                   </span>
                 </div>
 
                 <div className="tc-row">
-                  <span className="tc-key">
-                    Output:
-                  </span>
+                  <span className="tc-key">Output:</span>
 
-                  <span>
+                  <span style={{ whiteSpace: "pre-wrap" }}>
                     {tc.stdout || "No Output"}
                   </span>
                 </div>
 
-                <div
-                  className={
-                    tc.status?.id === 3
-                      ? "tc-pass"
-                      : "tc-fail"
-                  }
-                >
-                  {
-                    tc.status?.id === 3
-                      ? "✓ Passed"
-                      : `✗ ${tc.status?.description || "Failed"}`
-                  }
+                <div className={tc.status?.id === 3 ? "tc-pass" : "tc-fail"}>
+                  {tc.status?.id === 3
+                    ? "✓ Passed"
+                    : `✗ ${tc.errorMessage || tc.status?.description || "Failed"}`}
                 </div>
               </div>
             ))}

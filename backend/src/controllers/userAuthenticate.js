@@ -262,19 +262,6 @@ const deleteProfile = asyncHandler(async (req, res) => {
   });
 });
 
-const testMail = asyncHandler(async (req, res) => {
-  console.log("i am inside testMail");
-  const response = await sendEmail({
-    to: "lokesh6182005@gmail.com",
-    subject: "CodeArena Test Mail",
-    html: "<h1>Email service working successfully</h1>",
-  });
-
-  return res.status(200).json({
-    success: true,
-    response,
-  });
-});
 
 module.exports = {
   register,
@@ -283,7 +270,6 @@ module.exports = {
   refreshAccessToken,
   adminRegister,
   deleteProfile,
-  testMail,
   forgotPassword,
   resetPassword,
   changePassword,
