@@ -1,3 +1,32 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Shimmer utility */
+@keyframes shimmer {
+  0%   { background-position: -700px 0; }
+  100% { background-position: 700px 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #0c1018 25%,
+    #141a26 50%,
+    #0c1018 75%
+  );
+  background-size: 700px 100%;
+  animation: shimmer 1.6s infinite linear;
+}
+
+#nprogress .bar {
+  background: #a5b4fc !important;
+  height: 2px !important;
+}
+#nprogress .peg {
+  box-shadow: 0 0 10px #a5b4fc, 0 0 5px #a5b4fc !important;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}

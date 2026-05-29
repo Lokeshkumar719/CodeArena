@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import axiosClient from "../utils/axiosClient";
 import { logoutUser } from "../authSlice";
 import toast from "react-hot-toast";
+import ProblemListSkeleton from "../components/skeletons/ProblemListSkeleton";
 
 const tagOptions = [
   "array", "string", "stack", "queue", "hashing", "sorting",
@@ -167,6 +168,8 @@ function Homepage() {
   const fetchProblems = useCallback(async (page, search, f) => {
     setLoading(true);
     try {
+      /// For testing purpose add here an await delay of 5s to see the skeleton loader in action
+      // await new Promise(resolve => setTimeout(resolve, 7000));
       const qs = buildQueryString(page, search, f);
       const { data } = await axiosClient.get(`/problem/getProblems?${qs}`);
       if (!data.success) {
@@ -366,7 +369,7 @@ function Homepage() {
 
         {/* ── Problem list ── */}
         {loading ? (
-          <div style={s.emptyState}>Loading problems…</div>
+          <ProblemListSkeleton count={5} />
         ) : problems.length === 0 ? (
           <div style={s.emptyState}>
             No problems found.{" "}

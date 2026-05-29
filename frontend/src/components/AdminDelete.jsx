@@ -3,6 +3,7 @@ import axiosClient from "../utils/axiosClient";
 import toast from "react-hot-toast";
 import { NavLink, useNavigate } from "react-router";
 import { getErrorMessage } from "../utils/errorHandler";
+import TableSkeleton from "../components/skeletons/TableSkeleton";
 
 const tagOptions = [
   "array", "string", "stack", "queue", "hashing", "sorting", "binarySearch",
@@ -130,9 +131,12 @@ const AdminDelete = () => {
     return params.toString();
   }, []);
 
-  const fetchProblems = useCallback(async (page, search, f) => {
+  const fetchProblems = useCallback(async (page, search, f) => {  
     try {
       setLoading(true);
+      /// For testing purpose add here an await delay of 5s to see the skeleton loader in action
+      // await new Promise(resolve => setTimeout(resolve, 5000));
+      
       const qs = buildQueryString(page, search, f);
       const { data } = await axiosClient.get(`/problem/getProblems?${qs}`);
       if (!data.success) { toast.error(data.errors?.[0] || "Failed to fetch problems"); return; }
@@ -199,14 +203,11 @@ const AdminDelete = () => {
 
   const { currentPage: pg, totalPages, totalProblems, hasNextPage, hasPrevPage } = pagination;
 
-  if (loading && problems.length === 0) {
-    return <div style={{ minHeight: "100vh", background: "#080c14" }} />;
-  }
+  if (loading) return <TableSkeleton rows={5} />;
 
   return (
     <div style={s.page}>
 
-      {/* ── Navbar ── */}
       <nav style={s.navbar}>
         <div style={s.navLeft}>
           <button onClick={() => navigate(-1)} style={s.backBtn}>
@@ -226,13 +227,11 @@ const AdminDelete = () => {
 
       <div style={s.main}>
 
-        {/* ── Header ── */}
         <div style={s.header}>
           <h1 style={s.heading}>Delete Problems</h1>
           <p style={s.subheading}>Remove outdated or invalid coding problems from the platform</p>
         </div>
 
-        {/* ── Search ── */}
         <div style={s.searchWrapper}>
           <svg style={s.searchIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <circle cx="11" cy="11" r="8" />
@@ -250,7 +249,6 @@ const AdminDelete = () => {
           )}
         </div>
 
-        {/* ── Filters ── */}
         <div style={s.filterRow}>
 
           {/* Difficulty — custom dropdown */}
@@ -324,7 +322,6 @@ const AdminDelete = () => {
           </div>
         )}
 
-        {/* ── Table ── */}
         <div style={s.tableWrap}>
           <table style={s.table}>
             <thead>
@@ -335,7 +332,7 @@ const AdminDelete = () => {
               </tr>
             </thead>
             <tbody>
-              {!loading && problems.length === 0 ? (
+              {problems.length === 0 ? (
                 <tr>
                   <td colSpan={5} style={{ padding: "40px", textAlign: "center", color: "#4b5563" }}>
                     No problems found
@@ -376,8 +373,7 @@ const AdminDelete = () => {
           </table>
         </div>
 
-        {/* ── Pagination ── */}
-        {!loading && problems.length > 0 && (
+        {problems.length > 0 && (
           <>
             <div style={s.paginationInfo}>
               Showing {(pg - 1) * PAGE_LIMIT + 1}–{Math.min(pg * PAGE_LIMIT, totalProblems)} of {totalProblems} problems

@@ -7,6 +7,7 @@ import { useNavigate, useParams, NavLink } from "react-router";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "../utils/errorHandler";
 import useRateLimit from "../hooks/useRateLimit.jsx";
+import AdminUploadSkeleton from "../components/skeletons/AdminUploadSkeleton";
 
 const tagOptions = [
   "array",
@@ -305,9 +306,7 @@ function AdminUpdate() {
 
   const isDisabled = isSubmitting || cooldown > 0;
 
-  if (loading) {
-    return <div style={s.loadingContainer}>Loading problem...</div>;
-  }
+  if (loading) return <AdminUploadSkeleton />;
 
   return (
     <div style={s.page}>

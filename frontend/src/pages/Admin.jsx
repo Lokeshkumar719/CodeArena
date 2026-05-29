@@ -1,5 +1,6 @@
 import { Plus, Edit, Trash2, Video, ArrowRight } from "lucide-react";
 import { NavLink, useNavigate } from "react-router";
+import AdminCardSkeleton from "../components/skeletons/AdminCardSkeleton";
 
 function Admin() {
   const navigate = useNavigate();
@@ -45,6 +46,8 @@ function Admin() {
       route: "/admin/video",
     },
   ];
+
+  // if (loading) return <TableSkeleton rows={5} />;
 
   return (
     <div style={s.page}>
