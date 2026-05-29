@@ -55,7 +55,7 @@ function AdminPanel() {
       outputFormat: "",
       constraints: "",
       timeLimit: 2,
-      memoryLimit: 256000,
+      memoryLimit: 262144,
       visibleTestCases: [{ input: "", output: "", explanation: "" }],
       hiddenTestCases: [{ input: "", output: "" }],
       startCode: languageOptions.map((lang) => ({ language: lang.value, initialCode: "" })),

@@ -2,18 +2,19 @@
 
 **ODM:** Mongoose 9  
 **Connection:** `process.env.DB_CONNECT_STRING` via `config/db.js`  
-**Last reviewed:** 2026-05-18
+**Cache/KV:** Redis via `config/redis.js`  
+**Last reviewed:** 2026-05-29
 
 ## Collections (Models)
 
 | Model | Collection name | File |
 |-------|-----------------|------|
-| User | `users` (default pluralization: `user` model → collection `users`) | `models/user.js` |
-| Problem | `problems` | `models/problems.js` |
+| User | `users` | `models/user.js` |
+| Problem | `problems` | `models/problem.js` |
 | Submission | `submissions` | `models/submission.js` |
 | SolutionVideo | `solutionvideos` | `models/solutionVideo.js` |
-
-> Mongoose model names: `"user"`, `"Problem"`, `"submission"`, `"solutionVideo"`.
+| Counter | `counters` | `models/counter.js` |
+| ReusableProblemNo | `reusableproblemnoes` | `models/reusableProblemNo.js` |
 
 ## Entity Relationships
 
@@ -32,52 +33,67 @@ erDiagram
 - `emailId`: unique, indexed, immutable, validated email
 - `role`: `user` | `admin`
 - `problemSolved`: array of `ObjectId` ref `Problem`
-- `password`: bcrypt hash (required)
+- `password`: bcrypt hash
+- `resetPasswordToken` / `resetPasswordExpires`: Used for password reset flow (hashed tokens)
 - **Hook:** `post('findOneAndDelete')` deletes all submissions for that user
 
 ## Problem Schema Highlights
 
-- `description`: problem statement (required)
-- `inputFormat`, `outputFormat`, `constraints`: required strings (shown in UI and returned by `getProblemById` / admin GET)
-- `visibleTestCases`: input, output, explanation
-- `hiddenTestCases`: input, output (no explanation)
-- `startCode[]`: per-language starter templates
-- `referenceSolution[]`: validated via Judge0 on admin create/update
-- `tags`: fixed enum list (array)
-- `problemCreator`: ref User (set from `req.user._id` on create)
+- `problemNo`: Integer identifier, automatically incremented and unique
+- `title`: Indexed for text search
+- `description`, `inputFormat`, `outputFormat`, `constraints`: Rich text / markdown
+- `visibleTestCases` / `hiddenTestCases`: Arrays of input/output objects
+- `startCode[]`: Starter templates per language
+- `referenceSolution[]`: Validated via Judge0 before saving
+- `tags`: Validated against `VALID_TAGS` enum array
+- `difficulty`: `easy` | `medium` | `hard`
+- **Indexes:** 
+  - Text index on `title` (`{ title: "text" }`)
+  - Compound index on `{ difficulty: 1, tags: 1 }`
+  - Sort index on `{ createdAt: -1 }`
+
+## Problem Numbering System
+
+Instead of relying solely on Mongo ObjectIds, problems have human-readable sequential IDs (`problemNo`).
+1. **Counter Model:** Stores the highest assigned ID (`{ _id: "problemNo", seq: X }`).
+2. **ReusableProblemNo Model:** If a problem is deleted, its `problemNo` is saved here.
+3. **`getNextProblemNo` utility:** When a new problem is created, it first checks `ReusableProblemNo` for the smallest available deleted number. If none exist, it atomically increments `Counter`.
 
 ## Submission Schema Highlights
 
-- Indexed compound: `{ userId: 1, problemId: 1 }`
-- `status`: pending | accepted | wrong | error
-- `language`: cpp | java | javascript
-- **Note:** Controller sets `errorMessage` but schema does not define it (may not persist)
+- Compound Index: `{ userId: 1, problemId: 1 }`
+- `status`: Enum containing standard execution states (`accepted`, `wrong_answer`, `time_limit_exceeded`, etc.)
+- Tracking metrics: `runtime`, `memory`, `testCasesPassed`, `testCasesTotal`
 
 ## SolutionVideo Schema
 
-- Links `problemId` + `userId` + Cloudinary `cloudinaryPublicId`, `secureUrl`, `thumbnailUrl`, `duration`
-- One video per problem in delete flow (`findOneAndDelete({ problemId })`)
+- Links `problemId` + `userId` + Cloudinary metadata (`cloudinaryPublicId`, `secureUrl`, `thumbnailUrl`, `duration`)
 
-## Redis (non-Mongo but auth-related)
+## Redis Data Structures
 
-- Key: `token:<jwt_string>` → `"blocked"` on logout
-- TTL: `expireAt` at JWT `exp` timestamp
+While MongoDB is the primary database, Redis acts as a critical secondary datastore:
 
-## Typical Query Paths
+| Key Pattern | Type | Expiry | Purpose |
+|-------------|------|--------|---------|
+| `refreshToken:<userId>` | String | 7 days | Hashed refresh token to validate sessions |
+| `rl:login:<IP>` | Hash | 15m | Rate limit counters for login (Fixed Window) |
+| `rl:register:<IP>` | Hash | 1h | Rate limit counters for registration |
+| `rl:change-password:<userId>` | Hash | 15m | Rate limit counters for password changes |
+| `rl:run:<userId>` | Hash | TTL varies | Token bucket state (`tokens`, `last_refill`) |
+| `rl:submit:<userId>` | Hash | TTL varies | Token bucket state (`tokens`, `last_refill`) |
 
-| Operation | Query |
-|-----------|-------|
-| Login | `User.findOne({ emailId })` |
-| List problems | `Problem.find().select(...).skip().limit()` |
-| Get problem | `Problem.findById(id).select(...)` + optional `SolutionVideo.findOne({ problemId })` |
-| Submissions | `Submission.find({ userId, problemId })` |
-| Mark solved | `User.updateOne({ $addToSet: { problemSolved: problemId } })` |
-| Solved list | `User.findById(id).populate('problemSolved')` |
+## Complex Queries
 
-## Seeding
-
-`seedProblems.js` inserts predefined problems with a **hardcoded** `ADMIN_USER_ID` — must exist in DB before seeding.
+### Problem Search/Filter (`services/problem/listingProblems.js`)
+Uses `buildProblemQuery.js` to construct complex Mongo queries:
+- Text search: `{ $text: { $search: query } }`
+- Exact ID search: `{ problemNo: number }`
+- Array intersection (tags): `{ tags: { $all: requestedTags } }`
+- Difficulty matching: `{ difficulty: value }`
+- Excludes solved/unsolved using `$in`/`$nin` with `Submission` aggregate lookups.
+- Projections explicitly exclude heavy arrays (`hiddenTestCases`, `startCode`, `description`) for performance.
 
 ## Related
 
-- [backend_docs/database/](../backend_docs/database/)
+- [BACKEND_FLOW.md](./BACKEND_FLOW.md)
+- [ARCHITECTURE.md](./ARCHITECTURE.md)

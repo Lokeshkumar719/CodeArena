@@ -1,170 +1,95 @@
-# File Purpose
+# `backend/src/controllers/userAuthenticate.js`
 
-Controller module for user registration, login, logout, admin registration, and account deletion. Implements JWT-in-cookie authentication with Redis-based token blocklisting for logout handling.
+**Layer:** Controller  
+**Path:** `backend/src/controllers/userAuthenticate.js`  
+**Purpose:** Handles user authentication requests, including registration, login, logout, profile deletion, and password resets.  
+**Last reviewed:** 2026-05-29
 
-# Responsibilities
+## Overview
 
-- Validate incoming request bodies using utils/validate
-- Hash passwords securely using bcrypt (salt rounds: 10)
-- Generate JWT tokens with identity and authorization data
-- Store JWT inside secure HTTP-only cookies
-- Block revoked tokens in Redis during logout
-- Delete authenticated user accounts
+This controller layer intercepts requests for the `/user` routes and delegates complex operations (like hashing, DB interactions, and JWT signing) to the `authService`, `refreshSessionService`, and `emailService`. It maps domain results back into standard HTTP responses, setting httpOnly cookies for access and refresh tokens.
 
-# Main Functions / Components / Classes
+## Endpoints Handled
 
-| Export | Wrapped in asyncHandler | Role |
-|--------|---------------------------|------|
-| register | yes | Public signup, role forced to "user" |
-| login | yes | Email/password authentication |
-| logout | yes | Redis blocklist + cookie clear |
-| adminRegister | yes | Admin-only user creation |
-| deleteProfile | yes | Deletes authenticated user account |
+| Method | Export | Route | Security |
+|--------|--------|-------|----------|
+| `POST` | `register` | `/user/register` | `limitRegister` |
+| `POST` | `login` | `/user/login` | `limitLogin` |
+| `POST` | `logout` | `/user/logout` | `userMiddleware` |
+| `GET` | *(inline)* | `/user/check` | `userMiddleware` |
+| `POST` | `adminRegister` | `/user/admin/Register` | `userMiddleware`, `adminMiddleware` |
+| `DELETE`| `deleteProfile` | `/user/profile` | `userMiddleware` |
+| `POST` | `refreshAccessToken` | `/user/refresh` | — |
+| `POST` | `forgotPassword` | `/user/forgot-password` | `limitLogin` |
+| `POST` | `resetPassword` | `/user/reset-password/:token`| — |
+| `POST` | `changePassword` | `/user/change-password` | `userMiddleware`, `limitChangePassword` |
 
-# Internal Logic
+## Core Behaviors
 
-### Register
+### 1. `register`
+- Expects `firstName`, `emailId`, `password`
+- Delegates to `authService.registerUser(req.body, "user")`
+- Destructures `accessToken`, `refreshToken`, `user` from service
+- Calls `setAuthCookies(res, accessToken, refreshToken)`
+- Returns 201 with `user` object
 
-1. validate(req.body) validates required fields and password rules
-2. req.body.role = "user" prevents self-registration as admin
-3. Password hashed using bcrypt.hash(password, 10)
-4. User.create(req.body)
-5. JWT payload stores:
-   js    {      id,      emailId,      role: user.role    }    
-6. JWT `expiresIn: "1d"`; cookie `maxAge: 24 * 60 * 60 * 1000`
-7. Returns sanitized user object
+### 2. `login`
+- Expects `emailId`, `password`
+- Delegates to `authService.loginUser(emailId, password)`
+- Sets cookies and returns 200 with `user` object
 
-### Login
+### 3. `logout`
+- Requires `req.user._id` (from `userMiddleware`)
+- Calls `refreshSessionService.invalidateSession(req.user._id)` to clear Redis
+- Calls `clearAuthCookies(res)`
+- Returns 200 `Logged out successfully`
 
-1. Requires emailId and password
-2. User.findOne({ emailId })
-3. Password verified using bcrypt.compare
-4. JWT payload stores role directly from database
-5. Cookie returned with authenticated user data
+### 4. `refreshAccessToken`
+- Reads `refreshToken` from cookies
+- Validates it's not missing, then calls `refreshSessionService.rotateTokens(req.cookies.refreshToken)`
+- Sets new access/refresh cookies on response
+- Important for silent token rotation.
 
-### Logout
+### 5. `forgotPassword`
+- Expects `emailId`
+- Calls `authService.createPasswordResetToken(emailId)`
+- Calls `emailService.sendPasswordResetEmail(emailId, resetToken)`
+- Returns success even if email not found (security practice)
 
-1. Read JWT token from cookies
-2. jwt.decode(token) extracts expiration timestamp
-3. Token added to Redis blocklist:
-   js    redisClient.set(`token:${token}`,"blocked")    
-4. Redis key expires automatically when JWT expires
-5. Cookie cleared immediately
+### 6. `resetPassword`
+- Reads `req.params.token` and `req.body.password`
+- Calls `authService.resetPasswordWithToken(req.params.token, req.body.password)`
+- Invalidates active sessions in Redis
+- Clears cookies on response
 
-### Admin Register
+### 7. `changePassword`
+- Expects `oldPassword`, `newPassword`
+- Calls `authService.changePassword(req.user._id, oldPassword, newPassword)`
+- Does not clear sessions, just updates the password
 
-1. Validates incoming body
-2. Forces:
-   js    req.body.role = "admin"    
-3. Password hashed using bcrypt
-4. JWT payload stores admin role from DB
-5. Secure JWT cookie returned
+## Cookie Management
 
-### Delete Profile
+`setAuthCookies(res, access, refresh)`:
+- Sets `accessToken` with `accessTokenCookieOptions` (15m)
+- Sets `refreshToken` with `refreshTokenCookieOptions` (7d)
 
-Deletes authenticated user using:
+`clearAuthCookies(res)`:
+- Clears both cookies using standard Express `res.clearCookie`
 
-js req.user._id 
+## Dependencies
 
-Submission cleanup is handled through User model middleware/hooks.
+- `services/auth/authService.js` — business logic
+- `services/auth/refreshSessionService.js` — Redis session state
+- `services/auth/emailService.js` — Resend integration
+- `utils/ApiError.js` — custom errors caught by `errorMiddleware`
 
-# Authentication Architecture
+## Status Codes
 
-Authentication and authorization are separated:
-
-## userMiddleware
-
-Responsible for:
-- JWT verification
-- Redis blocklist validation
-- Fetching authenticated user from DB
-- Attaching authenticated user to:
-  js   req.user   
-
-## adminMiddleware
-
-Responsible only for authorization:
-
-js req.user.role === "admin" 
-
-# Inputs and Outputs
-
-| Handler | Input | Output |
-|---------|-------|--------|
-| register | { firstName, emailId, password, ... } | Cookie + { user, message } |
-| login | { emailId, password } | Cookie + authenticated user |
-| logout | JWT cookie | "Logged Out Successfully" |
-| adminRegister | validated admin body | "Admin Registered Successfully" |
-| deleteProfile | req.user | "User deleted Successfully" |
-
-Errors propagate through:
-
-txt errorMiddleware 
-
-which returns standardized error responses.
-
-# Dependencies
-
-## npm Packages
-
-- bcrypt
-- jsonwebtoken
-
-## Internal Modules
-
-- ../config/redis
-- ../models/user
-- ../utils/validate
-- ../utils/asyncHandler
-
-# API Connections
-
-No external APIs used.
-
-JWT signing and verification are handled locally using:
-
-js process.env.JWT_KEY 
-
-Redis is used for token revocation/blocklisting.
-
-# Database Connections
-
-## MongoDB
-
-Uses User collection for:
-- create
-- find
-- delete operations
-
-## Redis
-
-Stores revoked JWT tokens until their original expiry time.
-
-# State / Context Dependencies
-
-- process.env.JWT_KEY
-- req.user
-- req.cookies.token
-
-# Related Files
-
-- ../routes/userAuth.md
-- ../utils/validate.md
-- ../database/user.md
-- ../config/redis.md
-- ../docs/AUTH_FLOW.md
-
-# Next Files To Read
-
-1. ../middleware/userMiddleware.md
-2. ../middleware/adminMiddleware.md
-3. ../utils/validate.md
-
-# Common Risks / Notes
-
-- JWT payload is generated during login/register and does not auto-update if DB role changes later (re-login required).
-- Logout uses `jwt.decode()` for `exp` (route is behind `userMiddleware`, which already verified the token).
-- Unused import: `submission` model is required but not referenced in this file.
-- `adminRegister` route requires `userMiddleware` + `adminMiddleware` (see [../routes/userAuth.md](../routes/userAuth.md)).
-
-# Last Reviewed: 2026-05-18
+| Code | Usage |
+|------|-------|
+| 200 | Success (login, logout, delete, checks, changes) |
+| 201 | Created (registration) |
+| 400 | Validation errors, missing fields, invalid passwords |
+| 401 | Missing/invalid tokens during refresh |
+| 404 | User not found (sometimes masked for security) |
+| 500 | Server/Redis/DB errors |
