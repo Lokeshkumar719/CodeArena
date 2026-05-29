@@ -6,6 +6,10 @@ import { useEffect, useState } from "react";
 
 import { checkAuth } from "./authSlice";
 
+import { useLocation } from "react-router";
+import NProgress from "nprogress";
+import "nprogress/nprogress.css";
+
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Homepage from "./pages/Homepage";
@@ -21,6 +25,8 @@ import AdminUpdateList from "./components/AdminUpdateList";
 import AdminVideo from "./components/AdminVideo";
 import AdminDelete from "./components/AdminDelete";
 import AdminUpload from "./components/AdminUpload";
+
+NProgress.configure({ showSpinner: false, speed: 400, minimum: 0.1 });
 
 function App() {
   const dispatch = useDispatch();
@@ -46,11 +52,20 @@ function App() {
     );
   }
 
-  // if (loading) {
-  //   return (
-  //     <div style={{ minHeight: "100vh", background: "#080c14" }} />
-  //   );
-  // }
+function RouteProgress() {
+  const location = useLocation();
+
+  useEffect(() => {
+    NProgress.start();
+    const t = setTimeout(() => NProgress.done(), 300);
+    return () => {
+      clearTimeout(t);
+      NProgress.done();
+    };
+  }, [location.pathname]);
+
+  return null;
+}
 
   const isAdmin = user?.role?.toLowerCase() === "admin";
 

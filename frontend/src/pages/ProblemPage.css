@@ -113,8 +113,8 @@
   border-left: 1px solid #1e2738;
   border-right: 1px solid #1e2738;
   touch-action: none;
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
   transition: background 0.2s ease;
 }
 

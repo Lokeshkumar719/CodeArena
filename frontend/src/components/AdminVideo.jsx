@@ -3,6 +3,7 @@ import { useNavigate, NavLink } from "react-router";
 import axiosClient from "../utils/axiosClient";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "../utils/errorHandler";
+import TableSkeletonvideo from "../components/skeletons/TableSkeletonvideo";
 
 const tagOptions = [
   "array", "string", "stack", "queue", "hashing", "sorting", "binarySearch",
@@ -92,6 +93,7 @@ const AdminVideo = () => {
   const fetchProblems = useCallback(async (page, search, f) => {
     try {
       setLoading(true);
+      // await new Promise(resolve => setTimeout(resolve, 7000));
 
       const qs = buildQueryString(page, search, f);
 
@@ -209,9 +211,11 @@ const AdminVideo = () => {
     hasPrevPage,
   } = pagination;
 
-  if (loading && problems.length === 0) {
-    return <div style={{ minHeight: "100vh", background: "#080c14" }} />;
-  }
+  // if (loading && problems.length === 0) {
+  //   return <div style={{ minHeight: "100vh", background: "#080c14" }} />;
+  // }
+
+  if (loading) return <TableSkeletonvideo rows={5} />;
 
   return (
     <div style={s.page}>
@@ -421,7 +425,7 @@ const AdminVideo = () => {
 
             <tbody>
 
-              {!loading && problems.length === 0 ? (
+              {problems.length === 0 ? (
                 <tr>
                   <td
                     colSpan={5}

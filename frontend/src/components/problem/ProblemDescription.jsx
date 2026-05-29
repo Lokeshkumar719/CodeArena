@@ -1,7 +1,7 @@
 function ProblemDescription({ problem, getDifficultyBadge }) {
   return (
     <div>
-      <h1 className="problem-title">{problem.title}</h1>
+      <h1 className="problem-title">{problem.problemNo}. {problem.title}</h1>
 
       <div className="badge-row">
         <span className={`badge ${getDifficultyBadge(problem.difficulty)}`}>

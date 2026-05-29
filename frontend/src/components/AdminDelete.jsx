@@ -3,6 +3,7 @@ import axiosClient from "../utils/axiosClient";
 import toast from "react-hot-toast";
 import { NavLink, useNavigate } from "react-router";
 import { getErrorMessage } from "../utils/errorHandler";
+import TableSkeleton from "../components/skeletons/TableSkeleton";
 
 const tagOptions = [
   "array", "string", "stack", "queue", "hashing", "sorting", "binarySearch",
@@ -25,7 +26,6 @@ function useDebounce(value, delay) {
 const AdminDelete = () => {
   const navigate = useNavigate();
 
-  // ── Data ──────────────────────────────────────────────────────────────────
   const [problems,   setProblems]   = useState([]);
   const [pagination, setPagination] = useState({
     currentPage: 1, totalPages: 1, totalProblems: 0,
@@ -34,18 +34,15 @@ const AdminDelete = () => {
   const [loading,    setLoading]    = useState(true);
   const [deletingId, setDeletingId] = useState(null);
 
-  // ── Search + filters ──────────────────────────────────────────────────────
   const [searchInput, setSearchInput] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({ difficulty: "", tags: [] });
   const [tagsOpen, setTagsOpen] = useState(false);
 
-  // FIX 1: ref for outside-click detection
   const tagDropdownRef = useRef(null);
 
   const debouncedSearch = useDebounce(searchInput, 400);
 
-  // FIX 1: close tag panel on outside click
   useEffect(() => {
     const handleOutsideClick = (e) => {
       if (tagDropdownRef.current && !tagDropdownRef.current.contains(e.target)) {
@@ -56,21 +53,22 @@ const AdminDelete = () => {
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
-  // ── Query string builder ──────────────────────────────────────────────────
   const buildQueryString = useCallback((page, search, f) => {
     const params = new URLSearchParams();
     params.set("page",  page);
     params.set("limit", PAGE_LIMIT);
-    if (search.trim())     params.set("q",          search.trim());
-    if (f.difficulty)      params.set("difficulty",  f.difficulty);
-    if (f.tags.length > 0) params.set("tags",        f.tags.join(","));
+    if (search.trim())     params.set("q",         search.trim());
+    if (f.difficulty)      params.set("difficulty", f.difficulty);
+    if (f.tags.length > 0) params.set("tags",       f.tags.join(","));
     return params.toString();
   }, []);
 
-  // ── Fetch ─────────────────────────────────────────────────────────────────
-  const fetchProblems = useCallback(async (page, search, f) => {
+  const fetchProblems = useCallback(async (page, search, f) => {  
     try {
       setLoading(true);
+      /// For testing purpose add here an await delay of 5s to see the skeleton loader in action
+      // await new Promise(resolve => setTimeout(resolve, 5000));
+      
       const qs = buildQueryString(page, search, f);
       const { data } = await axiosClient.get(`/problem/getProblems?${qs}`);
       if (!data.success) {
@@ -97,7 +95,6 @@ const AdminDelete = () => {
     setCurrentPage(1);
   }, [debouncedSearch, filters]);
 
-  // ── Filter helpers ────────────────────────────────────────────────────────
   const updateFilter = (key, value) =>
     setFilters((prev) => ({ ...prev, [key]: value }));
 
@@ -119,20 +116,15 @@ const AdminDelete = () => {
   const hasActiveFilters =
     searchInput.trim() || filters.difficulty || filters.tags.length > 0;
 
-  // ── Delete ────────────────────────────────────────────────────────────────
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this problem?")) return;
-
     try {
       setDeletingId(id);
       await axiosClient.delete(`/problem/delete/${id}`);
       toast.success("Problem deleted successfully");
-
-      // FIX 3: re-fetch instead of splicing local state — keeps pagination
-      // accurate. If we deleted the last item on page 2, drop back to page 1.
       const isLastItemOnPage = problems.length === 1 && currentPage > 1;
       if (isLastItemOnPage) {
-        setCurrentPage((p) => p - 1); // triggers fetch via useEffect
+        setCurrentPage((p) => p - 1);
       } else {
         fetchProblems(currentPage, debouncedSearch, filters);
       }
@@ -146,14 +138,11 @@ const AdminDelete = () => {
 
   const { currentPage: pg, totalPages, totalProblems, hasNextPage, hasPrevPage } = pagination;
 
-  if (loading && problems.length === 0) {
-    return <div style={{ minHeight: "100vh", background: "#080c14" }} />;
-  }
+  if (loading) return <TableSkeleton rows={5} />;
 
   return (
     <div style={s.page}>
 
-      {/* ── Navbar ── */}
       <nav style={s.navbar}>
         <div style={s.navLeft}>
           <button onClick={() => navigate(-1)} style={s.backBtn}>
@@ -173,13 +162,11 @@ const AdminDelete = () => {
 
       <div style={s.main}>
 
-        {/* ── Header ── */}
         <div style={s.header}>
           <h1 style={s.heading}>Delete Problems</h1>
           <p style={s.subheading}>Remove outdated or invalid coding problems from the platform</p>
         </div>
 
-        {/* ── Search ── */}
         <div style={s.searchWrapper}>
           <svg style={s.searchIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <circle cx="11" cy="11" r="8" />
@@ -197,9 +184,7 @@ const AdminDelete = () => {
           )}
         </div>
 
-        {/* ── Filters ── */}
         <div style={s.filterRow}>
-
           <select
             value={filters.difficulty}
             onChange={(e) => updateFilter("difficulty", e.target.value)}
@@ -211,7 +196,6 @@ const AdminDelete = () => {
             <option value="hard">Hard</option>
           </select>
 
-          {/* FIX 1: ref attached here for outside-click */}
           <div style={s.tagDropdownWrapper} ref={tagDropdownRef}>
             <button
               type="button"
@@ -223,25 +207,17 @@ const AdminDelete = () => {
                   ? "All Tags"
                   : `${filters.tags.length} tag${filters.tags.length > 1 ? "s" : ""} selected`}
               </span>
-              {/* FIX 2: chevron reflects open/closed state */}
-              <span style={{ marginLeft: "auto", fontSize: "10px" }}>
-                <svg
-                  style={{ marginLeft: "auto", flexShrink: 0 }}
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#6b7280"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  {tagsOpen
-                    ? <path d="M18 15l-6-6-6 6" />   // chevron up
-                    : <path d="M6 9l6 6 6-6" />      // chevron down
-                  }
-                </svg>
-              </span>
+              <svg
+                style={{ marginLeft: "auto", flexShrink: 0 }}
+                width="12" height="12" viewBox="0 0 24 24"
+                fill="none" stroke="#6b7280" strokeWidth="2.5"
+                strokeLinecap="round" strokeLinejoin="round"
+              >
+                {tagsOpen
+                  ? <path d="M18 15l-6-6-6 6" />
+                  : <path d="M6 9l6 6 6-6" />
+                }
+              </svg>
             </button>
 
             {tagsOpen && (
@@ -281,7 +257,6 @@ const AdminDelete = () => {
           )}
         </div>
 
-        {/* ── Active tags ── */}
         {filters.tags.length > 0 && (
           <div style={s.activeTagsRow}>
             {filters.tags.map((tag) => (
@@ -293,7 +268,6 @@ const AdminDelete = () => {
           </div>
         )}
 
-        {/* ── Table ── */}
         <div style={s.tableWrap}>
           <table style={s.table}>
             <thead>
@@ -304,7 +278,7 @@ const AdminDelete = () => {
               </tr>
             </thead>
             <tbody>
-              {!loading && problems.length === 0 ? (
+              {problems.length === 0 ? (
                 <tr>
                   <td colSpan={5} style={{ padding: "40px", textAlign: "center", color: "#4b5563" }}>
                     No problems found
@@ -345,8 +319,7 @@ const AdminDelete = () => {
           </table>
         </div>
 
-        {/* ── Pagination ── */}
-        {!loading && problems.length > 0 && (
+        {problems.length > 0 && (
           <>
             <div style={s.paginationInfo}>
               Showing {(pg - 1) * PAGE_LIMIT + 1}–{Math.min(pg * PAGE_LIMIT, totalProblems)} of {totalProblems} problems
@@ -396,7 +369,6 @@ const AdminDelete = () => {
   );
 };
 
-// ── Styles + getDifficultyStyle unchanged ─────────────────────────────────
 const s = {
   page:       { minHeight: "100vh", background: "#080c14", fontFamily: "'Sora', sans-serif", color: "#c9d1d9" },
   navbar:     { height: "64px", background: "#080c14", borderBottom: "1px solid #1e2738", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 40px", position: "sticky", top: 0, zIndex: 100 },

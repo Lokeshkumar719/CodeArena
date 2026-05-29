@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, NavLink } from "react-router";
 import axiosClient from "../utils/axiosClient";
 import toast from "react-hot-toast";
+import TableSkeleton from "../components/skeletons/TableSkeleton";
 
 const tagOptions = [
   "array", "string", "stack", "queue", "hashing", "sorting", "binarySearch",
@@ -90,7 +91,7 @@ const AdminUpdateList = () => {
   const fetchProblems = useCallback(async (page, search, f) => {
     try {
       setLoading(true);
-
+      // await new Promise(resolve => setTimeout(resolve, 7000));
       const qs = buildQueryString(page, search, f);
 
       const { data } = await axiosClient.get(
@@ -176,10 +177,11 @@ const AdminUpdateList = () => {
     hasPrevPage,
   } = pagination;
 
-  if (loading && problems.length === 0) {
-    return <div style={{ minHeight: "100vh", background: "#080c14" }} />;
-  }
-
+  // if (loading && problems.length === 0) {
+  //   return <div style={{ minHeight: "100vh", background: "#080c14" }} />;
+  // }
+  if(loading)return <TableSkeleton rows={5} />;
+  
   return (
     <div style={s.page}>
 
