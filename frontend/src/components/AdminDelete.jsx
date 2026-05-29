@@ -23,6 +23,67 @@ function useDebounce(value, delay) {
   return debounced;
 }
 
+// ── Shared chevron — same component as Homepage ───────────────────────────
+function Chevron({ open }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{
+        flexShrink: 0,
+        transition: "transform 0.2s ease",
+        transform: open ? "rotate(180deg)" : "rotate(0deg)",
+      }}
+    >
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+
+// ── Generic single-select dropdown (cross-platform, no OS chrome) ─────────
+function CustomSelect({ value, onChange, options, placeholder, dropdownRef, isOpen, onToggle }) {
+  const selected = options.find((o) => o.value === value);
+  return (
+    <div style={s.selectWrapper} ref={dropdownRef}>
+      <button type="button" style={s.selectBtn} onClick={onToggle}>
+        <span style={{ color: value ? "#e2e8f0" : "#9ca3af" }}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <Chevron open={isOpen} />
+      </button>
+      {isOpen && (
+        <div style={s.selectDropdown}>
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              style={{ ...s.selectOption, ...(value === opt.value ? s.selectOptionActive : {}) }}
+              onClick={() => { onChange(opt.value); onToggle(); }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const difficultyOptions = [
+  { value: "",       label: "All Difficulties" },
+  { value: "easy",   label: "Easy"             },
+  { value: "medium", label: "Medium"           },
+  { value: "hard",   label: "Hard"             },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 const AdminDelete = () => {
   const navigate = useNavigate();
 
@@ -36,22 +97,29 @@ const AdminDelete = () => {
 
   const [searchInput, setSearchInput] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [filters, setFilters] = useState({ difficulty: "", tags: [] });
-  const [tagsOpen, setTagsOpen] = useState(false);
+  const [filters,     setFilters]     = useState({ difficulty: "", tags: [] });
 
+  // "difficulty" | "tags" | null
+  const [openPanel, setOpenPanel] = useState(null);
+  const toggle = (panel) => setOpenPanel((prev) => (prev === panel ? null : panel));
+
+  const difficultyRef  = useRef(null);
   const tagDropdownRef = useRef(null);
-
-  const debouncedSearch = useDebounce(searchInput, 400);
 
   useEffect(() => {
     const handleOutsideClick = (e) => {
-      if (tagDropdownRef.current && !tagDropdownRef.current.contains(e.target)) {
-        setTagsOpen(false);
+      if (
+        !difficultyRef.current?.contains(e.target) &&
+        !tagDropdownRef.current?.contains(e.target)
+      ) {
+        setOpenPanel(null);
       }
     };
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
+
+  const debouncedSearch = useDebounce(searchInput, 400);
 
   const buildQueryString = useCallback((page, search, f) => {
     const params = new URLSearchParams();
@@ -71,10 +139,7 @@ const AdminDelete = () => {
       
       const qs = buildQueryString(page, search, f);
       const { data } = await axiosClient.get(`/problem/getProblems?${qs}`);
-      if (!data.success) {
-        toast.error(data.errors?.[0] || "Failed to fetch problems");
-        return;
-      }
+      if (!data.success) { toast.error(data.errors?.[0] || "Failed to fetch problems"); return; }
       setProblems(data.problems);
       setPagination(data.pagination);
     } catch (err) {
@@ -110,7 +175,7 @@ const AdminDelete = () => {
     setSearchInput("");
     setFilters({ difficulty: "", tags: [] });
     setCurrentPage(1);
-    setTagsOpen(false);
+    setOpenPanel(null);
   };
 
   const hasActiveFilters =
@@ -185,42 +250,34 @@ const AdminDelete = () => {
         </div>
 
         <div style={s.filterRow}>
-          <select
-            value={filters.difficulty}
-            onChange={(e) => updateFilter("difficulty", e.target.value)}
-            style={s.select}
-          >
-            <option value="">All Difficulties</option>
-            <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
-          </select>
 
+          {/* Difficulty — custom dropdown */}
+          <CustomSelect
+            value={filters.difficulty}
+            onChange={(v) => updateFilter("difficulty", v)}
+            options={difficultyOptions}
+            placeholder="All Difficulties"
+            dropdownRef={difficultyRef}
+            isOpen={openPanel === "difficulty"}
+            onToggle={() => toggle("difficulty")}
+          />
+
+          {/* Tags — multi-select panel */}
           <div style={s.tagDropdownWrapper} ref={tagDropdownRef}>
             <button
               type="button"
-              style={{ ...s.select, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
-              onClick={() => setTagsOpen((prev) => !prev)}
+              style={s.selectBtn}
+              onClick={() => toggle("tags")}
             >
-              <span>
+              <span style={{ color: filters.tags.length > 0 ? "#e2e8f0" : "#9ca3af" }}>
                 {filters.tags.length === 0
                   ? "All Tags"
                   : `${filters.tags.length} tag${filters.tags.length > 1 ? "s" : ""} selected`}
               </span>
-              <svg
-                style={{ marginLeft: "auto", flexShrink: 0 }}
-                width="12" height="12" viewBox="0 0 24 24"
-                fill="none" stroke="#6b7280" strokeWidth="2.5"
-                strokeLinecap="round" strokeLinejoin="round"
-              >
-                {tagsOpen
-                  ? <path d="M18 15l-6-6-6 6" />
-                  : <path d="M6 9l6 6 6-6" />
-                }
-              </svg>
+              <Chevron open={openPanel === "tags"} />
             </button>
 
-            {tagsOpen && (
+            {openPanel === "tags" && (
               <div style={s.tagDropdownPanel}>
                 <div style={s.tagGrid}>
                   {tagOptions.map((tag) => {
@@ -238,11 +295,7 @@ const AdminDelete = () => {
                   })}
                 </div>
                 {filters.tags.length > 0 && (
-                  <button
-                    style={s.clearTagsBtn}
-                    onClick={() => updateFilter("tags", [])}
-                    type="button"
-                  >
+                  <button style={s.clearTagsBtn} onClick={() => updateFilter("tags", [])} type="button">
                     Clear tags
                   </button>
                 )}
@@ -257,6 +310,7 @@ const AdminDelete = () => {
           )}
         </div>
 
+        {/* ── Active tag pills ── */}
         {filters.tags.length > 0 && (
           <div style={s.activeTagsRow}>
             {filters.tags.map((tag) => (
@@ -332,7 +386,6 @@ const AdminDelete = () => {
               >
                 ← Prev
               </button>
-
               {Array.from({ length: totalPages }, (_, i) => i + 1)
                 .filter((n) => n === 1 || n === totalPages || Math.abs(n - pg) <= 2)
                 .reduce((acc, n, i, arr) => {
@@ -353,7 +406,6 @@ const AdminDelete = () => {
                     </button>
                   )
                 )}
-
               <button
                 disabled={!hasNextPage}
                 onClick={() => setCurrentPage((p) => p + 1)}
@@ -380,22 +432,74 @@ const s = {
   header:     { marginBottom: "36px" },
   heading:    { fontSize: "28px", fontWeight: 700, color: "#f9fafb", marginBottom: "8px" },
   subheading: { fontSize: "14px", color: "#6b7280" },
+
   searchWrapper: { position: "relative", display: "flex", alignItems: "center", marginBottom: "20px" },
   searchIcon:    { position: "absolute", left: "16px", width: "16px", height: "16px", color: "#4b5563", pointerEvents: "none" },
   searchInput:   { width: "100%", background: "#0c1018", border: "1px solid #1e2738", borderRadius: "12px", color: "#e2e8f0", fontSize: "14px", fontWeight: 500, padding: "12px 44px", outline: "none", fontFamily: "'Sora', sans-serif", boxSizing: "border-box" },
   searchClear:   { position: "absolute", right: "16px", background: "transparent", border: "none", color: "#4b5563", cursor: "pointer", fontSize: "14px" },
-  filterRow:          { display: "flex", gap: "12px", marginBottom: "16px", flexWrap: "wrap", alignItems: "flex-start" },
-  select:             { background: "#0c1018", border: "1px solid #1e2738", borderRadius: "10px", color: "#9ca3af", fontSize: "14px", fontWeight: 500, padding: "10px 18px", outline: "none", minWidth: "160px", fontFamily: "'Sora', sans-serif" },
+
+  filterRow: { display: "flex", gap: "12px", marginBottom: "16px", flexWrap: "wrap", alignItems: "flex-start" },
+
+  // ── Unified filter button — identical to Homepage ─────────────────────
+  selectWrapper: { position: "relative" },
+  selectBtn: {
+    background: "#0c1018",
+    border: "1px solid #1e2738",
+    borderRadius: "10px",
+    color: "#9ca3af",
+    fontSize: "14px",
+    fontWeight: 500,
+    padding: "10px 14px 10px 16px",
+    cursor: "pointer",
+    fontFamily: "'Sora', sans-serif",
+    minWidth: "160px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "10px",
+    outline: "none",
+    userSelect: "none",
+  },
+  selectDropdown: {
+    position: "absolute",
+    top: "calc(100% + 6px)",
+    left: 0,
+    minWidth: "100%",
+    background: "#0c1018",
+    border: "1px solid #1e2738",
+    borderRadius: "10px",
+    overflow: "hidden",
+    zIndex: 150,
+    boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+  },
+  selectOption: {
+    display: "block",
+    width: "100%",
+    padding: "10px 16px",
+    fontSize: "14px",
+    fontWeight: 500,
+    color: "#9ca3af",
+    background: "transparent",
+    border: "none",
+    textAlign: "left",
+    cursor: "pointer",
+    fontFamily: "'Sora', sans-serif",
+    whiteSpace: "nowrap",
+  },
+  selectOptionActive: { color: "#a5b4fc", background: "rgba(99,102,241,0.1)" },
+
   tagDropdownWrapper: { position: "relative" },
-  tagDropdownPanel:   { position: "absolute", top: "calc(100% + 8px)", left: 0, background: "#0c1018", border: "1px solid #1e2738", borderRadius: "14px", padding: "16px", zIndex: 150, width: "360px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" },
+  tagDropdownPanel:   { position: "absolute", top: "calc(100% + 6px)", left: 0, background: "#0c1018", border: "1px solid #1e2738", borderRadius: "14px", padding: "16px", zIndex: 150, width: "360px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" },
   tagGrid:            { display: "flex", flexWrap: "wrap", gap: "8px" },
   tagPill:            { background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: "999px", color: "#6b7280", fontSize: "12px", fontWeight: 600, padding: "5px 12px", cursor: "pointer", fontFamily: "'Sora', sans-serif" },
   tagPillActive:      { background: "rgba(99,102,241,0.25)", border: "1px solid rgba(99,102,241,0.5)", color: "#a5b4fc" },
   clearTagsBtn:       { marginTop: "12px", background: "transparent", border: "none", color: "#6366f1", fontSize: "13px", cursor: "pointer" },
-  clearAllBtn:        { background: "transparent", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 600, padding: "10px 16px", cursor: "pointer" },
+  clearAllBtn:        { background: "transparent", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 600, padding: "10px 16px", cursor: "pointer", fontFamily: "'Sora', sans-serif", alignSelf: "flex-start" },
+
   activeTagsRow:  { display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "20px" },
   activeTagPill:  { display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: "999px", color: "#a5b4fc", fontSize: "12px", fontWeight: 600, padding: "4px 10px 4px 12px" },
   removeTagBtn:   { background: "transparent", border: "none", color: "#6366f1", cursor: "pointer", fontSize: "11px" },
+
   tableWrap:  { background: "#0c1018", border: "1px solid #1e2738", borderRadius: "16px", overflow: "hidden" },
   table:      { width: "100%", borderCollapse: "collapse" },
   th:         { padding: "14px 20px", textAlign: "left", fontSize: "12px", fontWeight: 700, color: "#4b5563", textTransform: "uppercase", letterSpacing: "0.06em", background: "#0a0e18", borderBottom: "1px solid #1e2738" },
@@ -404,6 +508,7 @@ const s = {
   tagRow:     { display: "flex", flexWrap: "wrap", gap: "6px" },
   tag:        { background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: "999px", color: "#a5b4fc", fontSize: "11px", fontWeight: 600, padding: "3px 9px" },
   deleteBtn:  { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: "8px", color: "#f87171", fontSize: "13px", fontWeight: 600, padding: "7px 16px", fontFamily: "'Sora', sans-serif" },
+
   paginationInfo: { textAlign: "center", fontSize: "13px", color: "#4b5563", marginTop: "32px", marginBottom: "20px" },
   pagination:     { display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", paddingBottom: "40px", flexWrap: "wrap" },
   pageBtn:        { background: "#0c1018", border: "1px solid #1e2738", borderRadius: "8px", color: "#9ca3af", fontSize: "13px", fontWeight: 600, padding: "8px 14px", cursor: "pointer", fontFamily: "'Sora', sans-serif", minWidth: "40px" },
