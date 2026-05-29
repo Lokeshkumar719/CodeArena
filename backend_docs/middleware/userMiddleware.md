@@ -1,175 +1,48 @@
-# File Purpose
+# `backend/src/middlewares/userMiddleware.js`
 
-Express middleware responsible for authenticating logged-in users using JWT cookies, Redis token blocklisting, and MongoDB user verification.
+**Layer:** Middleware  
+**Path:** `backend/src/middlewares/userMiddleware.js`  
+**Purpose:** Authenticates requests using the `accessToken` JWT cookie and fetches the user.  
+**Last reviewed:** 2026-05-29
 
-This middleware is the primary authentication layer for all protected user and admin routes.
+## Overview
 
-# Responsibilities
+This middleware acts as the primary gatekeeper for protected routes. It relies exclusively on the short-lived `accessToken` cookie. If the access token expires, it rejects the request with a `401`, expecting the frontend interceptor to invoke the `/user/refresh` endpoint and retry.
 
-- Verify JWT token from cookies
-- Reject requests without authentication token
-- Reject blocklisted/logout tokens using Redis
-- Fetch authenticated user from MongoDB
-- Attach authenticated user document to:
-  js   req.user   
-- Pass authenticated requests to downstream middleware/controllers
+## Flow
 
-# Authentication Architecture
+1. **Extract Token:** Reads `req.cookies.accessToken`.
+   - If missing → throws `401 Unauthorized access`.
+2. **Verify JWT:** Calls `tokenService.verifyAccessToken(token)`.
+   - If expired/invalid → throws `401 Invalid token`.
+3. **Database Lookup:** Uses `payload.id` to find the user in MongoDB.
+   - If user deleted/not found → throws `401 User does not exist`.
+4. **Attach to Request:** Sets `req.user = user`.
+5. **Pass Control:** Calls `next()`.
 
-Authentication and authorization are intentionally separated.
+## Changes from Previous Architecture
 
-## userMiddleware
+- **No Redis lookups:** The old architecture checked a Redis logout blocklist on every request. This is now removed. Session validity is tied purely to the short lifespan of the access token (15m). If an admin deletes a user, or a user logs out, their refresh token is deleted from Redis, preventing them from acquiring new access tokens, effectively terminating their session within 15 minutes.
+- **Specific token lookup:** Only looks for `req.cookies.accessToken`, ignoring `req.cookies.refreshToken`.
 
-Responsible for:
-- authentication
-- JWT verification
-- Redis token validation
-- user lookup
+## Security Characteristics
 
-## adminMiddleware
+- Depends on `httpOnly`, `sameSite: strict` properties of the cookie to prevent XSS and CSRF.
+- Does not authorize (check roles); it only authenticates.
 
-Responsible only for authorization:
+## Errors Thrown
 
-js id="0n7hsk" req.user.role === "admin" 
+- `401` using `ApiError` class.
 
-This separation avoids duplicated authentication logic and keeps middleware responsibilities clean.
+## Usage
 
-# Main Functions / Components / Classes
+```javascript
+router.get("/problemById/:id", userMiddleware, getProblemById);
+router.post("/submission/run/:id", userMiddleware, limitRunCode, runCode);
+```
 
-| Export | Type |
-|--------|------|
-| userMiddleware | Express middleware wrapped with asyncHandler |
+## Dependencies
 
-# Internal Logic
-
-## Authentication Flow
-
-1. Read JWT token from:
-   js    req.cookies.token    
-
-2. Reject missing token:
-   js    401 Unauthorized Access    
-
-3. Verify JWT:
-   js    jwt.verify(token, process.env.JWT_KEY)    
-
-### Important Note
-
-jwt.verify():
-- returns decoded payload if token is valid
-- throws immediately if token is invalid or expired
-
-Therefore no additional:
-js if(!payload) 
-check is required.
-
-4. Extract:
-   js    payload.id    
-
-5. Fetch authenticated user:
-   js    User.findById(id)    
-
-6. Reject missing/deleted users
-
-7. Check Redis token blocklist:
-   js    redisClient.exists(`token:${token}`)    
-
-8. Attach authenticated user:
-   js    req.user = user    
-
-9. Continue request lifecycle:
-   js    next()    
-
-# Inputs and Outputs
-
-| Input | Success |
-|-------|---------|
-| Valid JWT cookie | req.user, next() |
-
-| Failure | Status | Response |
-|---------|--------|-----------|
-| Missing token | 401 | "Unauthorized Access" |
-| Invalid token | 401 | "Invalid Token" |
-| Deleted user | 401 | "User Doesn't Exist" |
-| Blocklisted token | 401 | "Invalid Token" |
-
-# Dependencies
-
-## npm Packages
-
-- jsonwebtoken
-
-## Internal Modules
-
-- ../models/user
-- ../config/redis
-- ../utils/asyncHandler
-
-# Used By
-
-## Protected User Routes
-
-### ../routes/userAuth.md
-- /logout
-- /profile
-- /check
-
-### ../routes/problemCreator.md
-- problem reads
-- solved problems
-- submission history
-
-### ../routes/submit.md
-- run code
-- submit code
-
-### ../routes/videoCreator.md
-- admin video routes (before adminMiddleware)
-
-# API Connections
-
-None directly.
-
-Acts as authentication gatekeeper for protected REST endpoints.
-
-# Database Connections
-
-## MongoDB
-
-js id="f0d3ha" User.findById() 
-
-used for authenticated user validation.
-
-## Redis
-
-js id="p7mnct" redisClient.exists() 
-
-used for JWT blocklist validation.
-
-# State / Context Dependencies
-
-- process.env.JWT_KEY
-- req.cookies.token
-- Redis connection availability
-- MongoDB connection availability
-
-# Related Files
-
-- adminMiddleware.md
-- ../routes/userAuth.md
-- ../docs/AUTH_FLOW.md
-
-# Next Files To Read
-
-1. adminMiddleware.md
-2. ../auth/userAuthenticate.md
-
-# Common Risks / Notes
-
-- Middleware assumes Redis connection is active for token blocklist checks.
-- JWT payload stores role information at login/register time and does not auto-update if DB role changes later.
-- jwt.verify() errors are forwarded through asyncHandler into centralized errorMiddleware.
-- Middleware attaches full Mongoose user document, enabling downstream usage like:
-  js   req.user.updateOne()   
-
-# Last Reviewed: 2026-05-18
+- `services/auth/tokenService` — validates the signature and expiry.
+- `models/user` — to fetch the current user document.
+- `utils/ApiError` — standard error throwing.

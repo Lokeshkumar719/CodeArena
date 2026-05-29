@@ -1,14 +1,14 @@
 # System Architecture
 
-**Project:** CodeArena / CodeArena coding platform  
+**Project:** CodeArena coding platform  
 **Repository layout:** `coding-platform/` (monorepo-style split: `frontend/` + `backend/`)  
-**Last reviewed:** 2026-05-18
+**Last reviewed:** 2026-05-29
 
 ## Overview
 
-CodeArena is a LeetCode-style web application where users register, browse DSA problems, write code in a Monaco editor, run against visible test cases, submit against hidden test cases (via Judge0), and track solved problems. Admins create/update/delete problems and upload editorial videos to Cloudinary.
+CodeArena is a LeetCode-style web application where users register, browse DSA problems with server-side search/filter/pagination, write code in a Monaco editor, run against visible test cases, submit against hidden test cases (via Judge0), and track solved problems. Admins create/update/delete problems and upload editorial videos to Cloudinary.
 
-There is **no WebSocket or realtime layer** in the current codebase (verified by search).
+There is **no WebSocket or realtime layer** in the current codebase.
 
 ## High-Level Diagram
 
@@ -17,91 +17,124 @@ flowchart TB
   subgraph Client["Frontend (Vite + React 19)"]
     UI[Pages & Components]
     Redux[Redux Toolkit - auth slice]
-    Axios[axiosClient withCredentials]
+    Axios["axiosClient (interceptors: 401 refresh, 429 rate-limit)"]
     UI --> Redux
     UI --> Axios
   end
 
   subgraph Server["Backend (Express 4)"]
-    Routes[Routes: /user /problem /submission /video]
-  MW[Middleware: JWT cookie + Redis blocklist]
+    Routes["Routes: /user /problem /submission /video"]
+    RL["Rate Limiters (Token Bucket + Fixed Window via Redis)"]
+    MW["Middleware: JWT cookie verify (access+refresh tokens)"]
     Ctrl[Controllers]
-    Svc[judge0Service]
-    Routes --> MW --> Ctrl
+    Svc["Services (auth, problem, execution, judge0)"]
+    Routes --> RL --> MW --> Ctrl
     Ctrl --> Svc
   end
 
   subgraph External["External Services"]
     MongoDB[(MongoDB via Mongoose)]
-    Redis[(Redis)]
+    Redis[("Redis (sessions, rate limits)")]
     J0[Judge0 CE via RapidAPI]
     Cloud[Cloudinary]
+    Resend[Resend Email API]
   end
 
-  Axios -->|HTTP + httpOnly cookie| Routes
+  Axios -->|HTTP + httpOnly cookies| Routes
   Ctrl --> MongoDB
   MW --> Redis
+  RL --> Redis
   Svc --> J0
   Ctrl --> Cloud
+  Ctrl --> Resend
 ```
 
 ## Technology Stack
 
 | Layer | Technology |
 |-------|------------|
-| Frontend | React 19, Vite 8, React Router 7, Redux Toolkit, Tailwind + DaisyUI, Monaco Editor, react-hook-form + Zod |
-| Backend | Node.js, Express, Mongoose 9, JWT (cookie), bcrypt, Redis 5 |
-| Code execution | Judge0 CE (RapidAPI) |
+| Frontend | React 19, Vite 8, React Router 7, Redux Toolkit, Tailwind 3 + DaisyUI 5, Monaco Editor, react-hook-form + Zod 4, NProgress, react-hot-toast |
+| Backend | Node.js, Express 4, Mongoose 9, JWT (dual access+refresh cookies), bcrypt 6, Redis 5, rate-limiter-flexible 9, Resend (email) |
+| Code execution | Judge0 CE (RapidAPI) with base64 encoding |
 | Media | Cloudinary (signed direct upload from browser) |
-| Database | MongoDB |
+| Database | MongoDB (Atlas or local) |
+| Caching/Sessions | Redis (refresh token sessions, rate limiter state, token bucket counters) |
 
 ## Feature Boundaries
 
 | Feature | Frontend | Backend | Data |
 |---------|----------|---------|------|
-| Auth | `authSlice`, Login/Signup | `/user/*` | `user` collection, Redis token blocklist |
-| Problem catalog | `Homepage` | `/problem/getAllProblems`, filters client-side | `Problem` |
-| Problem solve | `ProblemPage` + problem components | `/problem/problemById`, `/submission/*` | `Problem`, `submission` |
-| Submissions history | `SubmissionHistory` | `/problem/problemSubmmision/:id` | `submission` |
-| Admin CRUD | Admin* components | `/problem/create|update|delete`, admin routes | `Problem` |
-| Editorial video | `Editorial`, `AdminUpload` | `/video/*` + Cloudinary | `solutionVideo` |
+| Auth (register/login/logout) | `authSlice`, Login/Signup, axiosClient interceptor | `/user/*`, dual JWT, refresh rotation | `user` collection, Redis refresh sessions |
+| Password reset | ForgotPassword, ResetPassword, ChangePassword pages | `/user/forgot-password`, `/reset-password/:token`, `/change-password` | `user.resetPasswordToken`, `user.resetPasswordExpires`, Resend email |
+| Problem catalog | `Homepage` with server-side search/filter/pagination | `/problem/getProblems` with `buildProblemQuery` + `listProblems` service | `Problem`, `Submission` (for isSolved) |
+| Problem solve | `ProblemPage` + problem components + `useRateLimit` hook | `/submission/run/:id`, `/submission/submit/:id` | `Problem`, `Submission` |
+| Submissions history | `SubmissionHistory` | `/problem/problemSubmmision/:id` | `Submission` |
+| Admin CRUD | Admin* components with pagination | `/problem/create\|update\|delete`, admin routes with rate limiting | `Problem`, `Counter`, `ReusableProblemNo` |
+| Editorial video | `Editorial`, `AdminUpload`, `AdminVideo` | `/video/*` + Cloudinary | `SolutionVideo` |
+| Rate limiting | `useRateLimit` hook, cooldown UI on run/submit/login/register | `rateLimitMiddleware` (Token Bucket for run/submit, Fixed Window for login/register/change-password) | Redis keys |
 
-## Configuration & Environment (uncertain values)
+## Configuration & Environment
 
-No `.env` files are committed. Backend expects (from code references):
+Backend `.env` (not committed):
 
-- `PORT`, `DB_CONNECT_STRING`, `JWT_KEY`, `REDIS_URL`
-- `RAPID_API_KEY` (Judge0)
-- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+| Variable | Purpose |
+|----------|---------|
+| `PORT` | Express server port (typically 3000) |
+| `DB_CONNECT_STRING` | MongoDB connection string |
+| `JWT_KEY` | Access token signing secret |
+| `JWT_REFRESH_KEY` | Refresh token signing secret |
+| `REDIS_URL` | Redis connection URL |
+| `RAPID_API_KEY` | Judge0 CE RapidAPI key |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
+| `CLOUDINARY_API_KEY` | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret |
+| `RESEND_API_KEY` | Resend email API key |
+| `FRONTEND_URL` | Frontend URL for password reset emails |
 
 Frontend hardcodes API base URL: `http://localhost:3000` in `axiosClient.js`.  
-CORS on backend allows `http://localhost:5173` only.
+CORS on backend allows `http://localhost:5173` and `http://localhost:5174`.
 
-## Authentication model (current)
+## Authentication Model (Current)
 
-- **`userMiddleware`** — JWT cookie verify, Redis blocklist, `User.findById`, attaches **`req.user`** (full Mongoose document).
-- **`adminMiddleware`** — authorization only; requires `userMiddleware` first; checks `req.user.role === "admin"` → `403` if not.
-- Admin routes use **`userMiddleware, adminMiddleware`** (not `adminMiddleware` alone).
+**Dual token system** with httpOnly cookies:
+
+- **Access token** (`accessToken` cookie) — 15-minute expiry, verified by `userMiddleware`
+- **Refresh token** (`refreshToken` cookie) — 7-day expiry, stored hashed in Redis, rotated on each refresh
+- **Silent refresh** — Frontend axios interceptor automatically calls `POST /user/refresh` on 401, retries original request
+- **`userMiddleware`** — Verifies access token JWT, loads user from DB, attaches `req.user`
+- **`adminMiddleware`** — Authorization only; requires `userMiddleware` first; checks `req.user.role === "admin"` → `403`
+- **Rate limiting** — Login/register limited by IP (Fixed Window), run/submit limited by userId (Token Bucket with Lua script)
 
 See [AUTH_FLOW.md](./AUTH_FLOW.md).
 
 ## Known Architectural Risks
 
-1. **Route vs UI auth mismatch:** `/problem/:problemId` is not gated in `App.jsx`, but APIs require authentication.
-2. **JWT role staleness:** Token payload role does not update if DB role changes until re-login.
-3. **Judge0 status field inconsistency:** `problemsControllers` uses `status_id`; `userSubmission` uses `status.id`.
-4. **Unused dependencies:** `helmet`, `morgan`, `rate-limiter-flexible` listed in `package.json` but not wired in `index.js`.
-5. **`submission` schema** has no `errorMessage` field; controller assigns it anyway (may be stripped by Mongoose strict mode).
+1. **JWT role staleness:** Token payload role does not update if DB role changes until re-login.
+2. **Judge0 dependency:** All run/submit/create/update paths depend on external API availability.
+3. **Tag enum duplication:** `VALID_TAGS` in `models/problem.js` duplicated in frontend `Homepage.jsx` `tagOptions`.
+4. **Language ID duplication:** `constants/judge0.js` language IDs and frontend hardcoded `javascript|java|cpp`.
+5. **Cookie security:** `httpOnly` + `sameSite: "strict"` but no `secure` flag (HTTP-only local dev).
+6. **`deleteProblem` bug:** References `problem.problemNo` but variable is named `problemToDelete`.
+7. **`submission` schema** does not define `errorMessage` field; controller assigns it (Mongoose strict mode may strip it).
 
 ## Changelog
 
+### 2026-05-29 — Full documentation sync
+
+- Dual JWT (access + refresh) token system with Redis-backed sessions and rotation
+- Rate limiting: Token Bucket (Lua) for run/submit, Fixed Window for login/register/change-password
+- Password reset flow: forgot → email (Resend) → reset token → change
+- Server-side search, filter, pagination with `buildProblemQuery` + `listProblems` service
+- Problem numbering with `Counter` + `ReusableProblemNo` models
+- Base64 encoding/decoding for Judge0 submissions
+- Frontend: custom dropdowns, skeleton loaders, `useRateLimit` hook, `useDebounce`, NProgress
+- CORS multi-origin support
+- Axios interceptor: 429 rate-limit forwarding + silent 401 token refresh
+
 ### 2026-05-18 — Authentication improved (`d3cfb37`)
 
-- Fixed `userMiddleware` to authenticate any user; `req.result` renamed to **`req.user`** across controllers.
-- `adminMiddleware` simplified to role check only (depends on `userMiddleware`).
-- Admin routes now chain `userMiddleware` + `adminMiddleware`.
-- JWT cookie expiry **1 day** (`expiresIn: "1d"`).
-- Problem schema: required **`inputFormat`**, **`outputFormat`**, **`constraints`**; exposed in GET problem APIs and admin forms/UI.
+- Fixed `userMiddleware` to authenticate any user; `req.result` renamed to `req.user`.
+- Problem schema: required `inputFormat`, `outputFormat`, `constraints`.
 
 ## Related Documentation
 
