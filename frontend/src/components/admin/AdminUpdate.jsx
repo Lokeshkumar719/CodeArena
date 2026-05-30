@@ -16,40 +16,8 @@ import VisibleTestCasesSection from "./forms/VisibleTestCasesSection";
 import HiddenTestCasesSection from "./forms/HiddenTestCasesSection";
 import CodeTemplatesSection from "./forms/CodeTemplatesSection";
 
-const tagOptions = [
-  "array",
-  "string",
-  "stack",
-  "queue",
-  "hashing",
-  "sorting",
-  "binarySearch",
-  "twoPointers",
-  "slidingWindow",
-  "recursion",
-  "backtracking",
-  "greedy",
-  "heap",
-  "trie",
-  "graph",
-  "dfs",
-  "bfs",
-  "dp",
-  "bitManipulation",
-  "math",
-  "prefixSum",
-  "matrix",
-  "unionFind",
-  "segmentTree",
-  "topologicalSort",
-  "shortestPath",
-];
-
-const languageOptions = [
-  { value: "cpp", label: "C++" },
-  { value: "java", label: "Java" },
-  { value: "javascript", label: "JavaScript" },
-];
+import { tagOptions } from '../../constants/problemTags';
+import { languageOptions } from '../../constants/problemLanguages';
 
 const problemSchema = z.object({
   title: z.string().min(1, "Title is required"),

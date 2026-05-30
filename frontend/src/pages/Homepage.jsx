@@ -13,38 +13,14 @@ import ProblemCard from "../components/home/ProblemCard";
 import UserDropdown from '../components/home/UserDropdown';
 import Pagination from '../components/home/Pagination';
 
+import { tagOptions } from '../constants/problemTags';
+import {
+  PAGE_LIMIT,
+  difficultyOptions,
+  statusOptions,
+} from '../constants/filterOptions';
+
 import { s } from "../styles/pages/homepageStyles";
-
-const tagOptions = [
-  "array",
-  "string",
-  "stack",
-  "queue",
-  "hashing",
-  "sorting",
-  "binarySearch",
-  "twoPointers",
-  "slidingWindow",
-  "recursion",
-  "backtracking",
-  "greedy",
-  "heap",
-  "trie",
-  "graph",
-  "dfs",
-  "bfs",
-  "dp",
-  "bitManipulation",
-  "math",
-  "prefixSum",
-  "matrix",
-  "unionFind",
-  "segmentTree",
-  "topologicalSort",
-  "shortestPath",
-];
-
-const PAGE_LIMIT = 5;
 
 const getDifficultyStyle = (difficulty) => {
   const base = {
@@ -83,18 +59,6 @@ const getDifficultyStyle = (difficulty) => {
 // ── Generic single-select dropdown (replaces <select>) ────────────────────
 // Renders identically on Windows, macOS, Linux — no OS chrome involved.
 
-const difficultyOptions = [
-  { value: "", label: "All Difficulties" },
-  { value: "easy", label: "Easy" },
-  { value: "medium", label: "Medium" },
-  { value: "hard", label: "Hard" },
-];
-
-const statusOptions = [
-  { value: "", label: "All Problems" },
-  { value: "solved", label: "Solved" },
-  { value: "unsolved", label: "Unsolved" },
-];
 
 // ─────────────────────────────────────────────────────────────────────────────
 

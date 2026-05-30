@@ -5,84 +5,19 @@ import { NavLink, useNavigate } from 'react-router';
 import { getErrorMessage } from '../../utils/errorHandler';
 import TableSkeleton from '../skeletons/TableSkeleton';
 
+import useDebounce from '../../hooks/useDebounce';
+
+import Chevron from '../home/Chevron';
+import CustomSelect from '../home/CustomSelect';
+
+import { tagOptions } from '../../constants/problemTags';
+
+import {
+  PAGE_LIMIT,
+  difficultyOptions,
+} from '../../constants/filterOptions';
+
 import { s } from '../../styles/admin/adminDeleteStyles';
-
-const tagOptions = [
-  "array", "string", "stack", "queue", "hashing", "sorting", "binarySearch",
-  "twoPointers", "slidingWindow", "recursion", "backtracking", "greedy",
-  "heap", "trie", "graph", "dfs", "bfs", "dp", "bitManipulation", "math",
-  "prefixSum", "matrix", "unionFind", "segmentTree", "topologicalSort", "shortestPath",
-];
-
-const PAGE_LIMIT = 5;
-
-function useDebounce(value, delay) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return debounced;
-}
-
-// ── Shared chevron — same component as Homepage ───────────────────────────
-function Chevron({ open }) {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{
-        flexShrink: 0,
-        transition: "transform 0.2s ease",
-        transform: open ? "rotate(180deg)" : "rotate(0deg)",
-      }}
-    >
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  );
-}
-
-// ── Generic single-select dropdown (cross-platform, no OS chrome) ─────────
-function CustomSelect({ value, onChange, options, placeholder, dropdownRef, isOpen, onToggle }) {
-  const selected = options.find((o) => o.value === value);
-  return (
-    <div style={s.selectWrapper} ref={dropdownRef}>
-      <button type="button" style={s.selectBtn} onClick={onToggle}>
-        <span style={{ color: value ? "#e2e8f0" : "#9ca3af" }}>
-          {selected ? selected.label : placeholder}
-        </span>
-        <Chevron open={isOpen} />
-      </button>
-      {isOpen && (
-        <div style={s.selectDropdown}>
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              style={{ ...s.selectOption, ...(value === opt.value ? s.selectOptionActive : {}) }}
-              onClick={() => { onChange(opt.value); onToggle(); }}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-const difficultyOptions = [
-  { value: "",       label: "All Difficulties" },
-  { value: "easy",   label: "Easy"             },
-  { value: "medium", label: "Medium"           },
-  { value: "hard",   label: "Hard"             },
-];
 
 // ─────────────────────────────────────────────────────────────────────────────
 
