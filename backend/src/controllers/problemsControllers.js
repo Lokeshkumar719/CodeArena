@@ -144,7 +144,7 @@ const deleteProblem = asyncHandler(async (req, res) => {
 
   // Save released number
   await ReusableProblemNo.create({
-    value: problem.problemNo,
+    value: problemToDelete.problemNo,
   });
 
   // delete actual problem
