@@ -1,15 +1,20 @@
 import { useEffect, useState } from "react";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import axiosClient from '../../utils/axiosClient';
-import { useNavigate, useParams, NavLink } from 'react-router';
-import toast from 'react-hot-toast';
-import { getErrorMessage } from '../../utils/errorHandler';
-import useRateLimit from '../../hooks/useRateLimit.jsx';
-import AdminUploadSkeleton from '../skeletons/AdminUploadSkeleton';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import axiosClient from "../../utils/axiosClient";
+import { useNavigate, useParams, NavLink } from "react-router";
+import toast from "react-hot-toast";
+import { getErrorMessage } from "../../utils/errorHandler";
+import useRateLimit from "../../hooks/useRateLimit.jsx";
+import AdminUploadSkeleton from "../skeletons/AdminUploadSkeleton";
 
-import { s } from '../../styles/admin/adminUpdateStyles';
+import { s } from "../../styles/admin/adminUpdateStyles";
+
+import BasicInformationSection from './forms/BasicInformationSection';
+import VisibleTestCasesSection from "./forms/VisibleTestCasesSection";
+import HiddenTestCasesSection from "./forms/HiddenTestCasesSection";
+import CodeTemplatesSection from "./forms/CodeTemplatesSection";
 
 const tagOptions = [
   "array",
@@ -340,243 +345,33 @@ function AdminUpdate() {
             toast.error("Please fix validation errors");
           })}
         >
-          <div style={s.card}>
-            <h2 style={s.cardTitle}>Basic Information</h2>
+          <BasicInformationSection
+            register={register}
+            errors={errors}
+            control={control}
+            tagOptions={tagOptions}
+          />
 
-            <div style={s.formGroup}>
-              <label style={s.label}>Title</label>
+          <VisibleTestCasesSection
+            appendVisible={appendVisible}
+            visibleFields={visibleFields}
+            register={register}
+            removeVisible={removeVisible}
+            TestCaseBlock={TestCaseBlock}
+          />
 
-              <input
-                {...register("title")}
-                style={{
-                  ...s.input,
-                  ...(errors.title ? s.inputError : {}),
-                }}
-                placeholder="Problem title"
-              />
+          <HiddenTestCasesSection
+            appendHidden={appendHidden}
+            hiddenFields={hiddenFields}
+            register={register}
+            removeHidden={removeHidden}
+            TestCaseBlock={TestCaseBlock}
+          />
 
-              {errors.title && (
-                <p style={s.errorText}>{errors.title.message}</p>
-              )}
-            </div>
-
-            <div style={s.formGroup}>
-              <label style={s.label}>Description</label>
-
-              <textarea
-                {...register("description")}
-                rows={5}
-                style={{
-                  ...s.textarea,
-                  ...(errors.description ? s.inputError : {}),
-                }}
-                placeholder="Problem description..."
-              />
-
-              {errors.description && (
-                <p style={s.errorText}>{errors.description.message}</p>
-              )}
-            </div>
-
-            <div style={s.formGroup}>
-              <label style={s.label}>Input Format</label>
-
-              <textarea
-                {...register("inputFormat")}
-                rows={3}
-                style={s.textarea}
-              />
-            </div>
-
-            <div style={s.formGroup}>
-              <label style={s.label}>Output Format</label>
-
-              <textarea
-                {...register("outputFormat")}
-                rows={3}
-                style={s.textarea}
-              />
-            </div>
-
-            <div style={s.formGroup}>
-              <label style={s.label}>Constraints</label>
-
-              <textarea
-                {...register("constraints")}
-                rows={3}
-                style={s.textarea}
-              />
-            </div>
-
-            <div style={s.row}>
-              <div style={s.formGroupFlex}>
-                <label style={s.label}>Time Limit</label>
-
-                <input
-                  type="number"
-                  min="1"
-                  {...register("timeLimit")}
-                  style={{
-                    ...s.input,
-                    ...(errors.timeLimit ? s.inputError : {}),
-                  }}
-                />
-              </div>
-
-              <div style={s.formGroupFlex}>
-                <label style={s.label}>Memory Limit</label>
-
-                <input
-                  type="number"
-                  min="1024"
-                  {...register("memoryLimit")}
-                  style={{
-                    ...s.input,
-                    ...(errors.memoryLimit ? s.inputError : {}),
-                  }}
-                />
-              </div>
-            </div>
-
-            <div style={s.row}>
-              <div style={s.formGroupFlex}>
-                <label style={s.label}>Difficulty</label>
-
-                <select {...register("difficulty")} style={s.select}>
-                  <option value="easy">Easy</option>
-                  <option value="medium">Medium</option>
-                  <option value="hard">Hard</option>
-                </select>
-              </div>
-
-              <Controller
-                name="tags"
-                control={control}
-                render={({ field }) => (
-                  <div
-                    style={{
-                      ...s.formGroupFlex,
-                      flex: 2,
-                    }}
-                  >
-                    <label style={s.label}>Tags</label>
-
-                    <select
-                      multiple
-                      value={field.value || []}
-                      onChange={(e) =>
-                        field.onChange(
-                          Array.from(e.target.selectedOptions, (o) => o.value),
-                        )
-                      }
-                      style={{
-                        ...s.select,
-                        height: "160px",
-                      }}
-                    >
-                      {tagOptions.map((tag) => (
-                        <option key={tag} value={tag}>
-                          {tag}
-                        </option>
-                      ))}
-                    </select>
-
-                    {field.value?.length > 0 && (
-                      <div style={s.tagWrapper}>
-                        {field.value.map((tag) => (
-                          <span key={tag} style={s.tagPill}>
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              />
-            </div>
-          </div>
-
-          <div style={s.card}>
-            <div style={s.sectionHeader}>
-              <h2 style={s.cardTitle}>Visible Test Cases</h2>
-
-              <button
-                type="button"
-                style={s.addBtn}
-                onClick={() =>
-                  appendVisible({
-                    input: "",
-                    output: "",
-                    explanation: "",
-                  })
-                }
-              >
-                + Add Case
-              </button>
-            </div>
-
-            <TestCaseBlock
-              fields={visibleFields}
-              register={register}
-              remove={removeVisible}
-              type="visibleTestCases"
-              visible
-            />
-          </div>
-
-          <div style={s.card}>
-            <div style={s.sectionHeader}>
-              <h2 style={s.cardTitle}>Hidden Test Cases</h2>
-
-              <button
-                type="button"
-                style={s.addBtn}
-                onClick={() =>
-                  appendHidden({
-                    input: "",
-                    output: "",
-                  })
-                }
-              >
-                + Add Case
-              </button>
-            </div>
-
-            <TestCaseBlock
-              fields={hiddenFields}
-              register={register}
-              remove={removeHidden}
-              type="hiddenTestCases"
-            />
-          </div>
-
-          <div style={s.card}>
-            <h2 style={s.cardTitle}>Code Templates</h2>
-
-            <div style={s.langContainer}>
-              {languageOptions.map((lang, index) => (
-                <div key={lang.value}>
-                  <span style={s.langBadge}>{lang.label}</span>
-
-                  <div style={{ marginTop: "14px" }}>
-                    <textarea
-                      {...register(`startCode.${index}.initialCode`)}
-                      rows={7}
-                      style={s.codeArea}
-                      placeholder={`// ${lang.label} starter code`}
-                    />
-
-                    <textarea
-                      {...register(`referenceSolution.${index}.completeCode`)}
-                      rows={7}
-                      style={s.codeArea}
-                      placeholder={`// ${lang.label} solution`}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <CodeTemplatesSection
+            languageOptions={languageOptions}
+            register={register}
+          />
 
           {/* Rate limit banner */}
           {cooldown > 0 && (
@@ -596,7 +391,8 @@ function AdminUpdate() {
                 />
               </svg>
               <span style={{ fontSize: "13px", color: "#f87171" }}>
-                Too many requests. Please wait {cooldown}s before submitting again.
+                Too many requests. Please wait {cooldown}s before submitting
+                again.
               </span>
             </div>
           )}
