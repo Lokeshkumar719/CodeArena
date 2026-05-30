@@ -2,6 +2,8 @@ import { Plus, Edit, Trash2, Video, ArrowRight } from "lucide-react";
 import { NavLink, useNavigate } from "react-router";
 import AdminCardSkeleton from "../components/skeletons/AdminCardSkeleton";
 
+import { s } from '../styles/pages/adminPageStyles';
+
 function Admin() {
   const navigate = useNavigate();
   const adminOptions = [
@@ -114,113 +116,6 @@ function Admin() {
   );
 }
 
-const s = {
-  page: {
-    minHeight: "100vh",
-    background: "#080c14",
-    fontFamily: "'Sora', sans-serif",
-    color: "#c9d1d9",
-  },
-  navbar: {
-    height: "64px",
-    background: "#080c14",
-    borderBottom: "1px solid #1e2738",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "0 40px",
-    position: "sticky",
-    top: 0,
-    zIndex: 100,
-  },
-  logo: {
-    fontSize: "20px",
-    fontWeight: 700,
-    color: "#a5b4fc",
-  },
-  navLeft: { display: "flex", alignItems: "center", gap: "20px" },
-  backBtn: { display: "flex", alignItems: "center", gap: "6px", background: "transparent", border: "1px solid #1e2738", borderRadius: "8px", color: "#9ca3af", fontSize: "13px", fontWeight: 600, padding: "6px 14px", cursor: "pointer", fontFamily: "'Sora', sans-serif" },
-  adminBox: {
-    fontSize: "13px",
-    color: "#6b7280",
-    fontWeight: 500,
-    border: "1px solid #1e2738",
-    borderRadius: "8px",
-    padding: "6px 14px",
-    background: "#0c1018",
-  },
-  main: {
-    padding: "60px 40px",
-    maxWidth: "1400px",
-    margin: "0 auto",
-  },
-  header: {
-    textAlign: "center",
-    marginBottom: "56px",
-  },
-  heading: {
-    fontSize: "36px",
-    fontWeight: 700,
-    color: "#f9fafb",
-    marginBottom: "14px",
-  },
-  subheading: {
-    fontSize: "15px",
-    color: "#6b7280",
-    maxWidth: "520px",
-    margin: "0 auto",
-    lineHeight: 1.7,
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-    gap: "24px",
-  },
-  card: {
-    background: "#0c1018",
-    border: "1px solid #1e2738",
-    borderRadius: "20px",
-    padding: "36px 32px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "16px",
-    transition: "border-color 0.2s ease, transform 0.2s ease",
-  },
-  iconBox: {
-    width: "56px",
-    height: "56px",
-    borderRadius: "14px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cardTitle: {
-    fontSize: "18px",
-    fontWeight: 700,
-    color: "#f9fafb",
-    margin: 0,
-  },
-  cardDesc: {
-    fontSize: "14px",
-    color: "#6b7280",
-    lineHeight: 1.7,
-    margin: 0,
-    flex: 1,
-  },
-  cardBtn: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "8px",
-    padding: "10px 18px",
-    borderRadius: "10px",
-    fontSize: "13px",
-    fontWeight: 700,
-    textDecoration: "none",
-    cursor: "pointer",
-    alignSelf: "flex-start",
-    marginTop: "8px",
-    fontFamily: "'Sora', sans-serif",
-  },
-};
+
 
 export default Admin;
