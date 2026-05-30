@@ -1,12 +1,19 @@
-import axios from "axios";
+import axios from 'axios';
 
 const axiosClient = axios.create({
-  baseURL: "http://localhost:3000",
+  baseURL: 'http://localhost:3000',
   withCredentials: true,
   headers: {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   },
 });
+
+const authRoutes = [
+  '/user/login',
+  '/user/register',
+  '/user/forgot-password',
+  '/user/reset-password',
+];
 
 /*
   Axios response interceptor
@@ -26,8 +33,6 @@ axiosClient.interceptors.response.use(
     const originalRequest = error.config;
 
     // --- 429 Rate Limit ---
-    // Attach retryAfterSeconds from body so every caller just checks
-    // error.rateLimitedFor without touching HTTP internals
     if (error.response?.status === 429) {
       error.rateLimitedFor = error.response.data?.retryAfterSeconds ?? 10;
       return Promise.reject(error);
@@ -36,26 +41,26 @@ axiosClient.interceptors.response.use(
     // --- 401 Unauthorized — silent token refresh ---
     if (
       error.response?.status === 401 &&
-      !originalRequest._retry &&
-      originalRequest.url !== "/user/refresh"
+      !originalRequest?._retry &&
+      originalRequest?.url !== '/user/refresh' &&
+      !authRoutes.includes(originalRequest?.url)
     ) {
       originalRequest._retry = true;
 
       try {
         // Backend verifies refresh token and sets new access token cookie
-        await axiosClient.post("/user/refresh");
+        await axiosClient.post('/user/refresh');
 
         // Retry the original request with the new token
         return axiosClient(originalRequest);
       } catch (refreshError) {
-        // Refresh token also expired — session is fully gone
-        console.log("Refresh token expired");
+        console.log('Refresh token expired');
         return Promise.reject(refreshError);
       }
     }
 
     return Promise.reject(error);
-  },
+  }
 );
 
 export default axiosClient;
