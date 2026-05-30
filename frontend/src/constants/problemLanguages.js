@@ -3,5 +3,3 @@ export const languageOptions = [
   { value: "java", label: "Java" },
   { value: "javascript", label: "JavaScript" },
 ];
-
-
