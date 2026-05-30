@@ -4,10 +4,10 @@ const express = require("express");
 const main = require("./config/db");
 const cookieParser = require("cookie-parser");
 
-const authRouter = require("./routes/userAuth");
-const problemRouter = require("./routes/problemCreator");
-const submitRouter = require("./routes/submit");
-const videoRouter = require("./routes/videoCreator");
+const authRouter = require("./routes/auth/authRoutes");
+const problemRouter = require("./routes/problem/problemRoutes");
+const submitRouter = require("./routes/submission/submissionRoutes");
+const videoRouter = require("./routes/video/videoRoutes");
 
 const errorMiddleware = require("./middlewares/errorMiddleware");
 const { redisClient, connectRedis } = require("./config/redis");

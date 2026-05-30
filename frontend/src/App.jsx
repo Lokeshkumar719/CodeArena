@@ -19,12 +19,12 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import ChangePassword from "./pages/ChangePassword";
 
-import AdminPanel from "./components/AdminPanel";
-import AdminUpdate from "./components/AdminUpdate";
-import AdminUpdateList from "./components/AdminUpdateList";
-import AdminVideo from "./components/AdminVideo";
-import AdminDelete from "./components/AdminDelete";
-import AdminUpload from "./components/AdminUpload";
+import AdminPanel from './components/admin/AdminPanel';
+import AdminUpdate from './components/admin/AdminUpdate';
+import AdminUpdateList from './components/admin/AdminUpdateList';
+import AdminDelete from './components/admin/AdminDelete';
+import AdminUpload from './components/admin/AdminUpload';
+import AdminVideo from './components/admin/AdminVideo';
 
 NProgress.configure({ showSpinner: false, speed: 400, minimum: 0.1 });
 

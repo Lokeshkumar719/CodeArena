@@ -1,5 +1,5 @@
-const { getLanguageById } = require("../../utils/problemUtility");
-const { submitBatch, submitToken } = require("../judge0Service");
+const { getLanguageById } = require("../../utils/validation/validateUserRegistration");
+const { submitBatch, submitToken } = require("../execution/judge0Service");
 const { JUDGE0_STATUS } = require("../../constants/judgeStatus");
 const STATUS_CODES = require("../../constants/statusCodes");
 const ApiError = require("../../utils/ApiError");
