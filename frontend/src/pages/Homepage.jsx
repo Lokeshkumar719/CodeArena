@@ -10,15 +10,15 @@ import useDebounce from "../hooks/useDebounce";
 import CustomSelect from "../components/home/CustomSelect";
 import Chevron from "../components/home/Chevron";
 import ProblemCard from "../components/home/ProblemCard";
-import UserDropdown from '../components/home/UserDropdown';
-import Pagination from '../components/home/Pagination';
+import UserDropdown from "../components/home/UserDropdown";
+import Pagination from "../components/home/Pagination";
 
-import { tagOptions } from '../constants/problemTags';
+import { tagOptions } from "../constants/problemTags";
 import {
   PAGE_LIMIT,
   difficultyOptions,
   statusOptions,
-} from '../constants/filterOptions';
+} from "../constants/filterOptions";
 
 import { s } from "../styles/pages/homepageStyles";
 
@@ -58,7 +58,6 @@ const getDifficultyStyle = (difficulty) => {
 
 // ── Generic single-select dropdown (replaces <select>) ────────────────────
 // Renders identically on Windows, macOS, Linux — no OS chrome involved.
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -151,25 +150,34 @@ function Homepage() {
     fetchProblems(currentPage, debouncedSearch, filters);
   }, [currentPage, debouncedSearch, filters]);
 
-  const isFirstRender = useRef(true);
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
+  // const isFirstRender = useRef(true);
+  // useEffect(() => {
+  //   if (isFirstRender.current) {
+  //     isFirstRender.current = false;
+  //     return;
+  //   }
+  //   setCurrentPage(1);
+  // }, [debouncedSearch, filters]);
+
+  const updateFilter = (key, value) => {
     setCurrentPage(1);
-  }, [debouncedSearch, filters]);
 
-  const updateFilter = (key, value) =>
-    setFilters((prev) => ({ ...prev, [key]: value }));
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
 
-  const toggleTag = (tag) =>
+  const toggleTag = (tag) => {
+    setCurrentPage(1);
+
     setFilters((prev) => ({
       ...prev,
       tags: prev.tags.includes(tag)
         ? prev.tags.filter((t) => t !== tag)
         : [...prev.tags, tag],
     }));
+  };
 
   const clearAllFilters = () => {
     setSearchInput("");
@@ -210,14 +218,14 @@ function Homepage() {
           <span style={s.logo}>CodeArena</span>
         </NavLink>
 
-<UserDropdown
-  user={user}
-  openPanel={openPanel}
-  toggle={toggle}
-  setOpenPanel={setOpenPanel}
-  handleLogout={handleLogout}
-  userDropdownRef={userDropdownRef}
-/>
+        <UserDropdown
+          user={user}
+          openPanel={openPanel}
+          toggle={toggle}
+          setOpenPanel={setOpenPanel}
+          handleLogout={handleLogout}
+          userDropdownRef={userDropdownRef}
+        />
       </nav>
 
       <div style={s.main}>
@@ -238,10 +246,19 @@ function Homepage() {
             type="text"
             placeholder="Search by problem number or title…"
             value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
+            onChange={(e) => {
+              setCurrentPage(1);
+              setSearchInput(e.target.value);
+            }}
           />
           {searchInput && (
-            <button style={s.searchClear} onClick={() => setSearchInput("")}>
+            <button
+              style={s.searchClear}
+              onClick={() => {
+                setCurrentPage(1);
+                setSearchInput("");
+              }}
+            >
               ✕
             </button>
           )}
@@ -385,16 +402,16 @@ function Homepage() {
 
         {/* ── Pagination ── */}
         <Pagination
-  loading={loading}
-  problems={problems}
-  pg={pg}
-  totalPages={totalPages}
-  totalProblems={totalProblems}
-  hasNextPage={hasNextPage}
-  hasPrevPage={hasPrevPage}
-  setCurrentPage={setCurrentPage}
-  pageLimit={PAGE_LIMIT}
-/>
+          loading={loading}
+          problems={problems}
+          pg={pg}
+          totalPages={totalPages}
+          totalProblems={totalProblems}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          setCurrentPage={setCurrentPage}
+          pageLimit={PAGE_LIMIT}
+        />
       </div>
     </div>
   );

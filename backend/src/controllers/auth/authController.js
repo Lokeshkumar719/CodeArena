@@ -1,73 +1,173 @@
-const { redisClient } = require('../../config/redis');
-const User = require('../../models/user');
+const { redisClient } = require("../../config/redis");
+const User = require("../../models/user");
 
-const validateUserRegistration = require('../../utils/validation/validateUserRegistration');
-const validatePassword = require('../../utils/auth/validatePassword');
+const validateUserRegistration = require("../../utils/validation/validateUserRegistration");
+const validatePassword = require("../../utils/auth/validatePassword");
 
-const asyncHandler = require('../../utils/asyncHandler');
-const sendTokenResponse = require('../../utils/auth/sendTokenResponse');
-const removeRefreshSession = require('../../utils/auth/removeRefreshSession');
+const asyncHandler = require("../../utils/asyncHandler");
+const sendTokenResponse = require("../../utils/auth/sendTokenResponse");
+const removeRefreshSession = require("../../utils/auth/removeRefreshSession");
 
-const STATUS_CODES = require('../../constants/statusCodes');
-const ApiError = require('../../utils/ApiError');
-const clearAuthCookies = require('../../utils/auth/clearAuthCookies');
+const STATUS_CODES = require("../../constants/statusCodes");
+const ApiError = require("../../utils/ApiError");
+const clearAuthCookies = require("../../utils/auth/clearAuthCookies");
 
-const { registerUser, loginUser } = require('../../services/auth/authService');
-const refreshUserSession = require('../../services/auth/refreshSessionService');
+const { registerUser, loginUser } = require("../../services/auth/authService");
+const refreshUserSession = require("../../services/auth/refreshSessionService");
 
-const { verifyRefreshToken } = require('../../services/auth/tokenService');
+const { verifyRefreshToken } = require("../../services/auth/tokenService");
 
 const {
   accessTokenCookieOptions,
   refreshTokenCookieOptions,
-} = require('../../utils/auth/cookieOptions');
+} = require("../../utils/auth/cookieOptions");
 
-const sendEmail = require('../../services/auth/emailService');
+const sendEmail = require("../../services/auth/emailService");
 
-const crypto = require('crypto');
-const bcrypt = require('bcrypt');
-
-
+const crypto = require("crypto");
+const bcrypt = require("bcrypt");
 
 const register = asyncHandler(async (req, res) => {
   await validateUserRegistration(req.body);
-  const { user, accessToken, refreshToken } = await registerUser(
-    req.body,
-    "user",
-  );
-  // set access token cookie
-  res.cookie("accessToken", accessToken, accessTokenCookieOptions);
-  // set refresh token cookie
-  res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
-  return sendTokenResponse(
-    res,
-    user,
-    "User registered successfully",
-    STATUS_CODES.CREATED,
-  );
+
+  const user = await registerUser(req.body, 'user');
+
+  const verificationToken = user.createEmailVerificationToken();
+
+  await user.save({
+    validateBeforeSave: false,
+  });
+
+  const verificationUrl =
+    `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+
+  try {
+    await sendEmail({
+      to: user.emailId,
+      subject: 'Verify Your CodeArena Account',
+      html: `
+        <h2>Welcome to CodeArena</h2>
+
+        <p>Please verify your email by clicking the link below:</p>
+
+        <a href="${verificationUrl}">
+          Verify Email
+        </a>
+
+        <p>This link will expire in 24 hours.</p>
+      `,
+    });
+
+    return res.status(STATUS_CODES.CREATED).json({
+      success: true,
+      message:
+        'Verification email sent. Please verify your email before logging in.',
+    });
+  } catch (err) {
+    user.emailVerificationToken = undefined;
+    user.emailVerificationTokenExpires = undefined;
+
+    await user.save({
+      validateBeforeSave: false,
+    });
+
+    throw new ApiError(
+      STATUS_CODES.INTERNAL_SERVER_ERROR,
+      'Verification email could not be sent',
+    );
+  }
+});
+
+const verifyEmail = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+
+  const hashedToken = crypto
+    .createHash('sha256')
+    .update(token)
+    .digest('hex');
+
+  const user = await User.findOne({
+    emailVerificationToken: hashedToken,
+    emailVerificationTokenExpires: {
+      $gt: Date.now(),
+    },
+  });
+
+  if (!user) {
+    throw new ApiError(
+      STATUS_CODES.BAD_REQUEST,
+      'Invalid or expired verification token',
+    );
+  }
+
+  user.isVerified = true;
+
+  user.emailVerificationToken = undefined;
+  user.emailVerificationTokenExpires = undefined;
+
+  await user.save({
+    validateBeforeSave: false,
+  });
+
+  return res.status(STATUS_CODES.OK).json({
+    success: true,
+    message: 'Email verified successfully',
+  });
 });
 
 const login = asyncHandler(async (req, res) => {
   const { emailId, password } = req.body;
+
   if (!emailId || !password) {
     throw new ApiError(
       STATUS_CODES.BAD_REQUEST,
       "Email and password are required",
     );
   }
+
   const user = await User.findOne({ emailId });
+
   if (!user) {
-    throw new ApiError(STATUS_CODES.UNAUTHORIZED, "Invalid credentials");
+    throw new ApiError(
+      STATUS_CODES.UNAUTHORIZED,
+      "Invalid credentials",
+    );
   }
-  const match = await bcrypt.compare(password, user.password);
+
+  const match = await bcrypt.compare(
+    password,
+    user.password,
+  );
+
   if (!match) {
-    throw new ApiError(STATUS_CODES.UNAUTHORIZED, "Invalid credentials");
+    throw new ApiError(
+      STATUS_CODES.UNAUTHORIZED,
+      "Invalid credentials",
+    );
   }
+
+  if (!user.isVerified) {
+    throw new ApiError(
+      STATUS_CODES.UNAUTHORIZED,
+      "Please verify your email before logging in",
+    );
+  }
+
   const { accessToken, refreshToken } = await loginUser(user);
+
   // set access token cookie
-  res.cookie("accessToken", accessToken, accessTokenCookieOptions);
+  res.cookie(
+    "accessToken",
+    accessToken,
+    accessTokenCookieOptions,
+  );
+
   // set refresh token cookie
-  res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
+  res.cookie(
+    "refreshToken",
+    refreshToken,
+    refreshTokenCookieOptions,
+  );
 
   return sendTokenResponse(
     res,
@@ -96,31 +196,20 @@ const logout = asyncHandler(async (req, res) => {
 });
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
-
   const { refreshToken } = req.cookies;
 
-  const {
-    accessToken,
-    refreshToken:newRefreshToken,
-  } = await refreshUserSession(refreshToken);
+  const { accessToken, refreshToken: newRefreshToken } =
+    await refreshUserSession(refreshToken);
 
   // set new access token cookie
-  res.cookie(
-    "accessToken",
-    accessToken,
-    accessTokenCookieOptions,
-  );
+  res.cookie("accessToken", accessToken, accessTokenCookieOptions);
 
   // rotate refresh token cookie
-  res.cookie(
-    "refreshToken",
-    newRefreshToken,
-    refreshTokenCookieOptions,
-  );
+  res.cookie("refreshToken", newRefreshToken, refreshTokenCookieOptions);
 
   return res.status(STATUS_CODES.OK).json({
-    success:true,
-    message:"Access token refreshed successfully",
+    success: true,
+    message: "Access token refreshed successfully",
   });
 });
 
@@ -240,15 +329,32 @@ const changePassword = asyncHandler(async (req, res) => {
 });
 
 const adminRegister = asyncHandler(async (req, res) => {
-  await validate(req.body);
-  const { user, accessToken, refreshToken } = await registerUser(
-    req.body,
+  await validateUserRegistration(req.body);
+
+  const user = await registerUser(
+    {
+      ...req.body,
+      isVerified: true,
+    },
     "admin",
   );
+
+  const { accessToken, refreshToken } = await loginUser(user);
+
   // set access token cookie
-  res.cookie("accessToken", accessToken, accessTokenCookieOptions);
+  res.cookie(
+    "accessToken",
+    accessToken,
+    accessTokenCookieOptions,
+  );
+
   // set refresh token cookie
-  res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
+  res.cookie(
+    "refreshToken",
+    refreshToken,
+    refreshTokenCookieOptions,
+  );
+
   return sendTokenResponse(
     res,
     user,
@@ -268,9 +374,9 @@ const deleteProfile = asyncHandler(async (req, res) => {
   });
 });
 
-
 module.exports = {
   register,
+  verifyEmail,
   login,
   logout,
   refreshAccessToken,
