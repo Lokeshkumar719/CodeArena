@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Pause, Play, Video } from "lucide-react";
 
+import { s } from '../styles/problem/editorialStyles';
+
 const Editorial = ({ secureUrl, thumbnailUrl, duration }) => {
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -117,31 +119,6 @@ const Editorial = ({ secureUrl, thumbnailUrl, duration }) => {
   );
 };
 
-const s = {
-  wrap: { width: "100%", maxWidth: "896px", margin: "0 auto", fontFamily: "'Sora', sans-serif" },
 
-  // Empty state
-  emptyState: { background: "#0c1018", border: "1px solid #1e2738", borderRadius: "16px", minHeight: "380px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "48px 32px" },
-  emptyIconWrap: { background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: "50%", width: "88px", height: "88px", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "24px" },
-  emptyTitle: { fontSize: "22px", fontWeight: 700, color: "#f9fafb", marginBottom: "12px" },
-  emptyText: { fontSize: "14px", color: "#6b7280", maxWidth: "420px", lineHeight: 1.7 },
-
-  // Player
-  playerWrap: { position: "relative", background: "#000", borderRadius: "16px", overflow: "hidden", border: "1px solid #1e2738", boxShadow: "0 24px 48px rgba(0,0,0,0.6)" },
-  video: { width: "100%", aspectRatio: "16/9", display: "block", background: "#000", cursor: "pointer" },
-
-  // Centre play button
-  centrePlay: { position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" },
-  centrePlayBtn: { background: "rgba(99,102,241,0.85)", borderRadius: "50%", width: "64px", height: "64px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 0 8px rgba(99,102,241,0.2)", backdropFilter: "blur(4px)" },
-
-  // Bottom overlay
-  controls: { position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 60%, transparent 100%)", padding: "32px 16px 14px", transition: "opacity 0.25s ease" },
-  progressTrack: { position: "relative", height: "4px", background: "#1e2738", borderRadius: "999px", marginBottom: "10px", cursor: "pointer" },
-  progressFill: { height: "100%", background: "linear-gradient(90deg, #6366f1, #a5b4fc)", borderRadius: "999px", pointerEvents: "none" },
-  rangeInput: { position: "absolute", inset: 0, width: "100%", opacity: 0, cursor: "pointer", height: "100%", margin: 0 },
-  controlsRow: { display: "flex", alignItems: "center", gap: "10px" },
-  playBtn: { background: "rgba(99,102,241,0.2)", border: "1px solid rgba(99,102,241,0.35)", borderRadius: "50%", width: "34px", height: "34px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 },
-  timeText: { fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.75)", fontFamily: "monospace", minWidth: "38px" },
-};
 
 export default Editorial;
