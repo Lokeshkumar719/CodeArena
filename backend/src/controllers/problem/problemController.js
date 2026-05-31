@@ -200,12 +200,6 @@ const getProblemById = asyncHandler(async (req, res) => {
   });
 });
 
-
-/**
- * GET /problems
- * Controller is intentionally thin — only handles HTTP layer concerns.
- * All logic lives in the service.
- */
 async function getProblems(req, res) {
   try {
     // Auth middleware guarantees req.user exists for protected routes
