@@ -1,9 +1,10 @@
-const { Resend } = require("resend");
+const { Resend } = require('resend');
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendEmail = async ({ to, subject, html }) => {
   return await resend.emails.send({
-    from: "CodeArena <onboarding@resend.dev>",
+    from: process.env.EMAIL_FROM,
     to,
     subject,
     html,
