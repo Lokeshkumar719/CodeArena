@@ -1,4 +1,4 @@
-const { getLanguageById } = require("../../utils/validation/validateUserRegistration");
+const { getLanguageById } = require("../../utils/judge/judge0Utils");
 const { submitBatch, submitToken } = require("../execution/judge0Service");
 const { JUDGE0_STATUS } = require("../../constants/judgeStatus");
 const STATUS_CODES = require("../../constants/statusCodes");
