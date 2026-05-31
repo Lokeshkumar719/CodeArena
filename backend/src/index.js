@@ -4,10 +4,10 @@ const express = require("express");
 const main = require("./config/db");
 const cookieParser = require("cookie-parser");
 
-const authRouter = require("./routes/userAuth");
-const problemRouter = require("./routes/problemCreator");
-const submitRouter = require("./routes/submit");
-const videoRouter = require("./routes/videoCreator");
+const authRouter = require("./routes/auth/authRoutes");
+const problemRouter = require("./routes/problem/problemRoutes");
+const submitRouter = require("./routes/submission/submissionRoutes");
+const videoRouter = require("./routes/video/videoRoutes");
 
 const errorMiddleware = require("./middlewares/errorMiddleware");
 const { redisClient, connectRedis } = require("./config/redis");
@@ -18,10 +18,11 @@ const app = express();
 
 app.set("trust proxy", 1);
 
-const allowedOrigins=[
-  "http://localhost:5173",
-  "http://localhost:5174"
-];
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:5173',
+  'http://localhost:5174',
+].filter(Boolean);
 
 app.use(cors({
   origin:function(origin,callback){
@@ -45,6 +46,13 @@ app.use(express.urlencoded({
 
 app.use(cookieParser());
 
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'CodeArena API Running',
+  });
+});
+
 app.use("/user", authRouter);
 app.use("/problem", problemRouter);
 app.use("/submission", submitRouter);
@@ -52,8 +60,13 @@ app.use("/video", videoRouter);
 
 app.use(errorMiddleware);
 
-process.on("SIGINT", async () => {
-  await redisClient.quit();
+process.on('SIGINT', async () => {
+  try {
+    await redisClient.quit();
+  } catch (error) {
+    console.error(error);
+  }
+
   process.exit(0);
 });
 
@@ -65,7 +78,7 @@ const initialiseConnection = async () => {
       console.log("Server is listening at port " + process.env.PORT);
     });
   } catch (err) {
-    console.log("Error Occurred: " + err);
+    console.error('Startup Error:', err);
   }
 };
 
