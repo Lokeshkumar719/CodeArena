@@ -1,4 +1,4 @@
-import { s } from '../../../styles/admin/adminUpdateStyles';
+import { s } from '../../../styles/admin/updateProblemStyles';
 
 function HiddenTestCasesSection({
   appendHidden,

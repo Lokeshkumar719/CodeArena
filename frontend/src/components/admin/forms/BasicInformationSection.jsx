@@ -1,5 +1,5 @@
 import { Controller } from "react-hook-form";
-import { s } from "../../../styles/admin/adminUpdateStyles";
+import { s } from '../../../styles/admin/updateProblemStyles';
 
 function BasicInformationSection({ register, errors, control, tagOptions }) {
   return (
