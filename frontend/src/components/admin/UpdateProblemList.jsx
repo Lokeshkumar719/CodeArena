@@ -1,9 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, NavLink } from 'react-router';
 import axiosClient from '../../utils/axiosClient';
-import { getErrorMessage } from '../../utils/errorHandler';
 import toast from 'react-hot-toast';
-import TableSkeletonvideo from '../skeletons/TableSkeletonvideo';
+import TableSkeleton from '../skeletons/TableSkeleton';
 
 import useDebounce from '../../hooks/useDebounce';
 
@@ -17,16 +16,14 @@ import {
   difficultyOptions,
 } from '../../constants/filterOptions';
 
-import { s } from '../../styles/admin/adminVideoStyles';
+import { s } from '../../styles/admin/updateProblemListStyles';
 
-
-const AdminVideo = () => {
+const UpdateProblemList = () => {
   const navigate = useNavigate();
 
   const [problems,   setProblems]   = useState([]);
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalProblems: 0, hasNextPage: false, hasPrevPage: false });
   const [loading,    setLoading]    = useState(true);
-  const [deletingId, setDeletingId] = useState(null);
 
   const [searchInput, setSearchInput] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -68,14 +65,13 @@ const AdminVideo = () => {
     try {
       setLoading(true);
       // await new Promise(resolve => setTimeout(resolve, 7000));
-
       const qs = buildQueryString(page, search, f);
       const { data } = await axiosClient.get(`/problem/getProblems?${qs}`);
       if (!data.success) { toast.error(data.errors?.[0] || "Failed to fetch problems"); return; }
       setProblems(data.problems);
       setPagination(data.pagination);
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      toast.error("Failed to fetch problems");
       if (import.meta.env.DEV) console.error(err);
     } finally {
       setLoading(false);
@@ -109,33 +105,13 @@ const AdminVideo = () => {
 
   const hasActiveFilters = searchInput.trim() || filters.difficulty || filters.tags.length > 0;
 
-  const handleDeleteVideo = async (problemId) => {
-    if (!window.confirm("Are you sure you want to delete this video?")) return;
-    try {
-      setDeletingId(problemId);
-      const response = await axiosClient.delete(`/video/delete/${problemId}`);
-      toast.success(response.data.message);
-      const isLastItemOnPage = problems.length === 1 && currentPage > 1;
-      if (isLastItemOnPage) {
-        setCurrentPage((p) => p - 1);
-      } else {
-        fetchProblems(currentPage, debouncedSearch, filters);
-      }
-    } catch (error) {
-      toast.error(getErrorMessage(error));
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
   const { currentPage: pg, totalPages, totalProblems, hasNextPage, hasPrevPage } = pagination;
 
   // if (loading && problems.length === 0) {
   //   return <div style={{ minHeight: "100vh", background: "#080c14" }} />;
   // }
-
-  if (loading) return <TableSkeletonvideo rows={5} />;
-
+  if(loading)return <TableSkeleton rows={5} />;
+  
   return (
     <div style={s.page}>
 
@@ -152,7 +128,7 @@ const AdminVideo = () => {
             <span style={s.logo}>CodeArena</span>
           </NavLink>
         </div>
-        <NavLink to="/admin" style={s.adminLink}>
+        <NavLink to="/admin" style={{ textDecoration: "none" }}>
           <span style={s.adminBox}>Admin Dashboard</span>
         </NavLink>
       </nav>
@@ -161,8 +137,8 @@ const AdminVideo = () => {
 
         {/* ── Header ── */}
         <div style={s.header}>
-          <h1 style={s.heading}>Upload Solution Videos</h1>
-          <p style={s.subheading}>Upload and manage problem solution videos</p>
+          <h1 style={s.heading}>Update Problems</h1>
+          <p style={s.subheading}>Edit and manage coding problems on the platform</p>
         </div>
 
         {/* ── Search ── */}
@@ -255,14 +231,13 @@ const AdminVideo = () => {
           <table style={s.table}>
             <thead>
               <tr>
-                {["#", "Title", "Difficulty", "Tags", "Actions"].map((h) => (
+                {["#", "Title", "Difficulty", "Tags", "Action"].map((h) => (
                   <th key={h} style={s.th}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-
-              {problems.length === 0 ? (
+              {!loading && problems.length === 0 ? (
                 <tr>
                   <td colSpan={5} style={{ padding: "40px", textAlign: "center", color: "#4b5563" }}>
                     No problems found
@@ -284,25 +259,12 @@ const AdminVideo = () => {
                       </div>
                     </td>
                     <td style={s.td}>
-                      <div style={s.actionRow}>
-                        <button
-                          onClick={() => navigate(`/admin/upload/${problem._id}`)}
-                          style={s.uploadBtn}
-                        >
-                          ↑ Upload Video
-                        </button>
-                        <button
-                          onClick={() => handleDeleteVideo(problem._id)}
-                          disabled={deletingId === problem._id}
-                          style={{
-                            ...s.deleteBtn,
-                            opacity: deletingId === problem._id ? 0.6 : 1,
-                            cursor: deletingId === problem._id ? "not-allowed" : "pointer",
-                          }}
-                        >
-                          {deletingId === problem._id ? "Deleting..." : "✕ Delete Video"}
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => navigate(`/admin/update/${problem._id}`)}
+                        style={s.updateBtn}
+                      >
+                        Update
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -360,8 +322,6 @@ const AdminVideo = () => {
   );
 };
 
-
-
 const getDifficultyStyle = (difficulty) => {
   const base = { borderRadius: "999px", fontSize: "11px", fontWeight: 600, padding: "3px 10px", textTransform: "capitalize" };
   switch (difficulty?.toLowerCase()) {
@@ -372,4 +332,4 @@ const getDifficultyStyle = (difficulty) => {
   }
 };
 
-export default AdminVideo;
+export default UpdateProblemList;

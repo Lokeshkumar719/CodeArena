@@ -5,9 +5,9 @@ import axios from 'axios';
 import axiosClient from '../../utils/axiosClient';
 import toast from 'react-hot-toast';
 
-import { s } from '../../styles/admin/adminUploadStyles';
+import { s } from '../../styles/admin/uploadVideoSolutionStyles';
 
-function AdminUpload() {
+function UploadVideoSolution() {
   const { problemId } = useParams();
   const navigate = useNavigate();
   const [uploading, setUploading] = useState(false);
@@ -245,6 +245,4 @@ function AdminUpload() {
   );
 }
 
-
-
-export default AdminUpload;
+export default UploadVideoSolution;

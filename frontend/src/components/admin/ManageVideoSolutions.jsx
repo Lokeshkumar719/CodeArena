@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useNavigate, NavLink } from 'react-router';
 import axiosClient from '../../utils/axiosClient';
-import toast from 'react-hot-toast';
-import { NavLink, useNavigate } from 'react-router';
 import { getErrorMessage } from '../../utils/errorHandler';
-import TableSkeleton from '../skeletons/TableSkeleton';
+import toast from 'react-hot-toast';
+import TableSkeletonvideo from '../skeletons/TableSkeletonvideo';
 
 import useDebounce from '../../hooks/useDebounce';
 
@@ -17,18 +17,13 @@ import {
   difficultyOptions,
 } from '../../constants/filterOptions';
 
-import { s } from '../../styles/admin/adminDeleteStyles';
+import { s } from '../../styles/admin/manageVideoSolutionsStyles';
 
-// ─────────────────────────────────────────────────────────────────────────────
-
-const AdminDelete = () => {
+const ManageVideoSolutions = () => {
   const navigate = useNavigate();
 
   const [problems,   setProblems]   = useState([]);
-  const [pagination, setPagination] = useState({
-    currentPage: 1, totalPages: 1, totalProblems: 0,
-    hasNextPage: false, hasPrevPage: false,
-  });
+  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalProblems: 0, hasNextPage: false, hasPrevPage: false });
   const [loading,    setLoading]    = useState(true);
   const [deletingId, setDeletingId] = useState(null);
 
@@ -60,7 +55,7 @@ const AdminDelete = () => {
 
   const buildQueryString = useCallback((page, search, f) => {
     const params = new URLSearchParams();
-    params.set("page",  page);
+    params.set("page", page);
     params.set("limit", PAGE_LIMIT);
     if (search.trim())     params.set("q",         search.trim());
     if (f.difficulty)      params.set("difficulty", f.difficulty);
@@ -68,12 +63,11 @@ const AdminDelete = () => {
     return params.toString();
   }, []);
 
-  const fetchProblems = useCallback(async (page, search, f) => {  
+  const fetchProblems = useCallback(async (page, search, f) => {
     try {
       setLoading(true);
-      /// For testing purpose add here an await delay of 5s to see the skeleton loader in action
-      // await new Promise(resolve => setTimeout(resolve, 5000));
-      
+      // await new Promise(resolve => setTimeout(resolve, 7000));
+
       const qs = buildQueryString(page, search, f);
       const { data } = await axiosClient.get(`/problem/getProblems?${qs}`);
       if (!data.success) { toast.error(data.errors?.[0] || "Failed to fetch problems"); return; }
@@ -89,7 +83,7 @@ const AdminDelete = () => {
 
   useEffect(() => {
     fetchProblems(currentPage, debouncedSearch, filters);
-  }, [currentPage, debouncedSearch, filters]);
+  }, [currentPage, debouncedSearch, filters, fetchProblems]);
 
   const isFirstRender = useRef(true);
   useEffect(() => {
@@ -97,15 +91,12 @@ const AdminDelete = () => {
     setCurrentPage(1);
   }, [debouncedSearch, filters]);
 
-  const updateFilter = (key, value) =>
-    setFilters((prev) => ({ ...prev, [key]: value }));
+  const updateFilter = (key, value) => setFilters((prev) => ({ ...prev, [key]: value }));
 
   const toggleTag = (tag) =>
     setFilters((prev) => ({
       ...prev,
-      tags: prev.tags.includes(tag)
-        ? prev.tags.filter((t) => t !== tag)
-        : [...prev.tags, tag],
+      tags: prev.tags.includes(tag) ? prev.tags.filter((t) => t !== tag) : [...prev.tags, tag],
     }));
 
   const clearAllFilters = () => {
@@ -115,24 +106,22 @@ const AdminDelete = () => {
     setOpenPanel(null);
   };
 
-  const hasActiveFilters =
-    searchInput.trim() || filters.difficulty || filters.tags.length > 0;
+  const hasActiveFilters = searchInput.trim() || filters.difficulty || filters.tags.length > 0;
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this problem?")) return;
+  const handleDeleteVideo = async (problemId) => {
+    if (!window.confirm("Are you sure you want to delete this video?")) return;
     try {
-      setDeletingId(id);
-      await axiosClient.delete(`/problem/delete/${id}`);
-      toast.success("Problem deleted successfully");
+      setDeletingId(problemId);
+      const response = await axiosClient.delete(`/video/delete/${problemId}`);
+      toast.success(response.data.message);
       const isLastItemOnPage = problems.length === 1 && currentPage > 1;
       if (isLastItemOnPage) {
         setCurrentPage((p) => p - 1);
       } else {
         fetchProblems(currentPage, debouncedSearch, filters);
       }
-    } catch (err) {
-      toast.error(getErrorMessage(err));
-      if (import.meta.env.DEV) console.error(err);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
     } finally {
       setDeletingId(null);
     }
@@ -140,11 +129,16 @@ const AdminDelete = () => {
 
   const { currentPage: pg, totalPages, totalProblems, hasNextPage, hasPrevPage } = pagination;
 
-  if (loading) return <TableSkeleton rows={5} />;
+  // if (loading && problems.length === 0) {
+  //   return <div style={{ minHeight: "100vh", background: "#080c14" }} />;
+  // }
+
+  if (loading) return <TableSkeletonvideo rows={5} />;
 
   return (
     <div style={s.page}>
 
+      {/* ── Navbar ── */}
       <nav style={s.navbar}>
         <div style={s.navLeft}>
           <button onClick={() => navigate(-1)} style={s.backBtn}>
@@ -157,18 +151,20 @@ const AdminDelete = () => {
             <span style={s.logo}>CodeArena</span>
           </NavLink>
         </div>
-        <NavLink to="/admin" style={{ textDecoration: "none" }}>
+        <NavLink to="/admin" style={s.adminLink}>
           <span style={s.adminBox}>Admin Dashboard</span>
         </NavLink>
       </nav>
 
       <div style={s.main}>
 
+        {/* ── Header ── */}
         <div style={s.header}>
-          <h1 style={s.heading}>Delete Problems</h1>
-          <p style={s.subheading}>Remove outdated or invalid coding problems from the platform</p>
+          <h1 style={s.heading}>Upload Solution Videos</h1>
+          <p style={s.subheading}>Upload and manage problem solution videos</p>
         </div>
 
+        {/* ── Search ── */}
         <div style={s.searchWrapper}>
           <svg style={s.searchIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <circle cx="11" cy="11" r="8" />
@@ -186,9 +182,9 @@ const AdminDelete = () => {
           )}
         </div>
 
+        {/* ── Filters ── */}
         <div style={s.filterRow}>
 
-          {/* Difficulty — custom dropdown */}
           <CustomSelect
             value={filters.difficulty}
             onChange={(v) => updateFilter("difficulty", v)}
@@ -199,13 +195,8 @@ const AdminDelete = () => {
             onToggle={() => toggle("difficulty")}
           />
 
-          {/* Tags — multi-select panel */}
           <div style={s.tagDropdownWrapper} ref={tagDropdownRef}>
-            <button
-              type="button"
-              style={s.selectBtn}
-              onClick={() => toggle("tags")}
-            >
+            <button type="button" style={s.selectBtn} onClick={() => toggle("tags")}>
               <span style={{ color: filters.tags.length > 0 ? "#e2e8f0" : "#9ca3af" }}>
                 {filters.tags.length === 0
                   ? "All Tags"
@@ -221,8 +212,7 @@ const AdminDelete = () => {
                     const active = filters.tags.includes(tag);
                     return (
                       <button
-                        key={tag}
-                        type="button"
+                        key={tag} type="button"
                         onClick={() => toggleTag(tag)}
                         style={{ ...s.tagPill, ...(active ? s.tagPillActive : {}) }}
                       >
@@ -259,16 +249,18 @@ const AdminDelete = () => {
           </div>
         )}
 
+        {/* ── Table ── */}
         <div style={s.tableWrap}>
           <table style={s.table}>
             <thead>
               <tr>
-                {["#", "Title", "Difficulty", "Tags", "Action"].map((h) => (
+                {["#", "Title", "Difficulty", "Tags", "Actions"].map((h) => (
                   <th key={h} style={s.th}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
+
               {problems.length === 0 ? (
                 <tr>
                   <td colSpan={5} style={{ padding: "40px", textAlign: "center", color: "#4b5563" }}>
@@ -291,17 +283,25 @@ const AdminDelete = () => {
                       </div>
                     </td>
                     <td style={s.td}>
-                      <button
-                        onClick={() => handleDelete(problem._id)}
-                        disabled={deletingId === problem._id}
-                        style={{
-                          ...s.deleteBtn,
-                          opacity: deletingId === problem._id ? 0.6 : 1,
-                          cursor: deletingId === problem._id ? "not-allowed" : "pointer",
-                        }}
-                      >
-                        {deletingId === problem._id ? "Deleting..." : "Delete"}
-                      </button>
+                      <div style={s.actionRow}>
+                        <button
+                          onClick={() => navigate(`/admin/upload/${problem._id}`)}
+                          style={s.uploadBtn}
+                        >
+                          ↑ Upload Video
+                        </button>
+                        <button
+                          onClick={() => handleDeleteVideo(problem._id)}
+                          disabled={deletingId === problem._id}
+                          style={{
+                            ...s.deleteBtn,
+                            opacity: deletingId === problem._id ? 0.6 : 1,
+                            cursor: deletingId === problem._id ? "not-allowed" : "pointer",
+                          }}
+                        >
+                          {deletingId === problem._id ? "Deleting..." : "✕ Delete Video"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -310,7 +310,8 @@ const AdminDelete = () => {
           </table>
         </div>
 
-        {problems.length > 0 && (
+        {/* ── Pagination ── */}
+        {!loading && problems.length > 0 && (
           <>
             <div style={s.paginationInfo}>
               Showing {(pg - 1) * PAGE_LIMIT + 1}–{Math.min(pg * PAGE_LIMIT, totalProblems)} of {totalProblems} problems
@@ -358,7 +359,6 @@ const AdminDelete = () => {
   );
 };
 
-
 const getDifficultyStyle = (difficulty) => {
   const base = { borderRadius: "999px", fontSize: "11px", fontWeight: 600, padding: "3px 10px", textTransform: "capitalize" };
   switch (difficulty?.toLowerCase()) {
@@ -369,4 +369,4 @@ const getDifficultyStyle = (difficulty) => {
   }
 };
 
-export default AdminDelete;
+export default ManageVideoSolutions;
