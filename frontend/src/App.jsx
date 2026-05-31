@@ -19,12 +19,12 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import ChangePassword from "./pages/ChangePassword";
 
-import AdminPanel from "./components/AdminPanel";
-import AdminUpdate from "./components/AdminUpdate";
-import AdminUpdateList from "./components/AdminUpdateList";
-import AdminVideo from "./components/AdminVideo";
-import AdminDelete from "./components/AdminDelete";
-import AdminUpload from "./components/AdminUpload";
+import CreateProblem from './components/admin/CreateProblem';
+import UpdateProblem from './components/admin/UpdateProblem';
+import UpdateProblemList from './components/admin/UpdateProblemList';
+import DeleteProblem from './components/admin/DeleteProblem';
+import UploadVideoSolution from './components/admin/UploadVideoSolution';
+import ManageVideoSolutions from './components/admin/ManageVideoSolutions';
 
 NProgress.configure({ showSpinner: false, speed: 400, minimum: 0.1 });
 
@@ -116,42 +116,42 @@ function RouteProgress() {
       <Route
         path="/admin/create"
         element={
-          isAuthenticated && isAdmin ? <AdminPanel /> : <Navigate to="/" />
+          isAuthenticated && isAdmin ? <CreateProblem/>: <Navigate to="/" />
         }
       />
 
       <Route
         path="/admin/delete"
         element={
-          isAuthenticated && isAdmin ? <AdminDelete /> : <Navigate to="/" />
+          isAuthenticated && isAdmin ? <DeleteProblem /> : <Navigate to="/" />
         }
       />
 
       <Route
         path="/admin/update-list"
         element={
-          isAuthenticated && isAdmin ? <AdminUpdateList /> : <Navigate to="/" />
+          isAuthenticated && isAdmin ? <UpdateProblemList /> : <Navigate to="/" />
         }
       />
 
       <Route
         path="/admin/video"
         element={
-          isAuthenticated && isAdmin ? <AdminVideo /> : <Navigate to="/" />
+          isAuthenticated && isAdmin ? <ManageVideoSolutions /> : <Navigate to="/" />
         }
       />
 
       <Route
         path="/admin/upload/:problemId"
         element={
-          isAuthenticated && isAdmin ? <AdminUpload /> : <Navigate to="/" />
+          isAuthenticated && isAdmin ? <UploadVideoSolution/> : <Navigate to="/" />
         }
       />
 
       <Route
         path="/admin/update/:id"
         element={
-          isAuthenticated && isAdmin ? <AdminUpdate /> : <Navigate to="/" />
+          isAuthenticated && isAdmin ? <UpdateProblem/> : <Navigate to="/" />
         }
       />
     </Routes>
