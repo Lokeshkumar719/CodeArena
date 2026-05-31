@@ -10,21 +10,32 @@ const {
   forgotPassword,
   resetPassword,
   changePassword,
+  verifyEmail,
 } = require("../../controllers/auth/authController");
 
 const authMiddleware = require("../../middlewares/auth/authMiddleware");
 const adminMiddleware = require("../../middlewares/auth/adminMiddleware");
-const {limitLogin,limitRegister,limitChangePassword}=require("../../middlewares/rateLimitMiddleware");
+const {
+  limitLogin,
+  limitRegister,
+  limitChangePassword,
+} = require("../../middlewares/rateLimitMiddleware");
 
 // register and login routes are public routes so we don't need to add authMiddleware in them but logout route is a private route so we need to add authMiddleware in it
-authRouter.post("/register",limitRegister, register);
-authRouter.post("/login",limitLogin ,login);
+authRouter.post("/register", limitRegister, register);
+authRouter.post("/login", limitLogin, login);
 // before logout we need to check whether the user is authenticated or not so we will use authMiddleware
 authRouter.post("/logout", authMiddleware, logout);
 authRouter.post("/refresh", refreshAccessToken);
-authRouter.post("/forgot-password", limitLogin,forgotPassword);
+authRouter.post("/forgot-password", limitLogin, forgotPassword);
 authRouter.post("/reset-password/:token", resetPassword);
-authRouter.post("/change-password", authMiddleware,limitChangePassword, changePassword);
+authRouter.get("/verify-email/:token", verifyEmail);
+authRouter.post(
+  "/change-password",
+  authMiddleware,
+  limitChangePassword,
+  changePassword,
+);
 // authRouter.post('/getProfile',getProfile);
 authRouter.post(
   "/admin/Register",
@@ -34,6 +45,8 @@ authRouter.post(
 );
 authRouter.delete("/profile", authMiddleware, deleteProfile);
 // this is for verification for a valid jwt only if any error then userMidddleware will handle that
+
+
 authRouter.get("/check", authMiddleware, (req, res) => {
   const reply = {
     firstName: req.user.firstName,
@@ -48,6 +61,5 @@ authRouter.get("/check", authMiddleware, (req, res) => {
     data: reply,
   });
 });
-
 
 module.exports = authRouter;

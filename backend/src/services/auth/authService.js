@@ -23,14 +23,10 @@ const registerUser = async (userData, role) => {
     ...userData,
     role,
   };
+
   const user = await User.create(newUserData);
-  const { accessToken, refreshToken } = generateTokens(user);
-  await storeRefreshSession(user._id, refreshToken);
-  return {
-    user,
-    accessToken,
-    refreshToken,
-  };
+
+  return user;
 };
 
 const loginUser = async (user) => {

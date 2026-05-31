@@ -18,13 +18,15 @@ import Admin from "./pages/Admin";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import ChangePassword from "./pages/ChangePassword";
+import CheckEmail from "./pages/CheckEmail";
+import VerifyEmail from "./pages/VerifyEmail";
 
-import CreateProblem from './components/admin/CreateProblem';
-import UpdateProblem from './components/admin/UpdateProblem';
-import UpdateProblemList from './components/admin/UpdateProblemList';
-import DeleteProblem from './components/admin/DeleteProblem';
-import UploadVideoSolution from './components/admin/UploadVideoSolution';
-import ManageVideoSolutions from './components/admin/ManageVideoSolutions';
+import CreateProblem from "./components/admin/CreateProblem";
+import UpdateProblem from "./components/admin/UpdateProblem";
+import UpdateProblemList from "./components/admin/UpdateProblemList";
+import DeleteProblem from "./components/admin/DeleteProblem";
+import UploadVideoSolution from "./components/admin/UploadVideoSolution";
+import ManageVideoSolutions from "./components/admin/ManageVideoSolutions";
 
 NProgress.configure({ showSpinner: false, speed: 400, minimum: 0.1 });
 
@@ -52,20 +54,20 @@ function App() {
     );
   }
 
-function RouteProgress() {
-  const location = useLocation();
+  function RouteProgress() {
+    const location = useLocation();
 
-  useEffect(() => {
-    NProgress.start();
-    const t = setTimeout(() => NProgress.done(), 300);
-    return () => {
-      clearTimeout(t);
-      NProgress.done();
-    };
-  }, [location.pathname]);
+    useEffect(() => {
+      NProgress.start();
+      const t = setTimeout(() => NProgress.done(), 300);
+      return () => {
+        clearTimeout(t);
+        NProgress.done();
+      };
+    }, [location.pathname]);
 
-  return null;
-}
+    return null;
+  }
 
   const isAdmin = user?.role?.toLowerCase() === "admin";
 
@@ -84,6 +86,16 @@ function RouteProgress() {
       <Route
         path="/signup"
         element={isAuthenticated ? <Navigate to="/" /> : <Signup />}
+      />
+
+      <Route
+        path="/check-email"
+        element={isAuthenticated ? <Navigate to="/" /> : <CheckEmail />}
+      />
+
+      <Route
+        path="/verify-email/:token"
+        element={isAuthenticated ? <Navigate to="/" /> : <VerifyEmail />}
       />
 
       <Route
@@ -116,7 +128,7 @@ function RouteProgress() {
       <Route
         path="/admin/create"
         element={
-          isAuthenticated && isAdmin ? <CreateProblem/>: <Navigate to="/" />
+          isAuthenticated && isAdmin ? <CreateProblem /> : <Navigate to="/" />
         }
       />
 
@@ -130,28 +142,40 @@ function RouteProgress() {
       <Route
         path="/admin/update-list"
         element={
-          isAuthenticated && isAdmin ? <UpdateProblemList /> : <Navigate to="/" />
+          isAuthenticated && isAdmin ? (
+            <UpdateProblemList />
+          ) : (
+            <Navigate to="/" />
+          )
         }
       />
 
       <Route
         path="/admin/video"
         element={
-          isAuthenticated && isAdmin ? <ManageVideoSolutions /> : <Navigate to="/" />
+          isAuthenticated && isAdmin ? (
+            <ManageVideoSolutions />
+          ) : (
+            <Navigate to="/" />
+          )
         }
       />
 
       <Route
         path="/admin/upload/:problemId"
         element={
-          isAuthenticated && isAdmin ? <UploadVideoSolution/> : <Navigate to="/" />
+          isAuthenticated && isAdmin ? (
+            <UploadVideoSolution />
+          ) : (
+            <Navigate to="/" />
+          )
         }
       />
 
       <Route
         path="/admin/update/:id"
         element={
-          isAuthenticated && isAdmin ? <UpdateProblem/> : <Navigate to="/" />
+          isAuthenticated && isAdmin ? <UpdateProblem /> : <Navigate to="/" />
         }
       />
     </Routes>

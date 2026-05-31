@@ -5,17 +5,26 @@ export const registerUser = createAsyncThunk(
   "auth/register",
   async (userData, { rejectWithValue }) => {
     try {
-      const response = await axiosClient.post("/user/register", userData);
-      return response.data.data;
+      const response = await axiosClient.post(
+        "/user/register",
+        userData,
+      );
+
+      return response.data;
     } catch (error) {
-      // Pass rate limit metadata through so the component can start a cooldown
       if (error.rateLimitedFor) {
         return rejectWithValue({
-          message: error.response?.data?.message || "Too many requests",
+          message:
+            error.response?.data?.message ||
+            "Too many requests",
           rateLimitedFor: error.rateLimitedFor,
         });
       }
-      return rejectWithValue(error.response?.data?.message || "Something went wrong");
+
+      return rejectWithValue(
+        error.response?.data?.message ||
+        "Something went wrong",
+      );
     }
   },
 );
@@ -33,7 +42,9 @@ export const loginUser = createAsyncThunk(
           rateLimitedFor: error.rateLimitedFor,
         });
       }
-      return rejectWithValue(error.response?.data?.message || "Something went wrong");
+      return rejectWithValue(
+        error.response?.data?.message || "Something went wrong",
+      );
     }
   },
 );
@@ -104,10 +115,10 @@ const authSlice = createSlice({
         state.error = null;
       })
 
-      .addCase(registerUser.fulfilled, (state, action) => {
+      .addCase(registerUser.fulfilled, (state) => {
         state.loading = false;
-        state.isAuthenticated = true;
-        state.user = action.payload;
+        state.isAuthenticated = false;
+        state.user = null;
         state.error = null;
       })
 
@@ -173,6 +184,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError, resetAuthState } =
-  authSlice.actions;
+export const { clearError, resetAuthState } = authSlice.actions;
 export default authSlice.reducer;
