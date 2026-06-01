@@ -12,8 +12,8 @@ function Chevron({ open }) {
       strokeLinejoin="round"
       style={{
         flexShrink: 0,
-        transition: "transform 0.2s ease",
-        transform: open ? "rotate(180deg)" : "rotate(0deg)",
+        transition: 'transform 0.2s ease',
+        transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
       }}
     >
       <path d="M6 9l6 6 6-6" />

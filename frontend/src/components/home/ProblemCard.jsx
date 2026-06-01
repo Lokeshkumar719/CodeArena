@@ -12,27 +12,18 @@ function ProblemCard({ problem, getDifficultyStyle }) {
             gap: '12px',
           }}
         >
-          {problem.problemNo && (
-            <span style={s.problemNo}>#{problem.problemNo}</span>
-          )}
+          {problem.problemNo && <span style={s.problemNo}>#{problem.problemNo}</span>}
 
-          <NavLink
-            to={`/problem/${problem._id}`}
-            style={s.problemTitle}
-          >
+          <NavLink to={`/problem/${problem._id}`} style={s.problemTitle}>
             {problem.title}
           </NavLink>
         </div>
 
-        {problem.isSolved && (
-          <span style={s.solvedBadge}>✔ Solved</span>
-        )}
+        {problem.isSolved && <span style={s.solvedBadge}>✔ Solved</span>}
       </div>
 
       <div style={s.badgeRow}>
-        <span style={getDifficultyStyle(problem.difficulty)}>
-          {problem.difficulty}
-        </span>
+        <span style={getDifficultyStyle(problem.difficulty)}>{problem.difficulty}</span>
 
         {problem.tags.map((tag) => (
           <span key={tag} style={s.tagBadge}>

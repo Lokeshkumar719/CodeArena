@@ -18,8 +18,8 @@ function Pagination({
   return (
     <>
       <div style={s.paginationInfo}>
-        Showing {(pg - 1) * pageLimit + 1}–
-        {Math.min(pg * pageLimit, totalProblems)} of {totalProblems} problems
+        Showing {(pg - 1) * pageLimit + 1}–{Math.min(pg * pageLimit, totalProblems)} of{' '}
+        {totalProblems} problems
       </div>
 
       <div style={s.pagination}>
@@ -32,12 +32,7 @@ function Pagination({
         </button>
 
         {Array.from({ length: totalPages }, (_, i) => i + 1)
-          .filter(
-            (n) =>
-              n === 1 ||
-              n === totalPages ||
-              Math.abs(n - pg) <= 2,
-          )
+          .filter((n) => n === 1 || n === totalPages || Math.abs(n - pg) <= 2)
           .reduce((acc, n, i, arr) => {
             if (i > 0 && n - arr[i - 1] > 1) {
               acc.push('...');
@@ -48,10 +43,7 @@ function Pagination({
           }, [])
           .map((item, i) =>
             item === '...' ? (
-              <span
-                key={`ellipsis-${i}`}
-                style={{ color: '#4b5563', padding: '0 4px' }}
-              >
+              <span key={`ellipsis-${i}`} style={{ color: '#4b5563', padding: '0 4px' }}>
                 …
               </span>
             ) : (
@@ -65,7 +57,7 @@ function Pagination({
               >
                 {item}
               </button>
-            ),
+            )
           )}
 
         <button

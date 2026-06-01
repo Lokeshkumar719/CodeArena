@@ -13,7 +13,7 @@ function VisibleTestCasesSection({
         <h2 style={s.cardTitle}>Visible Test Cases</h2>
 
         <button
-          type='button'
+          type="button"
           style={s.addBtn}
           onClick={() =>
             appendVisible({
@@ -31,7 +31,7 @@ function VisibleTestCasesSection({
         fields={visibleFields}
         register={register}
         remove={removeVisible}
-        type='visibleTestCases'
+        type="visibleTestCases"
         visible
       />
     </div>

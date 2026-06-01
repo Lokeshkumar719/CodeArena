@@ -1,9 +1,6 @@
 import { s } from '../../../styles/admin/updateProblemStyles';
 
-function CodeTemplatesSection({
-  languageOptions,
-  register,
-}) {
+function CodeTemplatesSection({ languageOptions, register }) {
   return (
     <div style={s.card}>
       <h2 style={s.cardTitle}>Code Templates</h2>

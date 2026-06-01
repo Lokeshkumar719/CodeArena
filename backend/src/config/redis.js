@@ -1,6 +1,6 @@
-require("dotenv").config();
+require('dotenv').config();
 
-const { createClient } = require("redis");
+const { createClient } = require('redis');
 
 // create a single redis client instance for the entire application
 // this follows singleton pattern so that we don't create multiple
@@ -19,7 +19,7 @@ const redisClient = createClient({
       // if redis fails too many times,
       // stop reconnecting after 10 retries
       if (retries > 10) {
-        return new Error("Redis max retries reached");
+        return new Error('Redis max retries reached');
       }
 
       // retry delay increases gradually:
@@ -34,20 +34,20 @@ const redisClient = createClient({
 });
 
 // "connect" event fires when redis starts trying to connect
-redisClient.on("connect", () => {
-  console.log("Redis connecting...");
+redisClient.on('connect', () => {
+  console.log('Redis connecting...');
 });
 
 // "ready" event fires when redis connection is successful
 // and redis is ready to accept commands
-redisClient.on("ready", () => {
-  console.log("Redis connected successfully");
+redisClient.on('ready', () => {
+  console.log('Redis connected successfully');
 });
 
 // "reconnecting" event fires whenever redis loses connection
 // and starts reconnecting automatically
-redisClient.on("reconnecting", () => {
-  console.log("Redis reconnecting...");
+redisClient.on('reconnecting', () => {
+  console.log('Redis reconnecting...');
 });
 
 // "end" event fires when redis connection closes completely
@@ -55,14 +55,14 @@ redisClient.on("reconnecting", () => {
 // - server shutdown
 // - redisClient.quit()
 // - redis server stopped
-redisClient.on("end", () => {
-  console.log("Redis connection closed");
+redisClient.on('end', () => {
+  console.log('Redis connection closed');
 });
 
 // "error" event handles all redis-related errors
 // without this, some redis errors may crash the application
-redisClient.on("error", (err) => {
-  console.error("Redis Error:", err);
+redisClient.on('error', (err) => {
+  console.error('Redis Error:', err);
 });
 
 // reusable function to connect redis safely

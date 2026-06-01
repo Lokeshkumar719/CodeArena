@@ -1,21 +1,23 @@
-const { submitBatch, submitToken } = require("../execution/judge0Service");
-const { JUDGE0_STATUS } = require("../../constants/judgeStatus");
-const getSubmissionResult = require("../../utils/judge/getSubmissionResult");
+const { submitBatch, submitToken } = require('../execution/judge0Service');
+
+const { JUDGE0_STATUS } = require('../../constants/judgeStatus');
+
+const getSubmissionResult = require('../../utils/judge/getSubmissionResult');
 
 const executeCode = async (
   testcases,
   code,
   languageId,
   executionLimits,
-  includeTestResult = false,
+  includeTestResult = false
 ) => {
-const submissions=testcases.map((testcase)=>({
-  source_code:code,
-  language_id:languageId,
-  stdin:testcase.input,
-  expected_output:testcase.output,
-  ...executionLimits
-}));
+  const submissions = testcases.map((testcase) => ({
+    source_code: code,
+    language_id: languageId,
+    stdin: testcase.input,
+    expected_output: testcase.output,
+    ...executionLimits,
+  }));
 
   const submitResult = await submitBatch(submissions);
   const resultTokens = submitResult.map((value) => value.token);
@@ -24,7 +26,7 @@ const submissions=testcases.map((testcase)=>({
   let testCasesPassed = 0;
   let runtime = 0;
   let memory = 0;
-  let status = "accepted";
+  let status = 'accepted';
   let errorMessage = null;
 
   for (const test of testResult) {

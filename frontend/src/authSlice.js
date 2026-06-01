@@ -1,90 +1,75 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import axiosClient from "./utils/axiosClient";
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import axiosClient from './utils/axiosClient';
 
 export const registerUser = createAsyncThunk(
-  "auth/register",
+  'auth/register',
   async (userData, { rejectWithValue }) => {
     try {
-      const response = await axiosClient.post(
-        "/user/register",
-        userData,
-      );
+      const response = await axiosClient.post('/user/register', userData);
 
       return response.data;
     } catch (error) {
       if (error.rateLimitedFor) {
         return rejectWithValue({
-          message:
-            error.response?.data?.message ||
-            "Too many requests",
+          message: error.response?.data?.message || 'Too many requests',
           rateLimitedFor: error.rateLimitedFor,
         });
       }
 
-      return rejectWithValue(
-        error.response?.data?.message ||
-        "Something went wrong",
-      );
+      return rejectWithValue(error.response?.data?.message || 'Something went wrong');
     }
-  },
+  }
 );
 
 export const loginUser = createAsyncThunk(
-  "auth/login",
+  'auth/login',
   async (credentials, { rejectWithValue }) => {
     try {
-      const response = await axiosClient.post("/user/login", credentials);
-      return response.data.data;
+      const response = await axiosClient.post('/user/login', credentials);
+      return response.data.data; // success payload
     } catch (error) {
+      // normalize rate limiting error
       if (error.rateLimitedFor) {
         return rejectWithValue({
-          message: error.response?.data?.message || "Too many requests",
+          message: error.response?.data?.message || 'Too many requests',
           rateLimitedFor: error.rateLimitedFor,
         });
       }
-      return rejectWithValue(
-        error.response?.data?.message || "Something went wrong",
-      );
+
+      // normalize all other errors as objects with message
+      const message = error.response?.data?.message || 'Something went wrong';
+
+      return rejectWithValue({ message }); // <- always object
     }
-  },
+  }
 );
 
-export const checkAuth = createAsyncThunk(
-  "auth/check",
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await axiosClient.get("/user/check");
+export const checkAuth = createAsyncThunk('auth/check', async (_, { rejectWithValue }) => {
+  try {
+    const response = await axiosClient.get('/user/check');
 
-      return response.data.data;
-    } catch (error) {
-      if (error.response?.status === 401) {
-        return rejectWithValue(null);
-      }
-
-      return rejectWithValue(
-        error.response?.data?.message || "Something went wrong",
-      );
+    return response.data.data;
+  } catch (error) {
+    if (error.response?.status === 401) {
+      return rejectWithValue(null);
     }
-  },
-);
 
-export const logoutUser = createAsyncThunk(
-  "auth/logout",
-  async (_, { rejectWithValue }) => {
-    try {
-      await axiosClient.post("/user/logout");
+    return rejectWithValue(error.response?.data?.message || 'Something went wrong');
+  }
+});
 
-      return null;
-    } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || "Something went wrong",
-      );
-    }
-  },
-);
+export const logoutUser = createAsyncThunk('auth/logout', async (_, { rejectWithValue }) => {
+  try {
+    await axiosClient.post('/user/logout');
+
+    return null;
+  } catch (error) {
+    return rejectWithValue(error.response?.data?.message || 'Something went wrong');
+  }
+});
 
 const authSlice = createSlice({
-  name: "auth",
+  name: 'auth',
 
   initialState: {
     user: null,

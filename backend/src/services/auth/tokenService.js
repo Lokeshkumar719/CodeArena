@@ -1,6 +1,6 @@
-const jwt = require("jsonwebtoken");
+const jwt = require('jsonwebtoken');
 
-const AUTH_CONFIG = require("../../constants/authConstants");
+const AUTH_CONFIG = require('../../constants/authConstants');
 
 const generateAccessToken = (payload) => {
   return jwt.sign(payload, process.env.JWT_KEY, {
