@@ -1,17 +1,14 @@
-const { getLanguageById } = require("../../utils/judge/judge0Utils");
-const { submitBatch, submitToken } = require("../execution/judge0Service");
-const { JUDGE0_STATUS } = require("../../constants/judgeStatus");
-const STATUS_CODES = require("../../constants/statusCodes");
-const ApiError = require("../../utils/ApiError");
+const { getLanguageById } = require('../../utils/judge/judge0Utils');
+const { submitBatch, submitToken } = require('../execution/judge0Service');
+const { JUDGE0_STATUS } = require('../../constants/judgeStatus');
+const STATUS_CODES = require('../../constants/statusCodes');
+const ApiError = require('../../utils/ApiError');
 
 const validateReferenceSolutions = async (referenceSolution, testCases) => {
   for (const { language, completeCode } of referenceSolution) {
     const languageId = getLanguageById(language);
     if (!languageId) {
-      throw new ApiError(
-        STATUS_CODES.BAD_REQUEST,
-        `Unsupported language: ${language}`,
-      );
+      throw new ApiError(STATUS_CODES.BAD_REQUEST, `Unsupported language: ${language}`);
     }
     // prepare Judge0 submissions
     const submission = testCases.map((testCase) => ({
@@ -29,10 +26,7 @@ const validateReferenceSolutions = async (referenceSolution, testCases) => {
     // validate all testcases passed
     for (const test of testResult) {
       if (test.status_id !== JUDGE0_STATUS.ACCEPTED) {
-        throw new ApiError(
-          STATUS_CODES.BAD_REQUEST,
-          `Reference solution failed for ${language}`,
-        );
+        throw new ApiError(STATUS_CODES.BAD_REQUEST, `Reference solution failed for ${language}`);
       }
     }
   }

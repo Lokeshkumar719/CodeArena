@@ -1,10 +1,9 @@
-const judge0Client = require("../../config/judge0Client");
-const decodeBase64 = require("../../utils/judge/decodeBase64");
-const encodeBase64 = require("../../utils/judge/encodeBase64");
-const {
-  MAX_POLLING_RETRIES,
-  POLLING_INTERVAL,
-} = require("../../constants/judge0");
+const judge0Client = require('../../config/judge0Client');
+
+const decodeBase64 = require('../../utils/judge/decodeBase64');
+const encodeBase64 = require('../../utils/judge/encodeBase64');
+
+const { MAX_POLLING_RETRIES, POLLING_INTERVAL } = require('../../constants/judge0');
 
 const waiting = (timer) => {
   return new Promise((resolve) => setTimeout(resolve, timer));
@@ -19,10 +18,10 @@ const submitBatch = async (submissions) => {
   }));
 
   const options = {
-    method: "POST",
-    url: "/submissions/batch",
+    method: 'POST',
+    url: '/submissions/batch',
     params: {
-      base64_encoded: "true",
+      base64_encoded: 'true',
     },
     data: {
       submissions: encodedSubmissions,
@@ -33,19 +32,19 @@ const submitBatch = async (submissions) => {
     const response = await judge0Client.request(options);
     return response.data;
   } catch (error) {
-    console.error("The error is: " + error);
+    console.error('The error is: ' + error);
     throw error;
   }
 };
 
 const submitToken = async (resultTokens) => {
   const options = {
-    method: "GET",
-    url: "/submissions/batch",
+    method: 'GET',
+    url: '/submissions/batch',
     params: {
-      tokens: resultTokens.join(","),
-      base64_encoded: "true",
-      fields: "*",
+      tokens: resultTokens.join(','),
+      base64_encoded: 'true',
+      fields: '*',
     },
   };
 
@@ -54,9 +53,7 @@ const submitToken = async (resultTokens) => {
       const response = await judge0Client.request(options);
       const results = response.data;
       const submissions = results.submissions;
-      const isResultObtained = submissions.every(
-        (result) => result.status.id > 2,
-      );
+      const isResultObtained = submissions.every((result) => result.status.id > 2);
       if (isResultObtained) {
         const decodedSubmissions = submissions.map((submission) => ({
           ...submission,
@@ -75,7 +72,7 @@ const submitToken = async (resultTokens) => {
       throw error;
     }
   }
-  throw new Error("Judge0 polling timeout exceeded");
+  throw new Error('Judge0 polling timeout exceeded');
 };
 
 module.exports = {

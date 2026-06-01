@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const reusableProblemNoSchema = new mongoose.Schema({
   value: {
@@ -7,8 +7,5 @@ const reusableProblemNoSchema = new mongoose.Schema({
     unique: true,
   },
 });
-const ReusableProblemNo = mongoose.model(
-  "ReusableProblemNo",
-  reusableProblemNoSchema
-);
+const ReusableProblemNo = mongoose.model('ReusableProblemNo', reusableProblemNoSchema);
 module.exports = ReusableProblemNo;

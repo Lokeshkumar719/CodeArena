@@ -1,20 +1,16 @@
-import { s } from "../../../styles/admin/updateProblemStyles";
+import { s } from '../../../styles/admin/updateProblemStyles';
 
 function TestCaseBlock({ fields, register, remove, type, visible }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       {fields.map((field, index) => (
         <div key={field.id} style={s.caseCard}>
           <div style={s.caseHeader}>
             <span style={s.caseTitle}>
-              {visible ? "Case" : "Hidden Case"} {index + 1}
+              {visible ? 'Case' : 'Hidden Case'} {index + 1}
             </span>
 
-            <button
-              type="button"
-              style={s.removeBtn}
-              onClick={() => remove(index)}
-            >
+            <button type="button" style={s.removeBtn} onClick={() => remove(index)}>
               Remove
             </button>
           </div>

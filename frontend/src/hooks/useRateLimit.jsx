@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef } from 'react';
 
 const useRateLimit = () => {
   const [cooldown, setCooldown] = useState(0);

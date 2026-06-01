@@ -1,4 +1,4 @@
-import { Controller } from "react-hook-form";
+import { Controller } from 'react-hook-form';
 import { s } from '../../../styles/admin/updateProblemStyles';
 
 function BasicInformationSection({ register, errors, control, tagOptions }) {
@@ -11,7 +11,7 @@ function BasicInformationSection({ register, errors, control, tagOptions }) {
           <label style={s.label}>Title</label>
 
           <input
-            {...register("title")}
+            {...register('title')}
             style={{
               ...s.input,
               ...(errors.title ? s.inputError : {}),
@@ -26,7 +26,7 @@ function BasicInformationSection({ register, errors, control, tagOptions }) {
           <label style={s.label}>Description</label>
 
           <textarea
-            {...register("description")}
+            {...register('description')}
             rows={5}
             style={{
               ...s.textarea,
@@ -35,27 +35,25 @@ function BasicInformationSection({ register, errors, control, tagOptions }) {
             placeholder="Problem description..."
           />
 
-          {errors.description && (
-            <p style={s.errorText}>{errors.description.message}</p>
-          )}
+          {errors.description && <p style={s.errorText}>{errors.description.message}</p>}
         </div>
 
         <div style={s.formGroup}>
           <label style={s.label}>Input Format</label>
 
-          <textarea {...register("inputFormat")} rows={3} style={s.textarea} />
+          <textarea {...register('inputFormat')} rows={3} style={s.textarea} />
         </div>
 
         <div style={s.formGroup}>
           <label style={s.label}>Output Format</label>
 
-          <textarea {...register("outputFormat")} rows={3} style={s.textarea} />
+          <textarea {...register('outputFormat')} rows={3} style={s.textarea} />
         </div>
 
         <div style={s.formGroup}>
           <label style={s.label}>Constraints</label>
 
-          <textarea {...register("constraints")} rows={3} style={s.textarea} />
+          <textarea {...register('constraints')} rows={3} style={s.textarea} />
         </div>
 
         <div style={s.row}>
@@ -65,7 +63,7 @@ function BasicInformationSection({ register, errors, control, tagOptions }) {
             <input
               type="number"
               min="1"
-              {...register("timeLimit")}
+              {...register('timeLimit')}
               style={{
                 ...s.input,
                 ...(errors.timeLimit ? s.inputError : {}),
@@ -79,7 +77,7 @@ function BasicInformationSection({ register, errors, control, tagOptions }) {
             <input
               type="number"
               min="1024"
-              {...register("memoryLimit")}
+              {...register('memoryLimit')}
               style={{
                 ...s.input,
                 ...(errors.memoryLimit ? s.inputError : {}),
@@ -92,7 +90,7 @@ function BasicInformationSection({ register, errors, control, tagOptions }) {
           <div style={s.formGroupFlex}>
             <label style={s.label}>Difficulty</label>
 
-            <select {...register("difficulty")} style={s.select}>
+            <select {...register('difficulty')} style={s.select}>
               <option value="easy">Easy</option>
               <option value="medium">Medium</option>
               <option value="hard">Hard</option>
@@ -115,13 +113,11 @@ function BasicInformationSection({ register, errors, control, tagOptions }) {
                   multiple
                   value={field.value || []}
                   onChange={(e) =>
-                    field.onChange(
-                      Array.from(e.target.selectedOptions, (o) => o.value),
-                    )
+                    field.onChange(Array.from(e.target.selectedOptions, (o) => o.value))
                   }
                   style={{
                     ...s.select,
-                    height: "160px",
+                    height: '160px',
                   }}
                 >
                   {tagOptions.map((tag) => (

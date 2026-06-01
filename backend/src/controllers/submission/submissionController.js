@@ -2,7 +2,6 @@ const Submission = require('../../models/submission');
 const { Problem } = require('../../models/problem');
 
 const { getLanguageById } = require('../../utils/judge/judge0Utils');
-
 const asyncHandler = require('../../utils/asyncHandler');
 const getExecutionLimits = require('../../utils/judge/getExecutionLimits');
 const ApiError = require('../../utils/ApiError');
@@ -25,23 +24,17 @@ const submitCode = asyncHandler(async (req, res) => {
   const languageId = getLanguageById(language);
 
   if (!languageId) {
-    throw new ApiError(
-      STATUS_CODES.BAD_REQUEST,
-      "Unsupported language",
-    );
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Unsupported language');
   }
 
   const problem = await Problem.findById(problemId);
 
   if (!problem) {
-    throw new ApiError(STATUS_CODES.NOT_FOUND, "Problem not found");
+    throw new ApiError(STATUS_CODES.NOT_FOUND, 'Problem not found');
   }
 
   // combine visible + hidden testcases
-  const allTestcases = [
-    ...problem.visibleTestCases,
-    ...problem.hiddenTestCases,
-  ];
+  const allTestcases = [...problem.visibleTestCases, ...problem.hiddenTestCases];
 
   // create initial pending submission
   const submittedResult = await Submission.create({
@@ -55,17 +48,11 @@ const submitCode = asyncHandler(async (req, res) => {
   });
 
   // execute code against all testcases
-  const {
-    testCasesPassed,
-    runtime,
-    memory,
-    status,
-    errorMessage,
-  } = await executeCode(
+  const { testCasesPassed, runtime, memory, status, errorMessage } = await executeCode(
     allTestcases,
     code,
     languageId,
-    getExecutionLimits(problem),
+    getExecutionLimits(problem)
   );
 
   // update submission result
@@ -116,32 +103,22 @@ const runCode = asyncHandler(async (req, res) => {
   const problem = await Problem.findById(problemId);
 
   if (!problem) {
-    throw new ApiError(STATUS_CODES.NOT_FOUND, "Problem not found");
+    throw new ApiError(STATUS_CODES.NOT_FOUND, 'Problem not found');
   }
 
   const languageId = getLanguageById(language);
 
   if (!languageId) {
-    throw new ApiError(
-      STATUS_CODES.BAD_REQUEST,
-      "Unsupported language",
-    );
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Unsupported language');
   }
 
   // execute code only on visible testcases
-  const {
-    testResult,
-    testCasesPassed,
-    runtime,
-    memory,
-    status,
-    errorMessage,
-  } = await executeCode(
+  const { testResult, testCasesPassed, runtime, memory, status, errorMessage } = await executeCode(
     problem.visibleTestCases,
     code,
     languageId,
     getExecutionLimits(problem),
-    true,
+    true
   );
 
   return res.status(STATUS_CODES.OK).json({

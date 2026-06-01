@@ -1,9 +1,4 @@
-const sendTokenResponse = (
-  res,
-  user,
-  message,
-  statusCode,
-) => {
+const sendTokenResponse = (res, user, message, statusCode) => {
   const reply = {
     firstName: user.firstName,
     emailId: user.emailId,
