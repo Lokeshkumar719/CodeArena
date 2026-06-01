@@ -1,6 +1,8 @@
 const judge0Client = require('../../config/judge0Client');
+
 const decodeBase64 = require('../../utils/judge/decodeBase64');
 const encodeBase64 = require('../../utils/judge/encodeBase64');
+
 const { MAX_POLLING_RETRIES, POLLING_INTERVAL } = require('../../constants/judge0');
 
 const waiting = (timer) => {

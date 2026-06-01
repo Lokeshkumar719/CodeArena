@@ -1,7 +1,11 @@
 const bcrypt = require('bcrypt');
+
 const User = require('../../models/user');
+
 const { redisClient } = require('../../config/redis');
+
 const AUTH_CONFIG = require('../../constants/authConstants');
+
 const generateTokens = require('../../utils/auth/generateTokens');
 const hashToken = require('../../utils/auth/hashToken');
 const {

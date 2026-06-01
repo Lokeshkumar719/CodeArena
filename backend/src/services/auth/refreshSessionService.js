@@ -1,7 +1,10 @@
 const { redisClient } = require('../../config/redis');
+
 const ApiError = require('../../utils/ApiError');
+
 const STATUS_CODES = require('../../constants/statusCodes');
 const AUTH_CONFIG = require('../../constants/authConstants');
+
 const hashToken = require('../../utils/auth/hashToken');
 
 const { verifyRefreshToken, generateAccessToken, generateRefreshToken } = require('./tokenService');

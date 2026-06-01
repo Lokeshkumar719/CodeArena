@@ -1,6 +1,9 @@
 const validator = require('validator');
+
 const ApiError = require('../ApiError');
+
 const STATUS_CODES = require('../../constants/statusCodes');
+
 const validatePassword = (password) => {
   if (
     !validator.isStrongPassword(password, {

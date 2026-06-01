@@ -1,35 +1,29 @@
-const { redisClient } = require('../../config/redis');
-const User = require('../../models/user');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 
+const { redisClient } = require('../../config/redis');
+const User = require('../../models/user');
+
 const validateUserRegistration = require('../../utils/validation/validateUserRegistration');
 const validatePassword = require('../../utils/auth/validatePassword');
-
 const asyncHandler = require('../../utils/asyncHandler');
 const sendTokenResponse = require('../../utils/auth/sendTokenResponse');
 const removeRefreshSession = require('../../utils/auth/removeRefreshSession');
-
 const STATUS_CODES = require('../../constants/statusCodes');
 const ApiError = require('../../utils/ApiError');
 const clearAuthCookies = require('../../utils/auth/clearAuthCookies');
+const {
+  accessTokenCookieOptions,
+  refreshTokenCookieOptions,
+} = require('../../utils/auth/cookieOptions');
 
 const { registerUser, loginUser } = require('../../services/auth/authService');
 const refreshUserSession = require('../../services/auth/refreshSessionService');
 const { verifyRefreshToken } = require('../../services/auth/tokenService');
 const verificationEmailTemplate = require('../../services/auth/emailTemplates/verificationEmailTemplate');
-
 const resetPasswordEmailTemplate = require('../../services/auth/emailTemplates/resetPasswordEmailTemplate');
+const sendEmail = require('../../services/auth/emailService');
 
-const {
-  accessTokenCookieOptions,
-  refreshTokenCookieOptions,
-} = require('../../utils/auth/cookieOptions');
-const sendEmail = require('../../services/auth/emailService'); // service handles templates
-
-// ----------------------------
-// Register User
-// ----------------------------
 const register = asyncHandler(async (req, res) => {
   await validateUserRegistration(req.body);
 
@@ -66,9 +60,6 @@ const register = asyncHandler(async (req, res) => {
   }
 });
 
-// ----------------------------
-// Verify Email
-// ----------------------------
 const verifyEmail = asyncHandler(async (req, res) => {
   const { token } = req.params;
   const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
@@ -91,9 +82,6 @@ const verifyEmail = asyncHandler(async (req, res) => {
   });
 });
 
-// ----------------------------
-// Resend Verification Email
-// ----------------------------
 const resendVerificationEmail = asyncHandler(async (req, res) => {
   const { emailId } = req.body;
 
@@ -131,9 +119,6 @@ const resendVerificationEmail = asyncHandler(async (req, res) => {
   });
 });
 
-// ----------------------------
-// Login
-// ----------------------------
 const login = asyncHandler(async (req, res) => {
   const { emailId, password } = req.body;
   if (!emailId || !password)
@@ -156,9 +141,6 @@ const login = asyncHandler(async (req, res) => {
   return sendTokenResponse(res, user, 'User logged in successfully', STATUS_CODES.OK);
 });
 
-// ----------------------------
-// Logout
-// ----------------------------
 const logout = asyncHandler(async (req, res) => {
   const { refreshToken } = req.cookies;
   if (refreshToken) {
@@ -176,9 +158,6 @@ const logout = asyncHandler(async (req, res) => {
   });
 });
 
-// ----------------------------
-// Refresh Access Token
-// ----------------------------
 const refreshAccessToken = asyncHandler(async (req, res) => {
   const { refreshToken } = req.cookies;
 
@@ -193,9 +172,6 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   });
 });
 
-// ----------------------------
-// Forgot Password
-// ----------------------------
 const forgotPassword = asyncHandler(async (req, res) => {
   const { emailId } = req.body;
   const user = await User.findOne({ emailId });
@@ -218,9 +194,6 @@ const forgotPassword = asyncHandler(async (req, res) => {
   });
 });
 
-// ----------------------------
-// Reset Password
-// ----------------------------
 const resetPassword = asyncHandler(async (req, res) => {
   const { token } = req.params;
   const { password } = req.body;
@@ -248,9 +221,6 @@ const resetPassword = asyncHandler(async (req, res) => {
   });
 });
 
-// ----------------------------
-// Change Password
-// ----------------------------
 const changePassword = asyncHandler(async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   validatePassword(newPassword);
@@ -278,9 +248,6 @@ const changePassword = asyncHandler(async (req, res) => {
   });
 });
 
-// ----------------------------
-// Admin Register
-// ----------------------------
 const adminRegister = asyncHandler(async (req, res) => {
   await validateUserRegistration(req.body);
 
@@ -293,9 +260,6 @@ const adminRegister = asyncHandler(async (req, res) => {
   return sendTokenResponse(res, user, 'Admin registered successfully', STATUS_CODES.CREATED);
 });
 
-// ----------------------------
-// Delete Profile
-// ----------------------------
 const deleteProfile = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   await redisClient.del(`refreshToken:${userId}`);

@@ -1,8 +1,8 @@
 const express = require('express');
 const authMiddleware = require('../../middlewares/auth/authMiddleware');
+const { limitRunCode, limitSubmitCode } = require('../../middlewares/rateLimitMiddleware');
 
 const { submitCode, runCode } = require('../../controllers/submission/submissionController');
-const { limitRunCode, limitSubmitCode } = require('../../middlewares/rateLimitMiddleware');
 
 const submitRouter = express.Router();
 

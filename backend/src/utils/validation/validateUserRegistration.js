@@ -2,7 +2,6 @@ const validator = require('validator');
 const STATUS_CODES = require('../../constants/statusCodes');
 const ApiError = require('../ApiError');
 
-// validate the request body for registration before storing it in database
 const validateUser = async (data) => {
   const mandatoryField = ['firstName', 'emailId', 'password'];
 
@@ -28,7 +27,6 @@ const validateUser = async (data) => {
     );
   }
 
-  // .trim() removes leading/trailing spaces
   const name = data.firstName?.trim();
 
   if (!name) throw new ApiError(STATUS_CODES.BAD_REQUEST, 'First name is required');

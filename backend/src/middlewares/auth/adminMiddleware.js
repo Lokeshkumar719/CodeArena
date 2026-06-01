@@ -1,6 +1,6 @@
 const asyncHandler = require('../../utils/asyncHandler');
-const STATUS_CODES = require('../../constants/statusCodes');
 const ApiError = require('../../utils/ApiError');
+const STATUS_CODES = require('../../constants/statusCodes');
 
 // this middleware only checks whether authenticated user is admin or not
 const adminMiddleware = asyncHandler(async (req, res, next) => {
