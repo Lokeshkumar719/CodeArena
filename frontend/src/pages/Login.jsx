@@ -8,7 +8,7 @@ import { loginUser, clearError } from "../authSlice";
 import toast from "react-hot-toast";
 import useRateLimit from "../hooks/useRateLimit.jsx";
 
-import { s } from '../styles/pages/loginStyles';
+import { s } from "../styles/pages/loginStyles";
 
 const loginSchema = z.object({
   emailId: z.string().email("Invalid Email"),
@@ -23,31 +23,53 @@ function Login() {
   const navigate = useNavigate();
   const { loading, error } = useSelector((state) => state.auth);
 
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
     resolver: zodResolver(loginSchema),
   });
+
+  const [showResendVerification, setShowResendVerification] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
 
   useEffect(() => {
     if (error) toast.error(error);
   }, [error]);
 
   useEffect(() => {
-    return () => { dispatch(clearError()); };
+    return () => {
+      dispatch(clearError());
+    };
   }, [dispatch]);
 
   const onSubmit = async (data) => {
-    const resultAction = await dispatch(loginUser(data));
+  setShowResendVerification(false);
 
-    if (loginUser.fulfilled.match(resultAction)) {
-      toast.success("Login successful", { duration: 500 });
-      navigate("/");
-    } else if (loginUser.rejected.match(resultAction)) {
-      const payload = resultAction.payload;
-      if (payload?.rateLimitedFor) {
-        startCooldown(payload.rateLimitedFor);
-      }
+  const resultAction = await dispatch(loginUser(data));
+
+  if (loginUser.fulfilled.match(resultAction)) {
+    toast.success("Login successful", { duration: 500 });
+    navigate("/");
+    return;
+  }
+
+  if (loginUser.rejected.match(resultAction)) {
+    const payload = resultAction.payload;
+
+    if (
+      payload?.message?.toLowerCase().includes("verify your email")
+    ) {
+      setShowResendVerification(true);
+      setUnverifiedEmail(data.emailId);
     }
-  };
+
+    if (payload?.rateLimitedFor) {
+      startCooldown(payload.rateLimitedFor);
+    }
+  }
+};
 
   const isDisabled = loading || cooldown > 0;
 
@@ -57,14 +79,10 @@ function Login() {
         <div style={s.logoArea}>
           <div style={s.logo}>CodeArena</div>
 
-          <div style={s.tagline}>
-            Practice. Compete. Improve.
-          </div>
+          <div style={s.tagline}>Practice. Compete. Improve.</div>
         </div>
 
-        {error && (
-          <div style={s.errorBanner}>{error}</div>
-        )}
+        {error && <div style={s.errorBanner}>{error}</div>}
 
         <form onSubmit={handleSubmit(onSubmit)} style={s.form}>
           {/* Email */}
@@ -107,13 +125,42 @@ function Login() {
                 style={s.eyeBtn}
               >
                 {showPassword ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                    />
                   </svg>
                 ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    />
                   </svg>
                 )}
               </button>
@@ -135,20 +182,31 @@ function Login() {
             {loading
               ? "Logging in..."
               : cooldown > 0
-              ? `Login (Wait ${cooldown}s)`
-              : "Login"}
+                ? `Login (Wait ${cooldown}s)`
+                : "Login"}
           </button>
+
+          {showResendVerification && (
+            <div style={{ marginTop: "12px", textAlign: "center" }}>
+              <NavLink
+                to={`/resend-verification?email=${encodeURIComponent(unverifiedEmail)}`}
+                style={{ color: "#2563eb", fontWeight: "500" }}
+              >
+                Resend Verification Email
+              </NavLink>
+            </div>
+          )}
         </form>
 
         <div style={s.footer}>
           Don't have an account?{" "}
-          <NavLink to="/signup" style={s.link}>Sign Up</NavLink>
+          <NavLink to="/signup" style={s.link}>
+            Sign Up
+          </NavLink>
         </div>
       </div>
     </div>
   );
 }
-
-
 
 export default Login;

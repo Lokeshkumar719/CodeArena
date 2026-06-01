@@ -20,6 +20,7 @@ import ResetPassword from "./pages/ResetPassword";
 import ChangePassword from "./pages/ChangePassword";
 import CheckEmail from "./pages/CheckEmail";
 import VerifyEmail from "./pages/VerifyEmail";
+import ResendVerification from "./pages/ResendVerification";
 
 import CreateProblem from "./components/admin/CreateProblem";
 import UpdateProblem from "./components/admin/UpdateProblem";
@@ -97,6 +98,8 @@ function App() {
         path="/verify-email/:token"
         element={isAuthenticated ? <Navigate to="/" /> : <VerifyEmail />}
       />
+
+      <Route path="/resend-verification" element={<ResendVerification />} />
 
       <Route
         path="/forgot-password"

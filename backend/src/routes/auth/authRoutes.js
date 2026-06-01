@@ -11,6 +11,7 @@ const {
   resetPassword,
   changePassword,
   verifyEmail,
+  resendVerificationEmail,
 } = require("../../controllers/auth/authController");
 
 const authMiddleware = require("../../middlewares/auth/authMiddleware");
@@ -36,16 +37,16 @@ authRouter.post(
   limitChangePassword,
   changePassword,
 );
-// authRouter.post('/getProfile',getProfile);
+authRouter.post("/resend-verification", limitLogin, resendVerificationEmail);
+
 authRouter.post(
   "/admin/Register",
   authMiddleware,
   adminMiddleware,
   adminRegister,
 );
-authRouter.delete("/profile", authMiddleware, deleteProfile);
-// this is for verification for a valid jwt only if any error then userMidddleware will handle that
 
+authRouter.delete("/profile", authMiddleware, deleteProfile);
 
 authRouter.get("/check", authMiddleware, (req, res) => {
   const reply = {

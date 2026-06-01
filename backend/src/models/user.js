@@ -4,6 +4,8 @@ const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const { Schema } = mongoose;
 
+const AUTH_CONFIG=require('../constants/authConstants');
+
 const userSchema = new Schema(
   {
     firstName: {
@@ -116,24 +118,21 @@ userSchema.methods.createResetPasswordToken = function () {
 
   this.resetPasswordToken = hashedToken;
 
-  this.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
+  this.resetPasswordExpires = Date.now() + AUTH_CONFIG.RESET_PASSWORD_TOKEN_EXPIRY;
 
   return resetToken;
 };
 
 userSchema.methods.createEmailVerificationToken = function () {
   const verificationToken = crypto.randomBytes(32).toString("hex");
-
   const hashedToken = crypto
     .createHash("sha256")
     .update(verificationToken)
     .digest("hex");
-
+    
   this.emailVerificationToken = hashedToken;
-
   this.emailVerificationTokenExpires =
-    Date.now() + 24 * 60 * 60 * 1000;
-
+  Date.now() + AUTH_CONFIG.EMAIL_VERIFICATION_EXPIRY;
   return verificationToken;
 };
 
