@@ -38,9 +38,7 @@ function ResendVerification() {
         navigate('/login');
       }, 2000);
     } catch (error) {
-      toast.error(
-        error.response?.data?.message || 'Failed to send verification email'
-      );
+      toast.error(error.response?.data?.message || 'Failed to send verification email');
     } finally {
       setLoading(false);
     }
@@ -65,9 +63,7 @@ function ResendVerification() {
               })}
               style={s.input}
             />
-            {errors.emailId && (
-              <span style={s.errorMsg}>{errors.emailId.message}</span>
-            )}
+            {errors.emailId && <span style={s.errorMsg}>{errors.emailId.message}</span>}
           </div>
 
           <button

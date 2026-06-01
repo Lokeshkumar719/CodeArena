@@ -1,6 +1,6 @@
-import { useRef } from "react";
-import Editor from "@monaco-editor/react";
-import LanguageSelector from "./LanguageSelector";
+import { useRef } from 'react';
+import Editor from '@monaco-editor/react';
+import LanguageSelector from './LanguageSelector';
 
 const CodeEditorPanel = ({
   activeRightTab,
@@ -17,45 +17,44 @@ const CodeEditorPanel = ({
 
   const setupEditorShortcuts = (editor, monaco) => {
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyZ, () => {
-      editor.trigger("keyboard", "undo", null);
+      editor.trigger('keyboard', 'undo', null);
     });
 
-    editor.addCommand(
-      monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyZ,
-      () => { editor.trigger("keyboard", "redo", null); },
-    );
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyZ, () => {
+      editor.trigger('keyboard', 'redo', null);
+    });
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyY, () => {
-      editor.trigger("keyboard", "redo", null);
+      editor.trigger('keyboard', 'redo', null);
     });
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC, () => {
-      editor.trigger("keyboard", "editor.action.clipboardCopyAction", null);
+      editor.trigger('keyboard', 'editor.action.clipboardCopyAction', null);
     });
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyX, () => {
       const selection = editor.getSelection();
       if (selection && !selection.isEmpty()) {
-        editor.trigger("keyboard", "editor.action.clipboardCutAction", null);
+        editor.trigger('keyboard', 'editor.action.clipboardCutAction', null);
       }
     });
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, async () => {
       try {
-        const text      = await navigator.clipboard.readText();
+        const text = await navigator.clipboard.readText();
         const selection = editor.getSelection();
-        editor.executeEdits("", [{ range: selection, text, forceMoveMarkers: true }]);
+        editor.executeEdits('', [{ range: selection, text, forceMoveMarkers: true }]);
       } catch {
-        editor.trigger("keyboard", "editor.action.clipboardPasteAction", null);
+        editor.trigger('keyboard', 'editor.action.clipboardPasteAction', null);
       }
     });
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyA, () => {
-      editor.trigger("keyboard", "editor.action.selectAll", null);
+      editor.trigger('keyboard', 'editor.action.selectAll', null);
     });
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Slash, () => {
-      editor.trigger("keyboard", "editor.action.commentLine", null);
+      editor.trigger('keyboard', 'editor.action.commentLine', null);
     });
   };
 
@@ -64,15 +63,15 @@ const CodeEditorPanel = ({
     monacoRef.current = monaco;
 
     // safety: set theme again on mount
-    monaco.editor.setTheme("codearena-dark");
+    monaco.editor.setTheme('codearena-dark');
 
     monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
       noSemanticValidation: true,
-      noSyntaxValidation:   true,
+      noSyntaxValidation: true,
     });
     monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
       noSemanticValidation: true,
-      noSyntaxValidation:   true,
+      noSyntaxValidation: true,
     });
 
     monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
@@ -82,7 +81,7 @@ const CodeEditorPanel = ({
 
     setupEditorShortcuts(editor, monaco);
 
-    if (typeof handleEditorDidMount === "function") {
+    if (typeof handleEditorDidMount === 'function') {
       handleEditorDidMount(editor, monaco);
     }
 
@@ -92,11 +91,11 @@ const CodeEditorPanel = ({
   return (
     <div
       style={{
-        display:       activeRightTab === "code" ? "flex" : "none",
-        flexDirection: "column",
-        flex: activeRightTab === "code" ? 1 : 0, // releases space when hidden
-        overflow: "hidden",
-        background: "#0d1117",
+        display: activeRightTab === 'code' ? 'flex' : 'none',
+        flexDirection: 'column',
+        flex: activeRightTab === 'code' ? 1 : 0, // releases space when hidden
+        overflow: 'hidden',
+        background: '#0d1117',
       }}
     >
       <LanguageSelector
@@ -105,7 +104,7 @@ const CodeEditorPanel = ({
         handleLanguageChange={handleLanguageChange}
       />
 
-      <div className="editor-wrap" style={{ flex: 1, overflow: "hidden", background: "#0d1117" }}>
+      <div className="editor-wrap" style={{ flex: 1, overflow: 'hidden', background: '#0d1117' }}>
         <Editor
           height="100%"
           language={getLanguageForMonaco(selectedLanguage)}
@@ -113,74 +112,74 @@ const CodeEditorPanel = ({
           theme="codearena-dark"
           beforeMount={(monaco) => {
             // Define theme BEFORE first render — no white flash
-            monaco.editor.defineTheme("codearena-dark", {
-              base:    "vs-dark",
+            monaco.editor.defineTheme('codearena-dark', {
+              base: 'vs-dark',
               inherit: true,
-              rules:   [],
+              rules: [],
               colors: {
-                "editor.background":              "#0d1117",
-                "editor.lineHighlightBackground": "#161b22",
-                "editorCursor.foreground":        "#ffffff",
+                'editor.background': '#0d1117',
+                'editor.lineHighlightBackground': '#161b22',
+                'editorCursor.foreground': '#ffffff',
               },
             });
           }}
           onChange={(value) => {
-            if (typeof handleEditorChange === "function") {
+            if (typeof handleEditorChange === 'function') {
               handleEditorChange(value);
             }
           }}
           onMount={onMount}
           options={{
-            fontSize:   14,
+            fontSize: 14,
             fontFamily: "'JetBrains Mono', monospace",
 
             minimap: { enabled: false },
 
             scrollBeyondLastLine: false,
-            automaticLayout:      true,
+            automaticLayout: true,
 
-            tabSize:      2,
+            tabSize: 2,
             insertSpaces: true,
 
-            wordWrap:    "off",
+            wordWrap: 'off',
 
-            lineNumbers: "on",
+            lineNumbers: 'on',
             lineNumbersMinChars: 3,
 
-            glyphMargin:          false,
-            folding:              true,
+            glyphMargin: false,
+            folding: true,
             lineDecorationsWidth: 10,
 
-            smoothScrolling:            true,
-            cursorSmoothCaretAnimation: "explicit",
-            cursorBlinking:             "smooth",
-            cursorStyle:                "line",
-            cursorWidth:                2,
+            smoothScrolling: true,
+            cursorSmoothCaretAnimation: 'explicit',
+            cursorBlinking: 'smooth',
+            cursorStyle: 'line',
+            cursorWidth: 2,
 
-            renderWhitespace:    "selection",
-            renderLineHighlight: "line",
+            renderWhitespace: 'selection',
+            renderLineHighlight: 'line',
 
             mouseWheelZoom: true,
-            contextmenu:    true,
+            contextmenu: true,
 
             padding: { top: 12, bottom: 12 },
 
             bracketPairColorization: { enabled: true },
 
-            quickSuggestions:           false,
+            quickSuggestions: false,
             suggestOnTriggerCharacters: false,
-            wordBasedSuggestions:       "off",
-            parameterHints:             { enabled: false },
-            hover:                      { enabled: false },
-            inlineSuggest:              { enabled: false },
-            acceptSuggestionOnEnter:    "off",
-            tabCompletion:              "off",
-            suggest:                    { preview: false, showWords: false },
+            wordBasedSuggestions: 'off',
+            parameterHints: { enabled: false },
+            hover: { enabled: false },
+            inlineSuggest: { enabled: false },
+            acceptSuggestionOnEnter: 'off',
+            tabCompletion: 'off',
+            suggest: { preview: false, showWords: false },
 
             scrollbar: {
-              verticalScrollbarSize:   8,
+              verticalScrollbarSize: 8,
               horizontalScrollbarSize: 8,
-              horizontal:              "auto",
+              horizontal: 'auto',
             },
           }}
         />

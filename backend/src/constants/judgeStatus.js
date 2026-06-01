@@ -1,73 +1,58 @@
-const JUDGE0_STATUS={
-  IN_QUEUE:1,
-  PROCESSING:2,
+const JUDGE0_STATUS = {
+  IN_QUEUE: 1,
+  PROCESSING: 2,
 
-  ACCEPTED:3,
+  ACCEPTED: 3,
 
-  WRONG_ANSWER:4,
+  WRONG_ANSWER: 4,
 
-  TIME_LIMIT_EXCEEDED:5,
+  TIME_LIMIT_EXCEEDED: 5,
 
-  COMPILE_ERROR:6,
+  COMPILE_ERROR: 6,
 
-  RUNTIME_ERROR_SIGSEGV:7,
-  RUNTIME_ERROR_SIGXFSZ:8,
-  RUNTIME_ERROR_SIGFPE:9,
-  RUNTIME_ERROR_SIGABRT:10,
-  RUNTIME_ERROR_NZEC:11,
-  RUNTIME_ERROR_OTHER:12,
+  RUNTIME_ERROR_SIGSEGV: 7,
+  RUNTIME_ERROR_SIGXFSZ: 8,
+  RUNTIME_ERROR_SIGFPE: 9,
+  RUNTIME_ERROR_SIGABRT: 10,
+  RUNTIME_ERROR_NZEC: 11,
+  RUNTIME_ERROR_OTHER: 12,
 
-  INTERNAL_ERROR:13,
+  INTERNAL_ERROR: 13,
 
-  EXEC_FORMAT_ERROR:14
+  EXEC_FORMAT_ERROR: 14,
 };
 
-const JUDGE0_STATUS_MESSAGES={
+const JUDGE0_STATUS_MESSAGES = {
+  [JUDGE0_STATUS.IN_QUEUE]: 'In Queue',
 
-  [JUDGE0_STATUS.IN_QUEUE]:
-    "In Queue",
+  [JUDGE0_STATUS.PROCESSING]: 'Processing',
 
-  [JUDGE0_STATUS.PROCESSING]:
-    "Processing",
+  [JUDGE0_STATUS.ACCEPTED]: 'Accepted',
 
-  [JUDGE0_STATUS.ACCEPTED]:
-    "Accepted",
+  [JUDGE0_STATUS.WRONG_ANSWER]: 'Wrong Answer',
 
-  [JUDGE0_STATUS.WRONG_ANSWER]:
-    "Wrong Answer",
+  [JUDGE0_STATUS.TIME_LIMIT_EXCEEDED]: 'Time Limit Exceeded',
 
-  [JUDGE0_STATUS.TIME_LIMIT_EXCEEDED]:
-    "Time Limit Exceeded",
+  [JUDGE0_STATUS.COMPILE_ERROR]: 'Compile Error',
 
-  [JUDGE0_STATUS.COMPILE_ERROR]:
-    "Compile Error",
+  [JUDGE0_STATUS.RUNTIME_ERROR_SIGSEGV]: 'Segmentation Fault (invalid memory access)',
 
-  [JUDGE0_STATUS.RUNTIME_ERROR_SIGSEGV]:
-    "Segmentation Fault (invalid memory access)",
+  [JUDGE0_STATUS.RUNTIME_ERROR_SIGXFSZ]: 'Output/File Size Limit Exceeded',
 
-  [JUDGE0_STATUS.RUNTIME_ERROR_SIGXFSZ]:
-    "Output/File Size Limit Exceeded",
+  [JUDGE0_STATUS.RUNTIME_ERROR_SIGFPE]: 'Floating Point Exception (possible divide by zero)',
 
-  [JUDGE0_STATUS.RUNTIME_ERROR_SIGFPE]:
-    "Floating Point Exception (possible divide by zero)",
+  [JUDGE0_STATUS.RUNTIME_ERROR_SIGABRT]: 'Program Aborted',
 
-  [JUDGE0_STATUS.RUNTIME_ERROR_SIGABRT]:
-    "Program Aborted",
+  [JUDGE0_STATUS.RUNTIME_ERROR_NZEC]: 'Program exited with a non-zero exit code',
 
-  [JUDGE0_STATUS.RUNTIME_ERROR_NZEC]:
-    "Program exited with a non-zero exit code",
+  [JUDGE0_STATUS.RUNTIME_ERROR_OTHER]: 'Runtime Error',
 
-  [JUDGE0_STATUS.RUNTIME_ERROR_OTHER]:
-    "Runtime Error",
+  [JUDGE0_STATUS.INTERNAL_ERROR]: 'Internal Judge Error',
 
-  [JUDGE0_STATUS.INTERNAL_ERROR]:
-    "Internal Judge Error",
-
-  [JUDGE0_STATUS.EXEC_FORMAT_ERROR]:
-    "Execution Format Error"
+  [JUDGE0_STATUS.EXEC_FORMAT_ERROR]: 'Execution Format Error',
 };
 
-module.exports={
+module.exports = {
   JUDGE0_STATUS,
-  JUDGE0_STATUS_MESSAGES
+  JUDGE0_STATUS_MESSAGES,
 };

@@ -1,10 +1,4 @@
-import {
-  FiFileText,
-  FiBookOpen,
-  FiCode,
-  FiClock,
-  FiTerminal,
-} from "react-icons/fi";
+import { FiFileText, FiBookOpen, FiCode, FiClock, FiTerminal } from 'react-icons/fi';
 
 const tabIcons = {
   description: <FiFileText size={16} />,
@@ -29,8 +23,8 @@ function ProblemTabs({ tabs, activeTab, setActiveTab }) {
             transition-all duration-200 whitespace-nowrap
             ${
               activeTab === tab
-                ? "bg-primary text-primary-content shadow-md"
-                : "bg-base-100 hover:bg-base-300 text-base-content"
+                ? 'bg-primary text-primary-content shadow-md'
+                : 'bg-base-100 hover:bg-base-300 text-base-content'
             }
           `}
         >

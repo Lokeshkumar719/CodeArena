@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { Pause, Play, Video } from "lucide-react";
+import { useState, useRef, useEffect } from 'react';
+import { Pause, Play, Video } from 'lucide-react';
 
 import { s } from '../styles/problem/editorialStyles';
 
@@ -10,10 +10,10 @@ const Editorial = ({ secureUrl, thumbnailUrl, duration }) => {
   const [isHovering, setIsHovering] = useState(false);
 
   const formatTime = (seconds) => {
-    if (!seconds || isNaN(seconds)) return "0:00";
+    if (!seconds || isNaN(seconds)) return '0:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
   const togglePlayPause = () => {
@@ -29,14 +29,16 @@ const Editorial = ({ secureUrl, thumbnailUrl, duration }) => {
 
   useEffect(() => {
     const video = videoRef.current;
-    const handleTimeUpdate = () => { if (video) setCurrentTime(video.currentTime); };
+    const handleTimeUpdate = () => {
+      if (video) setCurrentTime(video.currentTime);
+    };
     const handleEnded = () => setIsPlaying(false);
     if (video) {
-      video.addEventListener("timeupdate", handleTimeUpdate);
-      video.addEventListener("ended", handleEnded);
+      video.addEventListener('timeupdate', handleTimeUpdate);
+      video.addEventListener('ended', handleEnded);
       return () => {
-        video.removeEventListener("timeupdate", handleTimeUpdate);
-        video.removeEventListener("ended", handleEnded);
+        video.removeEventListener('timeupdate', handleTimeUpdate);
+        video.removeEventListener('ended', handleEnded);
       };
     }
   }, [secureUrl]);
@@ -51,7 +53,8 @@ const Editorial = ({ secureUrl, thumbnailUrl, duration }) => {
           </div>
           <h2 style={s.emptyTitle}>Video Solution Coming Soon</h2>
           <p style={s.emptyText}>
-            The editorial video for this problem has not been uploaded yet. It will be available soon.
+            The editorial video for this problem has not been uploaded yet. It will be available
+            soon.
           </p>
         </div>
       </div>
@@ -80,7 +83,7 @@ const Editorial = ({ secureUrl, thumbnailUrl, duration }) => {
         {!isPlaying && (
           <div style={s.centrePlay} onClick={togglePlayPause}>
             <div style={s.centrePlayBtn}>
-              <Play size={28} color="#fff" style={{ marginLeft: "3px" }} />
+              <Play size={28} color="#fff" style={{ marginLeft: '3px' }} />
             </div>
           </div>
         )}
@@ -105,9 +108,11 @@ const Editorial = ({ secureUrl, thumbnailUrl, duration }) => {
           {/* Controls row */}
           <div style={s.controlsRow}>
             <button onClick={togglePlayPause} style={s.playBtn}>
-              {isPlaying
-                ? <Pause size={16} color="#fff" />
-                : <Play size={16} color="#fff" style={{ marginLeft: "2px" }} />}
+              {isPlaying ? (
+                <Pause size={16} color="#fff" />
+              ) : (
+                <Play size={16} color="#fff" style={{ marginLeft: '2px' }} />
+              )}
             </button>
             <span style={s.timeText}>{formatTime(currentTime)}</span>
             <div style={{ flex: 1 }} />
@@ -118,7 +123,5 @@ const Editorial = ({ secureUrl, thumbnailUrl, duration }) => {
     </div>
   );
 };
-
-
 
 export default Editorial;

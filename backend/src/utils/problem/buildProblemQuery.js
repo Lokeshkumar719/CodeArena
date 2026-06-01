@@ -1,7 +1,7 @@
 // utils/buildProblemQuery.js
-const { VALID_TAGS } = require("../../models/problem");
+const { VALID_TAGS } = require('../../models/problem');
 
-const VALID_DIFFICULTIES = ["easy", "medium", "hard"];
+const VALID_DIFFICULTIES = ['easy', 'medium', 'hard'];
 
 /**
  * Builds a MongoDB filter object from validated query params.
@@ -19,7 +19,7 @@ function buildProblemQuery(params) {
   const errors = [];
 
   // ── Search: numeric → problemNo exact match, text → title full-text ──────
-  if (params.q && params.q.trim() !== "") {
+  if (params.q && params.q.trim() !== '') {
     const q = params.q.trim();
 
     if (/^\d+$/.test(q)) {
@@ -54,7 +54,7 @@ function buildProblemQuery(params) {
   // ── Tags: silently skip the entire tags filter if ANY tag is unrecognized ──
   if (params.tags) {
     const requested = params.tags
-      .split(",")
+      .split(',')
       .map((t) => t.trim())
       .filter(Boolean);
 
@@ -79,10 +79,10 @@ function buildProblemQuery(params) {
  * @returns {{ page: number, limit: number, skip: number }}
  */
 function buildPagination(params) {
-  let page  = parseInt(params.page,  10);
+  let page = parseInt(params.page, 10);
   let limit = parseInt(params.limit, 10);
 
-  if (isNaN(page)  || page  < 1) page  = 1;
+  if (isNaN(page) || page < 1) page = 1;
   if (isNaN(limit) || limit < 1) limit = 20;
   if (limit > 100) limit = 100; // hard cap — prevent abuse
 

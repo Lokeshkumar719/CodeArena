@@ -1,18 +1,18 @@
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useDispatch, useSelector } from "react-redux";
-import { useNavigate, NavLink } from "react-router";
-import { loginUser, clearError } from "../authSlice";
-import toast from "react-hot-toast";
-import useRateLimit from "../hooks/useRateLimit.jsx";
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate, NavLink } from 'react-router';
+import { loginUser, clearError } from '../authSlice';
+import toast from 'react-hot-toast';
+import useRateLimit from '../hooks/useRateLimit.jsx';
 
-import { s } from "../styles/pages/loginStyles";
+import { s } from '../styles/pages/loginStyles';
 
 const loginSchema = z.object({
-  emailId: z.string().email("Invalid Email"),
-  password: z.string().min(1, "Password is required"),
+  emailId: z.string().email('Invalid Email'),
+  password: z.string().min(1, 'Password is required'),
 });
 
 function Login() {
@@ -32,7 +32,7 @@ function Login() {
   });
 
   const [showResendVerification, setShowResendVerification] = useState(false);
-  const [unverifiedEmail, setUnverifiedEmail] = useState("");
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
 
   useEffect(() => {
     if (error) toast.error(error);
@@ -45,31 +45,29 @@ function Login() {
   }, [dispatch]);
 
   const onSubmit = async (data) => {
-  setShowResendVerification(false);
+    setShowResendVerification(false);
 
-  const resultAction = await dispatch(loginUser(data));
+    const resultAction = await dispatch(loginUser(data));
 
-  if (loginUser.fulfilled.match(resultAction)) {
-    toast.success("Login successful", { duration: 500 });
-    navigate("/");
-    return;
-  }
-
-  if (loginUser.rejected.match(resultAction)) {
-    const payload = resultAction.payload;
-
-    if (
-      payload?.message?.toLowerCase().includes("verify your email")
-    ) {
-      setShowResendVerification(true);
-      setUnverifiedEmail(data.emailId);
+    if (loginUser.fulfilled.match(resultAction)) {
+      toast.success('Login successful', { duration: 500 });
+      navigate('/');
+      return;
     }
 
-    if (payload?.rateLimitedFor) {
-      startCooldown(payload.rateLimitedFor);
+    if (loginUser.rejected.match(resultAction)) {
+      const payload = resultAction.payload;
+
+      if (payload?.message?.toLowerCase().includes('verify your email')) {
+        setShowResendVerification(true);
+        setUnverifiedEmail(data.emailId);
+      }
+
+      if (payload?.rateLimitedFor) {
+        startCooldown(payload.rateLimitedFor);
+      }
     }
-  }
-};
+  };
 
   const isDisabled = loading || cooldown > 0;
 
@@ -91,12 +89,10 @@ function Login() {
             <input
               type="email"
               placeholder="john@example.com"
-              {...register("emailId")}
+              {...register('emailId')}
               style={{ ...s.input, ...(errors.emailId ? s.inputError : {}) }}
             />
-            {errors.emailId && (
-              <span style={s.errorMsg}>{errors.emailId.message}</span>
-            )}
+            {errors.emailId && <span style={s.errorMsg}>{errors.emailId.message}</span>}
           </div>
 
           {/* Password */}
@@ -110,12 +106,12 @@ function Login() {
 
             <div style={s.passwordWrapper}>
               <input
-                type={showPassword ? "text" : "password"}
+                type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
-                {...register("password")}
+                {...register('password')}
                 style={{
                   ...s.input,
-                  paddingRight: "46px",
+                  paddingRight: '46px',
                   ...(errors.password ? s.inputError : {}),
                 }}
               />
@@ -166,9 +162,7 @@ function Login() {
               </button>
             </div>
 
-            {errors.password && (
-              <span style={s.errorMsg}>{errors.password.message}</span>
-            )}
+            {errors.password && <span style={s.errorMsg}>{errors.password.message}</span>}
           </div>
 
           <button
@@ -179,18 +173,14 @@ function Login() {
               opacity: isDisabled ? 0.7 : 1,
             }}
           >
-            {loading
-              ? "Logging in..."
-              : cooldown > 0
-                ? `Login (Wait ${cooldown}s)`
-                : "Login"}
+            {loading ? 'Logging in...' : cooldown > 0 ? `Login (Wait ${cooldown}s)` : 'Login'}
           </button>
 
           {showResendVerification && (
-            <div style={{ marginTop: "12px", textAlign: "center" }}>
+            <div style={{ marginTop: '12px', textAlign: 'center' }}>
               <NavLink
                 to={`/resend-verification?email=${encodeURIComponent(unverifiedEmail)}`}
-                style={{ color: "#2563eb", fontWeight: "500" }}
+                style={{ color: '#2563eb', fontWeight: '500' }}
               >
                 Resend Verification Email
               </NavLink>
@@ -199,7 +189,7 @@ function Login() {
         </form>
 
         <div style={s.footer}>
-          Don't have an account?{" "}
+          Don't have an account?{' '}
           <NavLink to="/signup" style={s.link}>
             Sign Up
           </NavLink>

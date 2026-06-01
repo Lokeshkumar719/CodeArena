@@ -1,19 +1,19 @@
 // services/problem.service.js
-const mongoose   = require("mongoose");                                          // ADDED — was missing, breaks getSolvedProblemIds
-const { Problem } = require("../../models/problem");
-const Submission  = require("../../models/submission");
-const { buildProblemQuery, buildPagination } = require("../../utils/problem/buildProblemQuery");
+const mongoose = require('mongoose'); // ADDED — was missing, breaks getSolvedProblemIds
+const { Problem } = require('../../models/problem');
+const Submission = require('../../models/submission');
+const { buildProblemQuery, buildPagination } = require('../../utils/problem/buildProblemQuery');
 
 // Fields to EXCLUDE from listing — never send heavy data to the problemset page
 const LISTING_PROJECTION = {
-  hiddenTestCases:   0,
+  hiddenTestCases: 0,
   referenceSolution: 0,
-  startCode:         0,
-  description:       0,
-  inputFormat:       0,
-  outputFormat:      0,
-  constraints:       0,
-  visibleTestCases:  0,
+  startCode: 0,
+  description: 0,
+  inputFormat: 0,
+  outputFormat: 0,
+  constraints: 0,
+  visibleTestCases: 0,
 };
 
 /**
@@ -33,12 +33,12 @@ async function listProblems(queryParams, userId) {
 
   // ── 3. Status filter (solved / unsolved) ────────────────────────────────
   const status = queryParams.status?.toLowerCase();
-  let solvedIds = [];                                                            // CHANGED — hoisted out; reused for isSolved annotation below
+  let solvedIds = []; // CHANGED — hoisted out; reused for isSolved annotation below
 
-  if (status && ["solved", "unsolved"].includes(status)) {
+  if (status && ['solved', 'unsolved'].includes(status)) {
     solvedIds = await getSolvedProblemIds(userId);
 
-    if (status === "solved") {
+    if (status === 'solved') {
       filter._id = { $in: solvedIds };
     } else {
       filter._id = { $nin: solvedIds };
@@ -48,11 +48,7 @@ async function listProblems(queryParams, userId) {
   // ── 4. Query ────────────────────────────────────────────────────────────
   const [totalProblems, problems] = await Promise.all([
     Problem.countDocuments(filter),
-    Problem.find(filter, LISTING_PROJECTION)
-      .sort({ problemNo: 1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
+    Problem.find(filter, LISTING_PROJECTION).sort({ problemNo: 1 }).skip(skip).limit(limit).lean(),
   ]);
 
   // ── 5. Guard: page beyond range ─────────────────────────────────────────
@@ -85,9 +81,7 @@ async function listProblems(queryParams, userId) {
   const annotated = problems.map((p) => ({
     ...p,
     isSolved:
-      status === "solved"   ? true  :
-      status === "unsolved" ? false :
-      solvedSet.has(p._id.toString()),
+      status === 'solved' ? true : status === 'unsolved' ? false : solvedSet.has(p._id.toString()),
   }));
 
   // ── 7. Return structured response ───────────────────────────────────────
@@ -95,14 +89,14 @@ async function listProblems(queryParams, userId) {
     success: true,
     data: {
       pagination: {
-        currentPage:  page,
+        currentPage: page,
         totalPages,
         totalProblems,
-        hasNextPage:  page < totalPages,
-        hasPrevPage:  page > 1,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
         limit,
       },
-      problems: annotated,                                                       // CHANGED — was: problems
+      problems: annotated, // CHANGED — was: problems
     },
   };
 }
@@ -113,12 +107,12 @@ async function listProblems(queryParams, userId) {
  */
 async function getSolvedProblemIds(userId) {
   const accepted = await Submission.find(
-    { userId, status: "accepted" },
+    { userId, status: 'accepted' },
     { problemId: 1, _id: 0 }
   ).lean();
 
   const uniqueIds = [...new Set(accepted.map((s) => s.problemId.toString()))];
-  return uniqueIds.map((id) => new mongoose.Types.ObjectId(id));                // FIXED — mongoose now imported
+  return uniqueIds.map((id) => new mongoose.Types.ObjectId(id)); // FIXED — mongoose now imported
 }
 
 module.exports = { listProblems };

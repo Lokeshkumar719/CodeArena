@@ -1,19 +1,19 @@
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useDispatch, useSelector } from "react-redux";
-import { useNavigate, NavLink } from "react-router";
-import toast from "react-hot-toast";
-import { registerUser, clearError } from "../authSlice";
-import useRateLimit from "../hooks/useRateLimit.jsx";
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate, NavLink } from 'react-router';
+import toast from 'react-hot-toast';
+import { registerUser, clearError } from '../authSlice';
+import useRateLimit from '../hooks/useRateLimit.jsx';
 
-import { s } from "../styles/pages/signupStyles";
+import { s } from '../styles/pages/signupStyles';
 
 const signupSchema = z.object({
-  firstName: z.string().min(3, "Minimum character should be 3"),
-  emailId: z.string().email("Invalid Email"),
-  password: z.string().min(8, "Password must be at least 8 characters long"),
+  firstName: z.string().min(3, 'Minimum character should be 3'),
+  emailId: z.string().email('Invalid Email'),
+  password: z.string().min(8, 'Password must be at least 8 characters long'),
 });
 
 function Signup() {
@@ -43,14 +43,12 @@ function Signup() {
   }, [dispatch]);
 
   const onSubmit = async ({ firstName, emailId, password }) => {
-    const resultAction = await dispatch(
-      registerUser({ firstName, emailId, password }),
-    );
+    const resultAction = await dispatch(registerUser({ firstName, emailId, password }));
     if (registerUser.fulfilled.match(resultAction)) {
-      toast.success("Verification email sent. Please check your inbox.", {
+      toast.success('Verification email sent. Please check your inbox.', {
         duration: 2000,
       });
-      navigate("/check-email");
+      navigate('/check-email');
     } else if (registerUser.rejected.match(resultAction)) {
       const payload = resultAction.payload;
       if (payload?.rateLimitedFor) {
@@ -77,11 +75,9 @@ function Signup() {
               type="text"
               placeholder="John"
               style={{ ...s.input, ...(errors.firstName ? s.inputError : {}) }}
-              {...register("firstName")}
+              {...register('firstName')}
             />
-            {errors.firstName && (
-              <span style={s.errorMsg}>{errors.firstName.message}</span>
-            )}
+            {errors.firstName && <span style={s.errorMsg}>{errors.firstName.message}</span>}
           </div>
 
           {/* Email */}
@@ -91,38 +87,30 @@ function Signup() {
               type="email"
               placeholder="john@example.com"
               style={{ ...s.input, ...(errors.emailId ? s.inputError : {}) }}
-              {...register("emailId")}
+              {...register('emailId')}
             />
-            {errors.emailId && (
-              <span style={s.errorMsg}>{errors.emailId.message}</span>
-            )}
+            {errors.emailId && <span style={s.errorMsg}>{errors.emailId.message}</span>}
           </div>
 
           {/* Password */}
           <div style={s.fieldGroup}>
             <label style={s.label}>Password</label>
-            <div style={{ position: "relative" }}>
+            <div style={{ position: 'relative' }}>
               <input
-                type={showPassword ? "text" : "password"}
+                type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 style={{
                   ...s.input,
-                  paddingRight: "44px",
+                  paddingRight: '44px',
                   ...(errors.password ? s.inputError : {}),
                 }}
-                {...register("password")}
+                {...register('password')}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                style={s.eyeBtn}
-              >
+              <button type="button" onClick={() => setShowPassword(!showPassword)} style={s.eyeBtn}>
                 {showPassword ? <EyeOffIcon /> : <EyeIcon />}
               </button>
             </div>
-            {errors.password && (
-              <span style={s.errorMsg}>{errors.password.message}</span>
-            )}
+            {errors.password && <span style={s.errorMsg}>{errors.password.message}</span>}
           </div>
 
           <button
@@ -130,16 +118,12 @@ function Signup() {
             disabled={isDisabled}
             style={{ ...s.submitBtn, opacity: isDisabled ? 0.7 : 1 }}
           >
-            {loading
-              ? "Signing Up..."
-              : cooldown > 0
-                ? `Sign Up (Wait ${cooldown}s)`
-                : "Sign Up"}
+            {loading ? 'Signing Up...' : cooldown > 0 ? `Sign Up (Wait ${cooldown}s)` : 'Sign Up'}
           </button>
         </div>
 
         <div style={s.footer}>
-          Already have an account?{" "}
+          Already have an account?{' '}
           <NavLink to="/login" style={s.link}>
             Login
           </NavLink>

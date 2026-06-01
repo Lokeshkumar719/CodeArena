@@ -1,10 +1,10 @@
-const validator = require("validator");
-const mongoose = require("mongoose");
-const bcrypt = require("bcrypt");
-const crypto = require("crypto");
+const validator = require('validator');
+const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const { Schema } = mongoose;
 
-const AUTH_CONFIG=require('../constants/authConstants');
+const AUTH_CONFIG = require('../constants/authConstants');
 
 const userSchema = new Schema(
   {
@@ -33,7 +33,7 @@ const userSchema = new Schema(
 
       validate: {
         validator: validator.isEmail,
-        message: "Invalid email format",
+        message: 'Invalid email format',
       },
 
       index: true,
@@ -47,15 +47,15 @@ const userSchema = new Schema(
 
     role: {
       type: String,
-      enum: ["user", "admin"],
-      default: "user",
+      enum: ['user', 'admin'],
+      default: 'user',
     },
 
     problemSolved: {
       type: [
         {
           type: Schema.Types.ObjectId,
-          ref: "Problem",
+          ref: 'Problem',
         },
       ],
 
@@ -90,31 +90,28 @@ const userSchema = new Schema(
   },
   {
     timestamps: true,
-  },
+  }
 );
 
-userSchema.pre("save", async function () {
-  if (!this.isModified("password")) {
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) {
     return;
   }
   this.password = await bcrypt.hash(this.password, 10);
 });
 
-userSchema.post("findOneAndDelete", async function (userInfo) {
+userSchema.post('findOneAndDelete', async function (userInfo) {
   if (userInfo) {
-    await mongoose.model("submission").deleteMany({
+    await mongoose.model('submission').deleteMany({
       userId: userInfo._id,
     });
   }
 });
 
 userSchema.methods.createResetPasswordToken = function () {
-  const resetToken = crypto.randomBytes(32).toString("hex");
+  const resetToken = crypto.randomBytes(32).toString('hex');
 
-  const hashedToken = crypto
-    .createHash("sha256")
-    .update(resetToken)
-    .digest("hex");
+  const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
 
   this.resetPasswordToken = hashedToken;
 
@@ -124,18 +121,14 @@ userSchema.methods.createResetPasswordToken = function () {
 };
 
 userSchema.methods.createEmailVerificationToken = function () {
-  const verificationToken = crypto.randomBytes(32).toString("hex");
-  const hashedToken = crypto
-    .createHash("sha256")
-    .update(verificationToken)
-    .digest("hex");
-    
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+  const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+
   this.emailVerificationToken = hashedToken;
-  this.emailVerificationTokenExpires =
-  Date.now() + AUTH_CONFIG.EMAIL_VERIFICATION_EXPIRY;
+  this.emailVerificationTokenExpires = Date.now() + AUTH_CONFIG.EMAIL_VERIFICATION_EXPIRY;
   return verificationToken;
 };
 
-const User = mongoose.model("user", userSchema);
+const User = mongoose.model('user', userSchema);
 
 module.exports = User;

@@ -1,18 +1,17 @@
-const validator = require("validator");
-const STATUS_CODES = require("../../constants/statusCodes");
-const ApiError = require("../ApiError");
+const validator = require('validator');
+const STATUS_CODES = require('../../constants/statusCodes');
+const ApiError = require('../ApiError');
 
 // validate the request body for registration before storing it in database
 const validateUser = async (data) => {
-  const mandatoryField = ["firstName", "emailId", "password"];
+  const mandatoryField = ['firstName', 'emailId', 'password'];
 
   const isAllowed = mandatoryField.every((k) => Object.keys(data).includes(k));
 
-  if (!isAllowed)
-    throw new ApiError(STATUS_CODES.BAD_REQUEST, "Some Field Missing");
+  if (!isAllowed) throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Some Field Missing');
 
   if (!validator.isEmail(data.emailId))
-    throw new ApiError(STATUS_CODES.BAD_REQUEST, "Invalid Email");
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Invalid Email');
 
   if (
     !validator.isStrongPassword(data.password, {
@@ -25,21 +24,17 @@ const validateUser = async (data) => {
   ) {
     throw new ApiError(
       STATUS_CODES.BAD_REQUEST,
-      "Password must contain uppercase, lowercase, number, special character and be at least 8 characters long",
+      'Password must contain uppercase, lowercase, number, special character and be at least 8 characters long'
     );
   }
 
   // .trim() removes leading/trailing spaces
   const name = data.firstName?.trim();
 
-  if (!name)
-    throw new ApiError(STATUS_CODES.BAD_REQUEST, "First name is required");
+  if (!name) throw new ApiError(STATUS_CODES.BAD_REQUEST, 'First name is required');
 
   if (name.length < 3 || name.length > 20)
-    throw new ApiError(
-      STATUS_CODES.BAD_REQUEST,
-      "First name must be 3-20 characters long",
-    );
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'First name must be 3-20 characters long');
 };
 
 module.exports = validateUser;

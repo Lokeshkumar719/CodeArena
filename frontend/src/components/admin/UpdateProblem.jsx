@@ -1,78 +1,76 @@
-import { useEffect, useState } from "react";
-import { useForm, useFieldArray, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import axiosClient from "../../utils/axiosClient";
-import { useNavigate, useParams, NavLink } from "react-router";
-import toast from "react-hot-toast";
-import { getErrorMessage } from "../../utils/errorHandler";
-import useRateLimit from "../../hooks/useRateLimit.jsx";
-import AdminUploadSkeleton from "../skeletons/AdminUploadSkeleton";
+import { useEffect, useState } from 'react';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import axiosClient from '../../utils/axiosClient';
+import { useNavigate, useParams, NavLink } from 'react-router';
+import toast from 'react-hot-toast';
+import { getErrorMessage } from '../../utils/errorHandler';
+import useRateLimit from '../../hooks/useRateLimit.jsx';
+import AdminUploadSkeleton from '../skeletons/AdminUploadSkeleton';
 
 import { s } from '../../styles/admin/updateProblemStyles';
 
-import BasicInformationSection from "./forms/BasicInformationSection";
-import VisibleTestCasesSection from "./forms/VisibleTestCasesSection";
-import HiddenTestCasesSection from "./forms/HiddenTestCasesSection";
-import CodeTemplatesSection from "./forms/CodeTemplatesSection";
+import BasicInformationSection from './forms/BasicInformationSection';
+import VisibleTestCasesSection from './forms/VisibleTestCasesSection';
+import HiddenTestCasesSection from './forms/HiddenTestCasesSection';
+import CodeTemplatesSection from './forms/CodeTemplatesSection';
 
-import { tagOptions } from "../../constants/problemTags";
-import { languageOptions } from "../../constants/problemLanguages";
+import { tagOptions } from '../../constants/problemTags';
+import { languageOptions } from '../../constants/problemLanguages';
 
-import TestCaseBlock from "./forms/TestCaseBlock";
+import TestCaseBlock from './forms/TestCaseBlock';
 
 const problemSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().min(1, "Description is required"),
-  difficulty: z.enum(["easy", "medium", "hard"]),
-  inputFormat: z.string().min(1, "Input format is required"),
-  outputFormat: z.string().min(1, "Output format is required"),
-  constraints: z.string().min(1, "Constraints are required"),
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().min(1, 'Description is required'),
+  difficulty: z.enum(['easy', 'medium', 'hard']),
+  inputFormat: z.string().min(1, 'Input format is required'),
+  outputFormat: z.string().min(1, 'Output format is required'),
+  constraints: z.string().min(1, 'Constraints are required'),
 
-  timeLimit: z.coerce.number().min(1, "Time limit must be at least 1 second"),
+  timeLimit: z.coerce.number().min(1, 'Time limit must be at least 1 second'),
 
-  memoryLimit: z.coerce
-    .number()
-    .min(1024, "Memory limit must be at least 1024 KB"),
+  memoryLimit: z.coerce.number().min(1024, 'Memory limit must be at least 1024 KB'),
 
   tags: z
-    .array(z.string().refine((tag) => tagOptions.includes(tag), "Invalid tag"))
-    .min(1, "At least one tag is required"),
+    .array(z.string().refine((tag) => tagOptions.includes(tag), 'Invalid tag'))
+    .min(1, 'At least one tag is required'),
 
   visibleTestCases: z
     .array(
       z.object({
-        input: z.string().min(1, "Input is required"),
-        output: z.string().min(1, "Output is required"),
-        explanation: z.string().min(1, "Explanation is required"),
-      }),
+        input: z.string().min(1, 'Input is required'),
+        output: z.string().min(1, 'Output is required'),
+        explanation: z.string().min(1, 'Explanation is required'),
+      })
     )
-    .min(1, "At least one visible test case required"),
+    .min(1, 'At least one visible test case required'),
 
   hiddenTestCases: z
     .array(
       z.object({
-        input: z.string().min(1, "Input is required"),
-        output: z.string().min(1, "Output is required"),
-      }),
+        input: z.string().min(1, 'Input is required'),
+        output: z.string().min(1, 'Output is required'),
+      })
     )
-    .min(1, "At least one hidden test case required"),
+    .min(1, 'At least one hidden test case required'),
 
   startCode: z
     .array(
       z.object({
-        language: z.enum(["cpp", "java", "javascript"]),
-        initialCode: z.string().min(1, "Initial code is required"),
-      }),
+        language: z.enum(['cpp', 'java', 'javascript']),
+        initialCode: z.string().min(1, 'Initial code is required'),
+      })
     )
     .length(3),
 
   referenceSolution: z
     .array(
       z.object({
-        language: z.enum(["cpp", "java", "javascript"]),
-        completeCode: z.string().min(1, "Complete code is required"),
-      }),
+        language: z.enum(['cpp', 'java', 'javascript']),
+        completeCode: z.string().min(1, 'Complete code is required'),
+      })
     )
     .length(3),
 });
@@ -97,33 +95,33 @@ function UpdateProblem() {
     resolver: zodResolver(problemSchema),
 
     defaultValues: {
-      difficulty: "easy",
+      difficulty: 'easy',
       timeLimit: 2,
       memoryLimit: 262144,
 
       visibleTestCases: [
         {
-          input: "",
-          output: "",
-          explanation: "",
+          input: '',
+          output: '',
+          explanation: '',
         },
       ],
 
       hiddenTestCases: [
         {
-          input: "",
-          output: "",
+          input: '',
+          output: '',
         },
       ],
 
       startCode: languageOptions.map((lang) => ({
         language: lang.value,
-        initialCode: "",
+        initialCode: '',
       })),
 
       referenceSolution: languageOptions.map((lang) => ({
         language: lang.value,
-        completeCode: "",
+        completeCode: '',
       })),
     },
   });
@@ -134,7 +132,7 @@ function UpdateProblem() {
     remove: removeVisible,
   } = useFieldArray({
     control,
-    name: "visibleTestCases",
+    name: 'visibleTestCases',
   });
 
   const {
@@ -143,7 +141,7 @@ function UpdateProblem() {
     remove: removeHidden,
   } = useFieldArray({
     control,
-    name: "hiddenTestCases",
+    name: 'hiddenTestCases',
   });
 
   useEffect(() => {
@@ -157,9 +155,7 @@ function UpdateProblem() {
           return;
         }
 
-        const response = await axiosClient.get(
-          `/problem/admin/problemById/${id}`,
-        );
+        const response = await axiosClient.get(`/problem/admin/problemById/${id}`);
 
         reset(response.data.data);
       } catch (error) {
@@ -197,10 +193,10 @@ function UpdateProblem() {
       isUnloading = true;
     };
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
 
       // Only clear draft if navigating away, NOT on page refresh
       if (!isUnloading) {
@@ -214,15 +210,12 @@ function UpdateProblem() {
       setIsSubmitting(true);
       await axiosClient.put(`/problem/update/${id}`, data);
       sessionStorage.removeItem(draftKey);
-      toast.success("Problem updated successfully!");
-      navigate("/admin/update-list");
+      toast.success('Problem updated successfully!');
+      navigate('/admin/update-list');
     } catch (error) {
       if (error.rateLimitedFor) {
         startCooldown(error.rateLimitedFor);
-        toast.error(
-          error.response?.data?.message ||
-            "Too many requests. Please slow down.",
-        );
+        toast.error(error.response?.data?.message || 'Too many requests. Please slow down.');
         return;
       }
       toast.error(getErrorMessage(error));
@@ -246,7 +239,7 @@ function UpdateProblem() {
             ← Back
           </button>
 
-          <NavLink to="/" style={{ textDecoration: "none" }}>
+          <NavLink to="/" style={{ textDecoration: 'none' }}>
             <span style={s.logo}>CodeArena</span>
           </NavLink>
         </div>
@@ -265,7 +258,7 @@ function UpdateProblem() {
 
         <form
           onSubmit={handleSubmit(onSubmit, () => {
-            toast.error("Please fix validation errors");
+            toast.error('Please fix validation errors');
           })}
         >
           <BasicInformationSection
@@ -291,21 +284,12 @@ function UpdateProblem() {
             TestCaseBlock={TestCaseBlock}
           />
 
-          <CodeTemplatesSection
-            languageOptions={languageOptions}
-            register={register}
-          />
+          <CodeTemplatesSection languageOptions={languageOptions} register={register} />
 
           {/* Rate limit banner */}
           {cooldown > 0 && (
             <div style={s.rateLimitBanner}>
-              <svg
-                width="16"
-                height="16"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="#f87171"
-              >
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#f87171">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -313,9 +297,8 @@ function UpdateProblem() {
                   d="M12 8v4m0 4h.01M12 2a10 10 0 110 20A10 10 0 0112 2z"
                 />
               </svg>
-              <span style={{ fontSize: "13px", color: "#f87171" }}>
-                Too many requests. Please wait {cooldown}s before submitting
-                again.
+              <span style={{ fontSize: '13px', color: '#f87171' }}>
+                Too many requests. Please wait {cooldown}s before submitting again.
               </span>
             </div>
           )}
@@ -329,10 +312,10 @@ function UpdateProblem() {
             }}
           >
             {isSubmitting
-              ? "Updating Problem..."
+              ? 'Updating Problem...'
               : cooldown > 0
                 ? `Wait ${cooldown}s`
-                : "Update Problem"}
+                : 'Update Problem'}
           </button>
         </form>
       </div>

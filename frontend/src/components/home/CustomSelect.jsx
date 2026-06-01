@@ -1,21 +1,13 @@
 import Chevron from './Chevron';
 import { s } from '../../styles/pages/homepageStyles';
 
-function CustomSelect({
-  value,
-  onChange,
-  options,
-  placeholder,
-  dropdownRef,
-  isOpen,
-  onToggle,
-}) {
+function CustomSelect({ value, onChange, options, placeholder, dropdownRef, isOpen, onToggle }) {
   const selected = options.find((o) => o.value === value);
 
   return (
     <div style={s.selectWrapper} ref={dropdownRef}>
       <button type="button" style={s.selectBtn} onClick={onToggle}>
-        <span style={{ color: value ? "#e2e8f0" : "#9ca3af" }}>
+        <span style={{ color: value ? '#e2e8f0' : '#9ca3af' }}>
           {selected ? selected.label : placeholder}
         </span>
         <Chevron open={isOpen} />

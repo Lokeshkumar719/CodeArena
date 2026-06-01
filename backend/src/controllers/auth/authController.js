@@ -1,31 +1,31 @@
-const { redisClient } = require("../../config/redis");
-const User = require("../../models/user");
-const crypto = require("crypto");
-const bcrypt = require("bcrypt");
+const { redisClient } = require('../../config/redis');
+const User = require('../../models/user');
+const crypto = require('crypto');
+const bcrypt = require('bcrypt');
 
-const validateUserRegistration = require("../../utils/validation/validateUserRegistration");
-const validatePassword = require("../../utils/auth/validatePassword");
+const validateUserRegistration = require('../../utils/validation/validateUserRegistration');
+const validatePassword = require('../../utils/auth/validatePassword');
 
-const asyncHandler = require("../../utils/asyncHandler");
-const sendTokenResponse = require("../../utils/auth/sendTokenResponse");
-const removeRefreshSession = require("../../utils/auth/removeRefreshSession");
+const asyncHandler = require('../../utils/asyncHandler');
+const sendTokenResponse = require('../../utils/auth/sendTokenResponse');
+const removeRefreshSession = require('../../utils/auth/removeRefreshSession');
 
-const STATUS_CODES = require("../../constants/statusCodes");
-const ApiError = require("../../utils/ApiError");
-const clearAuthCookies = require("../../utils/auth/clearAuthCookies");
+const STATUS_CODES = require('../../constants/statusCodes');
+const ApiError = require('../../utils/ApiError');
+const clearAuthCookies = require('../../utils/auth/clearAuthCookies');
 
-const { registerUser, loginUser } = require("../../services/auth/authService");
-const refreshUserSession = require("../../services/auth/refreshSessionService");
-const { verifyRefreshToken } = require("../../services/auth/tokenService");
-const verificationEmailTemplate = require("../../services/auth/emailTemplates/verificationEmailTemplate");
+const { registerUser, loginUser } = require('../../services/auth/authService');
+const refreshUserSession = require('../../services/auth/refreshSessionService');
+const { verifyRefreshToken } = require('../../services/auth/tokenService');
+const verificationEmailTemplate = require('../../services/auth/emailTemplates/verificationEmailTemplate');
 
-const resetPasswordEmailTemplate = require("../../services/auth/emailTemplates/resetPasswordEmailTemplate");
+const resetPasswordEmailTemplate = require('../../services/auth/emailTemplates/resetPasswordEmailTemplate');
 
 const {
   accessTokenCookieOptions,
   refreshTokenCookieOptions,
-} = require("../../utils/auth/cookieOptions");
-const sendEmail = require("../../services/auth/emailService"); // service handles templates
+} = require('../../utils/auth/cookieOptions');
+const sendEmail = require('../../services/auth/emailService'); // service handles templates
 
 // ----------------------------
 // Register User
@@ -33,7 +33,7 @@ const sendEmail = require("../../services/auth/emailService"); // service handle
 const register = asyncHandler(async (req, res) => {
   await validateUserRegistration(req.body);
 
-  const user = await registerUser(req.body, "user");
+  const user = await registerUser(req.body, 'user');
 
   const verificationToken = user.createEmailVerificationToken();
 
@@ -46,14 +46,13 @@ const register = asyncHandler(async (req, res) => {
   try {
     await sendEmail({
       to: user.emailId,
-      subject: "Verify Your CodeArena Account",
+      subject: 'Verify Your CodeArena Account',
       html: verificationEmailTemplate(verificationUrl),
     });
 
     return res.status(STATUS_CODES.CREATED).json({
       success: true,
-      message:
-        "Verification email sent. Please verify your email before logging in.",
+      message: 'Verification email sent. Please verify your email before logging in.',
     });
   } catch (err) {
     user.emailVerificationToken = undefined;
@@ -63,10 +62,7 @@ const register = asyncHandler(async (req, res) => {
       validateBeforeSave: false,
     });
 
-    throw new ApiError(
-      STATUS_CODES.INTERNAL_SERVER_ERROR,
-      "Verification email could not be sent",
-    );
+    throw new ApiError(STATUS_CODES.INTERNAL_SERVER_ERROR, 'Verification email could not be sent');
   }
 });
 
@@ -75,18 +71,14 @@ const register = asyncHandler(async (req, res) => {
 // ----------------------------
 const verifyEmail = asyncHandler(async (req, res) => {
   const { token } = req.params;
-  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
 
   const user = await User.findOne({
     emailVerificationToken: hashedToken,
     emailVerificationTokenExpires: { $gt: Date.now() },
   });
 
-  if (!user)
-    throw new ApiError(
-      STATUS_CODES.BAD_REQUEST,
-      "Invalid or expired verification token",
-    );
+  if (!user) throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Invalid or expired verification token');
 
   user.isVerified = true;
   user.emailVerificationToken = undefined;
@@ -95,7 +87,7 @@ const verifyEmail = asyncHandler(async (req, res) => {
 
   return res.status(STATUS_CODES.OK).json({
     success: true,
-    message: "Email verified successfully",
+    message: 'Email verified successfully',
   });
 });
 
@@ -106,17 +98,17 @@ const resendVerificationEmail = asyncHandler(async (req, res) => {
   const { emailId } = req.body;
 
   if (!emailId) {
-    throw new ApiError(STATUS_CODES.BAD_REQUEST, "Email is required");
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Email is required');
   }
 
   const user = await User.findOne({ emailId });
 
   if (!user) {
-    throw new ApiError(STATUS_CODES.NOT_FOUND, "User not found");
+    throw new ApiError(STATUS_CODES.NOT_FOUND, 'User not found');
   }
 
   if (user.isVerified) {
-    throw new ApiError(STATUS_CODES.BAD_REQUEST, "Email is already verified");
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Email is already verified');
   }
 
   const verificationToken = user.createEmailVerificationToken();
@@ -129,13 +121,13 @@ const resendVerificationEmail = asyncHandler(async (req, res) => {
 
   await sendEmail({
     to: user.emailId,
-    subject: "Verify Your CodeArena Account",
+    subject: 'Verify Your CodeArena Account',
     html: verificationEmailTemplate(verificationUrl),
   });
 
   return res.status(STATUS_CODES.OK).json({
     success: true,
-    message: "Verification email sent successfully",
+    message: 'Verification email sent successfully',
   });
 });
 
@@ -145,36 +137,23 @@ const resendVerificationEmail = asyncHandler(async (req, res) => {
 const login = asyncHandler(async (req, res) => {
   const { emailId, password } = req.body;
   if (!emailId || !password)
-    throw new ApiError(
-      STATUS_CODES.BAD_REQUEST,
-      "Email and password are required",
-    );
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Email and password are required');
 
   const user = await User.findOne({ emailId });
-  if (!user)
-    throw new ApiError(STATUS_CODES.UNAUTHORIZED, "Invalid credentials");
+  if (!user) throw new ApiError(STATUS_CODES.UNAUTHORIZED, 'Invalid credentials');
 
   const match = await bcrypt.compare(password, user.password);
-  if (!match)
-    throw new ApiError(STATUS_CODES.UNAUTHORIZED, "Invalid credentials");
+  if (!match) throw new ApiError(STATUS_CODES.UNAUTHORIZED, 'Invalid credentials');
 
   if (!user.isVerified)
-    throw new ApiError(
-      STATUS_CODES.UNAUTHORIZED,
-      "Please verify your email before logging in",
-    );
+    throw new ApiError(STATUS_CODES.UNAUTHORIZED, 'Please verify your email before logging in');
 
   const { accessToken, refreshToken } = await loginUser(user);
 
-  res.cookie("accessToken", accessToken, accessTokenCookieOptions);
-  res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
+  res.cookie('accessToken', accessToken, accessTokenCookieOptions);
+  res.cookie('refreshToken', refreshToken, refreshTokenCookieOptions);
 
-  return sendTokenResponse(
-    res,
-    user,
-    "User logged in successfully",
-    STATUS_CODES.OK,
-  );
+  return sendTokenResponse(res, user, 'User logged in successfully', STATUS_CODES.OK);
 });
 
 // ----------------------------
@@ -193,7 +172,7 @@ const logout = asyncHandler(async (req, res) => {
   clearAuthCookies(res);
   return res.status(STATUS_CODES.OK).json({
     success: true,
-    message: "User logged out successfully",
+    message: 'User logged out successfully',
   });
 });
 
@@ -203,15 +182,14 @@ const logout = asyncHandler(async (req, res) => {
 const refreshAccessToken = asyncHandler(async (req, res) => {
   const { refreshToken } = req.cookies;
 
-  const { accessToken, refreshToken: newRefreshToken } =
-    await refreshUserSession(refreshToken);
+  const { accessToken, refreshToken: newRefreshToken } = await refreshUserSession(refreshToken);
 
-  res.cookie("accessToken", accessToken, accessTokenCookieOptions);
-  res.cookie("refreshToken", newRefreshToken, refreshTokenCookieOptions);
+  res.cookie('accessToken', accessToken, accessTokenCookieOptions);
+  res.cookie('refreshToken', newRefreshToken, refreshTokenCookieOptions);
 
   return res.status(STATUS_CODES.OK).json({
     success: true,
-    message: "Access token refreshed successfully",
+    message: 'Access token refreshed successfully',
   });
 });
 
@@ -222,25 +200,21 @@ const forgotPassword = asyncHandler(async (req, res) => {
   const { emailId } = req.body;
   const user = await User.findOne({ emailId });
 
-  if (!user)
-    throw new ApiError(
-      STATUS_CODES.NOT_FOUND,
-      "If account exists, reset email sent.",
-    );
+  if (!user) throw new ApiError(STATUS_CODES.NOT_FOUND, 'If account exists, reset email sent.');
 
   const resetToken = user.createResetPasswordToken();
   await user.save({ validateBeforeSave: false });
 
   await sendEmail({
     to: user.emailId,
-    subject: "CodeArena Password Reset",
-    type: "reset",
+    subject: 'CodeArena Password Reset',
+    type: 'reset',
     token: resetToken,
   });
 
   return res.status(STATUS_CODES.OK).json({
     success: true,
-    message: "Password reset email sent successfully",
+    message: 'Password reset email sent successfully',
   });
 });
 
@@ -252,17 +226,13 @@ const resetPassword = asyncHandler(async (req, res) => {
   const { password } = req.body;
   validatePassword(password);
 
-  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
   const user = await User.findOne({
     resetPasswordToken: hashedToken,
     resetPasswordExpires: { $gt: Date.now() },
   });
 
-  if (!user)
-    throw new ApiError(
-      STATUS_CODES.BAD_REQUEST,
-      "Invalid or expired reset token",
-    );
+  if (!user) throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Invalid or expired reset token');
 
   user.password = password;
   user.resetPasswordToken = undefined;
@@ -274,7 +244,7 @@ const resetPassword = asyncHandler(async (req, res) => {
 
   return res.status(STATUS_CODES.OK).json({
     success: true,
-    message: "Password reset successful",
+    message: 'Password reset successful',
   });
 });
 
@@ -286,24 +256,15 @@ const changePassword = asyncHandler(async (req, res) => {
   validatePassword(newPassword);
 
   const user = await User.findById(req.user._id);
-  if (!user) throw new ApiError(STATUS_CODES.NOT_FOUND, "User not found");
+  if (!user) throw new ApiError(STATUS_CODES.NOT_FOUND, 'User not found');
 
-  const isPasswordCorrect = await bcrypt.compare(
-    currentPassword,
-    user.password,
-  );
+  const isPasswordCorrect = await bcrypt.compare(currentPassword, user.password);
   if (!isPasswordCorrect)
-    throw new ApiError(
-      STATUS_CODES.BAD_REQUEST,
-      "Current password is incorrect",
-    );
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Current password is incorrect');
 
   const isSamePassword = await bcrypt.compare(newPassword, user.password);
   if (isSamePassword)
-    throw new ApiError(
-      STATUS_CODES.BAD_REQUEST,
-      "New password cannot be same as current password",
-    );
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'New password cannot be same as current password');
 
   user.password = newPassword;
   await user.save();
@@ -313,7 +274,7 @@ const changePassword = asyncHandler(async (req, res) => {
 
   return res.status(STATUS_CODES.OK).json({
     success: true,
-    message: "Password changed successfully. Please login again.",
+    message: 'Password changed successfully. Please login again.',
   });
 });
 
@@ -323,18 +284,13 @@ const changePassword = asyncHandler(async (req, res) => {
 const adminRegister = asyncHandler(async (req, res) => {
   await validateUserRegistration(req.body);
 
-  const user = await registerUser({ ...req.body, isVerified: true }, "admin");
+  const user = await registerUser({ ...req.body, isVerified: true }, 'admin');
   const { accessToken, refreshToken } = await loginUser(user);
 
-  res.cookie("accessToken", accessToken, accessTokenCookieOptions);
-  res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
+  res.cookie('accessToken', accessToken, accessTokenCookieOptions);
+  res.cookie('refreshToken', refreshToken, refreshTokenCookieOptions);
 
-  return sendTokenResponse(
-    res,
-    user,
-    "Admin registered successfully",
-    STATUS_CODES.CREATED,
-  );
+  return sendTokenResponse(res, user, 'Admin registered successfully', STATUS_CODES.CREATED);
 });
 
 // ----------------------------
@@ -348,7 +304,7 @@ const deleteProfile = asyncHandler(async (req, res) => {
 
   return res.status(STATUS_CODES.OK).json({
     success: true,
-    message: "User deleted successfully",
+    message: 'User deleted successfully',
   });
 });
 

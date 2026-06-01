@@ -1,6 +1,6 @@
-const validator = require("validator");
-const ApiError = require("../ApiError");
-const STATUS_CODES = require("../../constants/statusCodes");
+const validator = require('validator');
+const ApiError = require('../ApiError');
+const STATUS_CODES = require('../../constants/statusCodes');
 const validatePassword = (password) => {
   if (
     !validator.isStrongPassword(password, {
@@ -13,7 +13,7 @@ const validatePassword = (password) => {
   ) {
     throw new ApiError(
       STATUS_CODES.BAD_REQUEST,
-      "Password must contain uppercase, lowercase, number, special character and be at least 8 characters long",
+      'Password must contain uppercase, lowercase, number, special character and be at least 8 characters long'
     );
   }
 };
