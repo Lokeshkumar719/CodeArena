@@ -10,6 +10,7 @@ const authRouter = require('./routes/auth/authRoutes');
 const problemRouter = require('./routes/problem/problemRoutes');
 const submitRouter = require('./routes/submission/submissionRoutes');
 const videoRouter = require('./routes/video/videoRoutes');
+const statsRoutes = require('./routes/statsRoutes');
 
 const errorMiddleware = require('./middlewares/errorMiddleware');
 const { redisClient, connectRedis } = require('./config/redis');
@@ -65,6 +66,7 @@ app.use('/user', authRouter);
 app.use('/problem', problemRouter);
 app.use('/submission', submitRouter);
 app.use('/video', videoRouter);
+app.use('/api/stats', statsRoutes);
 
 app.use(errorMiddleware);
 

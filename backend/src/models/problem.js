@@ -112,23 +112,13 @@ const problemSchema = new Schema(
     },
   },
   {
-    timestamps: true, // adds createdAt, updatedAt — needed for "sort by newest"
+    timestamps: true,
   }
 );
 
-// ─── Indexes ────────────────────────────────────────────────────────────────
-// problemNo gets an index automatically via unique:true above
-
-// Text search index — powers /problems?q=two+sum style queries
 problemSchema.index({ title: 'text' });
-
-// Compound index — the most common listing query pattern:
-// filter by difficulty + tags together (covers individual field queries too)
 problemSchema.index({ difficulty: 1, tags: 1 });
-
-// For "sort by newest" feature
 problemSchema.index({ createdAt: -1 });
 
-// ─── Export ─────────────────────────────────────────────────────────────────
 const Problem = mongoose.model('Problem', problemSchema);
 module.exports = { Problem, VALID_TAGS };
