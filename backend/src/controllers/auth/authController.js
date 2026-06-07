@@ -181,11 +181,12 @@ const forgotPassword = asyncHandler(async (req, res) => {
   const resetToken = user.createResetPasswordToken();
   await user.save({ validateBeforeSave: false });
 
-  await sendEmail({
+  const resetPasswordUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+
+  const response = await sendEmail({
     to: user.emailId,
     subject: 'CodeArena Password Reset',
-    type: 'reset',
-    token: resetToken,
+    html: resetPasswordEmailTemplate(resetPasswordUrl),
   });
 
   return res.status(STATUS_CODES.OK).json({

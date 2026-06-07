@@ -26,3 +26,34 @@ const startUnverifiedUserCleanup = () => {
 };
 
 module.exports = startUnverifiedUserCleanup;
+
+
+// explanation
+
+// ┌──────── Minute (0-59)
+// │ ┌────── Hour (0-23)
+// │ │ ┌──── Day of Month (1-31)
+// │ │ │ ┌── Month (1-12)
+// │ │ │ │ ┌ Day of Week (0-7)
+// │ │ │ │ │
+// 0 * * * *
+
+// So:
+
+// * 0 → Run at minute 0
+// * * → Every hour
+// * * → Every day
+// * * → Every month
+// * * → Every weekday
+
+// Meaning:
+
+// Run once every hour at exactly HH:00.
+
+// Examples:
+
+// * 1:00 AM
+// * 2:00 AM
+// * 3:00 AM
+// * …
+// * 11:00 PM
