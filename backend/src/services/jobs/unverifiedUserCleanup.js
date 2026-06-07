@@ -27,7 +27,6 @@ const startUnverifiedUserCleanup = () => {
 
 module.exports = startUnverifiedUserCleanup;
 
-
 // explanation
 
 // ┌──────── Minute (0-59)
