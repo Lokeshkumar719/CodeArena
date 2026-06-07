@@ -10,6 +10,7 @@ import { useLocation } from 'react-router';
 import NProgress from 'nprogress';
 import 'nprogress/nprogress.css';
 
+import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Homepage from './pages/Homepage';
@@ -74,7 +75,9 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/" element={isAuthenticated ? <Homepage /> : <Navigate to="/signup" />} />
+      <Route path="/" element={isAuthenticated ? <Navigate to="/problems" /> : <LandingPage />} />
+
+      <Route path="/problems" element={isAuthenticated ? <Homepage /> : <Navigate to="/" />} />
 
       <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <Login />} />
 
