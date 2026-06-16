@@ -5,8 +5,30 @@ const encodeBase64 = require('../../utils/judge/encodeBase64');
 
 const { MAX_POLLING_RETRIES, POLLING_INTERVAL } = require('../../constants/judge0');
 
+const ApiError = require('../../utils/ApiError');
+const STATUS_CODES = require('../../constants/statusCodes');
+
 const waiting = (timer) => {
   return new Promise((resolve) => setTimeout(resolve, timer));
+};
+
+const handleJudge0Error = (error) => {
+  console.error(error);
+
+  const judge0Unavailable =
+    error.response?.status === 403 ||
+    error.code === 'ECONNREFUSED' ||
+    error.code === 'ECONNABORTED' ||
+    error.code === 'ETIMEDOUT';
+
+  if (judge0Unavailable) {
+    throw new ApiError(
+      STATUS_CODES.SERVICE_UNAVAILABLE,
+      'Code execution service is temporarily unavailable. Please try again later.'
+    );
+  }
+
+  throw error;
 };
 
 const submitBatch = async (submissions) => {
@@ -32,8 +54,7 @@ const submitBatch = async (submissions) => {
     const response = await judge0Client.request(options);
     return response.data;
   } catch (error) {
-    console.error('The error is: ' + error);
-    throw error;
+    handleJudge0Error(error);
   }
 };
 
@@ -53,7 +74,11 @@ const submitToken = async (resultTokens) => {
       const response = await judge0Client.request(options);
       const results = response.data;
       const submissions = results.submissions;
-      const isResultObtained = submissions.every((result) => result.status.id > 2);
+
+      const isResultObtained = submissions.every(
+        (result) => result.status.id > 2
+      );
+
       if (isResultObtained) {
         const decodedSubmissions = submissions.map((submission) => ({
           ...submission,
@@ -64,15 +89,20 @@ const submitToken = async (resultTokens) => {
           stdin: decodeBase64(submission.stdin),
           expected_output: decodeBase64(submission.expected_output),
         }));
+
         return decodedSubmissions;
       }
+
       await waiting(POLLING_INTERVAL);
     } catch (error) {
-      console.error(error);
-      throw error;
+      handleJudge0Error(error);
     }
   }
-  throw new Error('Judge0 polling timeout exceeded');
+
+  throw new ApiError(
+    STATUS_CODES.SERVICE_UNAVAILABLE,
+    'Code execution service is temporarily unavailable. Please try again later.'
+  );
 };
 
 module.exports = {

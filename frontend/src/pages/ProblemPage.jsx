@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import toast from 'react-hot-toast';
 import axiosClient from '../utils/axiosClient';
@@ -33,6 +33,7 @@ const ProblemPage = () => {
   const [activeRightTab, setActiveRightTab] = useState('code');
   const [leftWidth, setLeftWidth] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
+  const [hoveredBtn, setHoveredBtn] = useState(null);
 
   const runRateLimit = useRateLimit();
   const submitRateLimit = useRateLimit();
@@ -41,6 +42,7 @@ const ProblemPage = () => {
   const splitLayoutRef = useRef(null);
   const { problemId } = useParams();
   const navigate = useNavigate();
+  const isMac = navigator.platform.includes('Mac');
 
   // ── Restore saved language ───────────────────────────────────────────────
   useEffect(() => {
@@ -117,7 +119,7 @@ const ProblemPage = () => {
     localStorage.setItem(LANG_STORAGE_KEY(problemId), language);
   };
 
-  const handleRun = async () => {
+  const handleRun = useCallback(async () => {
     if (isRunning || isSubmitting || runRateLimit.cooldown > 0) return;
     setIsRunning(true);
     setRunResult(null);
@@ -143,9 +145,9 @@ const ProblemPage = () => {
     } finally {
       setIsRunning(false);
     }
-  };
+  }, [isRunning, isSubmitting, runRateLimit.cooldown, problemId, currentCode, selectedLanguage]);
 
-  const handleSubmitCode = async () => {
+  const handleSubmitCode = useCallback(async () => {
     if (isRunning || isSubmitting || submitRateLimit.cooldown > 0) return;
     setIsSubmitting(true);
     setSubmitResult(null);
@@ -168,7 +170,7 @@ const ProblemPage = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [isRunning, isSubmitting, submitRateLimit.cooldown, problemId, currentCode, selectedLanguage]);
 
   const getLanguageForMonaco = (lang) =>
     ({ javascript: 'javascript', java: 'java', cpp: 'cpp' })[lang] ?? 'javascript';
@@ -185,6 +187,46 @@ const ProblemPage = () => {
 
   const runBlocked = isRunning || isSubmitting || runRateLimit.cooldown > 0;
   const submitBlocked = isRunning || isSubmitting || submitRateLimit.cooldown > 0;
+
+  useEffect(() => {
+    const handleShortcut = (e) => {
+      const isMac = navigator.platform.toUpperCase().includes('MAC');
+      const modifierPressed = isMac ? e.metaKey : e.ctrlKey;
+
+      if (!modifierPressed) return;
+
+      // Cmd/Ctrl + '
+      if (e.key === "'") {
+        e.preventDefault();
+        handleRun();
+        return;
+      }
+
+      // Cmd/Ctrl + Enter
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSubmitCode();
+      }
+    };
+
+    window.addEventListener('keydown', handleShortcut);
+
+    return () => {
+      window.removeEventListener('keydown', handleShortcut);
+    };
+  }, [handleRun, handleSubmitCode]);
+
+  useEffect(() => {
+    const handleEditorSubmit = () => {
+      handleSubmitCode();
+    };
+
+    window.addEventListener('codearena-submit', handleEditorSubmit);
+
+    return () => {
+      window.removeEventListener('codearena-submit', handleEditorSubmit);
+    };
+  }, [handleSubmitCode]);
 
   if (loading && !problem) return <LoadingScreen />;
 
@@ -334,20 +376,54 @@ const ProblemPage = () => {
               flexShrink: 0,
             }}
           >
-            <button className="run-btn" onClick={handleRun} disabled={runBlocked}>
-              {isRunning
-                ? 'Running...'
-                : runRateLimit.cooldown > 0
-                  ? `⏳ Run (${runRateLimit.cooldown}s)`
-                  : '▶ Run'}
-            </button>
-            <button className="submit-btn" onClick={handleSubmitCode} disabled={submitBlocked}>
-              {isSubmitting
-                ? 'Submitting...'
-                : submitRateLimit.cooldown > 0
-                  ? `⏳ Submit (${submitRateLimit.cooldown}s)`
-                  : '↗ Submit'}
-            </button>
+            <div
+              style={{ position: 'relative' }}
+              onMouseEnter={() => setHoveredBtn('run')}
+              onMouseLeave={() => setHoveredBtn(null)}
+            >
+              <button className="run-btn" onClick={handleRun} disabled={runBlocked}>
+                {isRunning
+                  ? 'Running...'
+                  : runRateLimit.cooldown > 0
+                    ? `⏳ Run (${runRateLimit.cooldown}s)`
+                    : '▶ Run'}
+              </button>
+
+              {hoveredBtn === 'run' && !runBlocked && (
+                <div className="shortcut-tooltip">
+                  <span>Run</span>
+
+                  <div className="shortcut-keys">
+                    <kbd>{isMac ? '⌘' : 'Ctrl'}</kbd>
+                    <kbd>'</kbd>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div
+              style={{ position: 'relative' }}
+              onMouseEnter={() => setHoveredBtn('submit')}
+              onMouseLeave={() => setHoveredBtn(null)}
+            >
+              <button className="submit-btn" onClick={handleSubmitCode} disabled={submitBlocked}>
+                {isSubmitting
+                  ? 'Submitting...'
+                  : submitRateLimit.cooldown > 0
+                    ? `⏳ Submit (${submitRateLimit.cooldown}s)`
+                    : '↗ Submit'}
+              </button>
+
+              {hoveredBtn === 'submit' && !submitBlocked && (
+                <div className="shortcut-tooltip">
+                  <span>Submit</span>
+
+                  <div className="shortcut-keys">
+                    <kbd>{isMac? '⌘' : 'Ctrl'}</kbd>
+                    <kbd>{isMac? 'Return' : 'Enter'}</kbd>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
