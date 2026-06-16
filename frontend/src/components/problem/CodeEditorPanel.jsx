@@ -56,6 +56,10 @@ const CodeEditorPanel = ({
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Slash, () => {
       editor.trigger('keyboard', 'editor.action.commentLine', null);
     });
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+      window.dispatchEvent(new CustomEvent('codearena-submit'));
+    });
   };
 
   const onMount = (editor, monaco) => {
