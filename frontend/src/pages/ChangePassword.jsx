@@ -1,23 +1,25 @@
-import { useState } from "react";
-import { useDispatch } from "react-redux";
-import { useNavigate, NavLink } from "react-router";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import toast from "react-hot-toast";
-import axiosClient from "../utils/axiosClient";
-import { resetAuthState } from "../authSlice";
-import useRateLimit from "../hooks/useRateLimit.jsx";
+import { useState } from 'react';
+import { useDispatch } from 'react-redux';
+import { useNavigate, NavLink } from 'react-router';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import toast from 'react-hot-toast';
+import axiosClient from '../utils/axiosClient';
+import { resetAuthState } from '../authSlice';
+import useRateLimit from '../hooks/useRateLimit.jsx';
+
+import { s } from '../styles/pages/changePasswordStyles';
 
 const changePasswordSchema = z
   .object({
-    currentPassword: z.string().min(1, "Current password is required"),
-    newPassword: z.string().min(8, "Password must be at least 8 characters"),
+    currentPassword: z.string().min(1, 'Current password is required'),
+    newPassword: z.string().min(8, 'Password must be at least 8 characters'),
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
   });
 
 function ChangePassword() {
@@ -40,21 +42,21 @@ function ChangePassword() {
   const onSubmit = async (data) => {
     try {
       setLoading(true);
-      const response = await axiosClient.post("/user/change-password", {
+      const response = await axiosClient.post('/user/change-password', {
         currentPassword: data.currentPassword,
         newPassword: data.newPassword,
       });
       toast.success(response.data.message);
       dispatch(resetAuthState());
       reset();
-      navigate("/login");
+      navigate('/login');
     } catch (err) {
       if (err.rateLimitedFor) {
         startCooldown(err.rateLimitedFor);
-        toast.error(err.response?.data?.message || "Too many requests. Please slow down.");
+        toast.error(err.response?.data?.message || 'Too many requests. Please slow down.');
         return;
       }
-      toast.error(err?.response?.data?.message || "Something went wrong",{duration:2000});
+      toast.error(err?.response?.data?.message || 'Something went wrong', { duration: 2000 });
     } finally {
       setLoading(false);
     }
@@ -76,27 +78,27 @@ function ChangePassword() {
             <label style={s.label}>Current Password</label>
             <div style={s.passwordWrapper}>
               <input
-                type={showCurrentPassword ? "text" : "password"}
+                type={showCurrentPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 onPaste={(e) => {
                   e.preventDefault();
-                  toast.error("Paste is not allowed");
+                  toast.error('Paste is not allowed');
                 }}
                 onCopy={(e) => {
                   e.preventDefault();
-                  toast.error("Copy is not allowed");
+                  toast.error('Copy is not allowed');
                 }}
                 onCut={(e) => {
                   e.preventDefault();
-                  toast.error("Cut is not allowed");
+                  toast.error('Cut is not allowed');
                 }}
                 onDragStart={(e) => {
                   e.preventDefault();
                 }}
-                {...register("currentPassword")}
+                {...register('currentPassword')}
                 style={{
                   ...s.input,
-                  paddingRight: "46px",
+                  paddingRight: '46px',
                   ...(errors.currentPassword ? s.inputError : {}),
                 }}
               />
@@ -118,41 +120,35 @@ function ChangePassword() {
             <label style={s.label}>New Password</label>
             <div style={s.passwordWrapper}>
               <input
-                type={showNewPassword ? "text" : "password"}
+                type={showNewPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 onPaste={(e) => {
                   e.preventDefault();
-                  toast.error("Paste is not allowed");
+                  toast.error('Paste is not allowed');
                 }}
                 onCopy={(e) => {
                   e.preventDefault();
-                  toast.error("Copy is not allowed");
+                  toast.error('Copy is not allowed');
                 }}
                 onCut={(e) => {
                   e.preventDefault();
-                  toast.error("Cut is not allowed");
+                  toast.error('Cut is not allowed');
                 }}
                 onDragStart={(e) => {
                   e.preventDefault();
                 }}
-                {...register("newPassword")}
+                {...register('newPassword')}
                 style={{
                   ...s.input,
-                  paddingRight: "46px",
+                  paddingRight: '46px',
                   ...(errors.newPassword ? s.inputError : {}),
                 }}
               />
-              <button
-                type="button"
-                onClick={() => setShowNewPassword((p) => !p)}
-                style={s.eyeBtn}
-              >
+              <button type="button" onClick={() => setShowNewPassword((p) => !p)} style={s.eyeBtn}>
                 {showNewPassword ? <EyeOff /> : <EyeOn />}
               </button>
             </div>
-            {errors.newPassword && (
-              <span style={s.errorMsg}>{errors.newPassword.message}</span>
-            )}
+            {errors.newPassword && <span style={s.errorMsg}>{errors.newPassword.message}</span>}
           </div>
 
           {/* Confirm Password */}
@@ -160,27 +156,27 @@ function ChangePassword() {
             <label style={s.label}>Confirm New Password</label>
             <div style={s.passwordWrapper}>
               <input
-                type={showConfirmPassword ? "text" : "password"}
+                type={showConfirmPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 onPaste={(e) => {
                   e.preventDefault();
-                  toast.error("Paste is not allowed");
+                  toast.error('Paste is not allowed');
                 }}
                 onCopy={(e) => {
                   e.preventDefault();
-                  toast.error("Copy is not allowed");
+                  toast.error('Copy is not allowed');
                 }}
                 onCut={(e) => {
                   e.preventDefault();
-                  toast.error("Cut is not allowed");
+                  toast.error('Cut is not allowed');
                 }}
                 onDragStart={(e) => {
                   e.preventDefault();
                 }}
-                {...register("confirmPassword")}
+                {...register('confirmPassword')}
                 style={{
                   ...s.input,
-                  paddingRight: "46px",
+                  paddingRight: '46px',
                   ...(errors.confirmPassword ? s.inputError : {}),
                 }}
               />
@@ -202,16 +198,14 @@ function ChangePassword() {
             disabled={isDisabled}
             style={{ ...s.submitBtn, opacity: isDisabled ? 0.7 : 1 }}
           >
-            {loading
-              ? "Updating..."
-              : cooldown > 0
-              ? `Wait ${cooldown}s`
-              : "Change Password"}
+            {loading ? 'Updating...' : cooldown > 0 ? `Wait ${cooldown}s` : 'Change Password'}
           </button>
         </form>
 
         <div style={s.footer}>
-          <NavLink to="/" style={s.link}>Back to Home</NavLink>
+          <NavLink to="/" style={s.link}>
+            Back to Home
+          </NavLink>
         </div>
       </div>
     </div>
@@ -259,115 +253,5 @@ const EyeOff = () => (
     />
   </svg>
 );
-
-const s = {
-  page: {
-    minHeight: "100vh",
-    background: "#080c14",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "24px",
-    fontFamily: "'Sora', sans-serif",
-  },
-  card: {
-    width: "100%",
-    maxWidth: "420px",
-    background: "#0c1018",
-    border: "1px solid #1e2738",
-    borderRadius: "20px",
-    padding: "44px 40px",
-    boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
-  },
-  logoArea: {
-    textAlign: "center",
-    marginBottom: "36px",
-  },
-  logo: {
-    fontSize: "32px",
-    fontWeight: 700,
-    color: "#a5b4fc",
-    marginBottom: "6px",
-  },
-  tagline: {
-    fontSize: "13px",
-    color: "#4b5563",
-    fontWeight: 500,
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "20px",
-  },
-  fieldGroup: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-  },
-  label: {
-    fontSize: "13px",
-    fontWeight: 600,
-    color: "#9ca3af",
-  },
-  input: {
-    width: "100%",
-    background: "#080c14",
-    border: "1px solid #1e2738",
-    borderRadius: "10px",
-    color: "#e2e8f0",
-    fontSize: "14px",
-    padding: "11px 14px",
-    outline: "none",
-    boxSizing: "border-box",
-    fontFamily: "'Sora', sans-serif",
-  },
-  inputError: {
-    borderColor: "rgba(239,68,68,0.5)",
-  },
-  errorMsg: {
-    fontSize: "12px",
-    color: "#f87171",
-  },
-  passwordWrapper: {
-    position: "relative",
-  },
-  eyeBtn: {
-    position: "absolute",
-    top: "50%",
-    right: "12px",
-    transform: "translateY(-50%)",
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    color: "#4b5563",
-    display: "flex",
-    alignItems: "center",
-    padding: 0,
-  },
-  submitBtn: {
-    background: "#4f46e5",
-    border: "1px solid #6366f1",
-    borderRadius: "10px",
-    color: "#fff",
-    fontSize: "14px",
-    fontWeight: 700,
-    padding: "12px",
-    cursor: "pointer",
-    marginTop: "8px",
-    fontFamily: "'Sora', sans-serif",
-    width: "100%",
-  },
-  footer: {
-    textAlign: "center",
-    marginTop: "28px",
-    fontSize: "13px",
-    color: "#4b5563",
-  },
-  link: {
-    color: "#a5b4fc",
-    fontWeight: 600,
-    textDecoration: "none",
-  },
-};
 
 export default ChangePassword;

@@ -1,5 +1,5 @@
-const { RateLimiterRedis } = require("rate-limiter-flexible");
-const { redisClient } = require("../config/redis");
+const { RateLimiterRedis } = require('rate-limiter-flexible');
+const { redisClient } = require('../config/redis');
 const {
   LOGIN_LIMIT,
   LOGIN_DURATION,
@@ -11,15 +11,15 @@ const {
   RUN_REFILL_RATE_PER_SEC,
   SUBMIT_LIMIT,
   SUBMIT_REFILL_RATE_PER_SEC,
-} = require("../constants/rateLimitConstants");
+} = require('../constants/rateLimitConstants');
 
 const buildHeaders = (limit, remaining, retryAfterMs = null) => {
   const headers = {
-    "X-RateLimit-Limit": limit,
-    "X-RateLimit-Remaining": Math.max(0, Math.floor(remaining)),
+    'X-RateLimit-Limit': limit,
+    'X-RateLimit-Remaining': Math.max(0, Math.floor(remaining)),
   };
   if (retryAfterMs !== null) {
-    headers["Retry-After"] = Math.ceil(retryAfterMs / 1000) || 1;
+    headers['Retry-After'] = Math.ceil(retryAfterMs / 1000) || 1;
   }
   return headers;
 };
@@ -29,8 +29,8 @@ const tooManyRequests = (res, limit, retryAfterMs) => {
   res.set(headers);
   return res.status(429).json({
     success: false,
-    message: "Too many requests. Please slow down.",
-    retryAfterSeconds: headers["Retry-After"],
+    message: 'Too many requests. Please slow down.',
+    retryAfterSeconds: headers['Retry-After'],
   });
 };
 
@@ -71,18 +71,15 @@ const consumeTokenBucket = async (key, capacity, refillRatePerSec) => {
   const refillRatePerMs = refillRatePerSec / 1000;
   const requested = 1;
 
-  const [allowed, remaining, waitMs] = await redisClient.eval(
-    TOKEN_BUCKET_LUA,
-    {
-      keys: [key],
-      arguments: [
-        capacity.toString(),
-        refillRatePerMs.toString(),
-        now.toString(),
-        requested.toString(),
-      ],
-    },
-  );
+  const [allowed, remaining, waitMs] = await redisClient.eval(TOKEN_BUCKET_LUA, {
+    keys: [key],
+    arguments: [
+      capacity.toString(),
+      refillRatePerMs.toString(),
+      now.toString(),
+      requested.toString(),
+    ],
+  });
 
   return {
     allowed: allowed === 1,
@@ -94,7 +91,7 @@ const consumeTokenBucket = async (key, capacity, refillRatePerSec) => {
 const loginLimiter = new RateLimiterRedis({
   storeClient: redisClient,
   useRedisPackage: true,
-  keyPrefix: "rl:login",
+  keyPrefix: 'rl:login',
   points: LOGIN_LIMIT,
   duration: LOGIN_DURATION,
 });
@@ -102,7 +99,7 @@ const loginLimiter = new RateLimiterRedis({
 const changePasswordLimiter = new RateLimiterRedis({
   storeClient: redisClient,
   useRedisPackage: true,
-  keyPrefix: "rl:change-password",
+  keyPrefix: 'rl:change-password',
   points: CHANGE_PASSWORD_LIMIT,
   duration: CHANGE_PASSWORD_DURATION,
 });
@@ -110,7 +107,7 @@ const changePasswordLimiter = new RateLimiterRedis({
 const registerLimiter = new RateLimiterRedis({
   storeClient: redisClient,
   useRedisPackage: true,
-  keyPrefix: "rl:register",
+  keyPrefix: 'rl:register',
   points: REGISTER_LIMIT,
   duration: REGISTER_DURATION,
 });
@@ -122,7 +119,7 @@ const limitRunCode = async (req, res, next) => {
     const { allowed, remaining, waitMs } = await consumeTokenBucket(
       key,
       RUN_LIMIT,
-      RUN_REFILL_RATE_PER_SEC,
+      RUN_REFILL_RATE_PER_SEC
     );
 
     res.set(buildHeaders(RUN_LIMIT, remaining));
@@ -134,10 +131,7 @@ const limitRunCode = async (req, res, next) => {
     return tooManyRequests(res, RUN_LIMIT, waitMs);
   } catch (error) {
     // Fail-open: Redis being down must not block users from running code.
-    console.error(
-      "[rateLimitMiddleware] limitRunCode unexpected error:",
-      error,
-    );
+    console.error('[rateLimitMiddleware] limitRunCode unexpected error:', error);
     return next();
   }
 };
@@ -149,7 +143,7 @@ const limitSubmitCode = async (req, res, next) => {
     const { allowed, remaining, waitMs } = await consumeTokenBucket(
       key,
       SUBMIT_LIMIT,
-      SUBMIT_REFILL_RATE_PER_SEC,
+      SUBMIT_REFILL_RATE_PER_SEC
     );
 
     res.set(buildHeaders(SUBMIT_LIMIT, remaining));
@@ -161,10 +155,7 @@ const limitSubmitCode = async (req, res, next) => {
     return tooManyRequests(res, SUBMIT_LIMIT, waitMs);
   } catch (error) {
     // Fail-open: Redis being down must not block users from submitting code.
-    console.error(
-      "[rateLimitMiddleware] limitSubmitCode unexpected error:",
-      error,
-    );
+    console.error('[rateLimitMiddleware] limitSubmitCode unexpected error:', error);
     return next();
   }
 };
@@ -178,10 +169,7 @@ const limitLogin = async (req, res, next) => {
     return next();
   } catch (rateLimiterRes) {
     if (rateLimiterRes instanceof Error) {
-      console.error(
-        "[rateLimitMiddleware] loginLimiter unexpected error:",
-        rateLimiterRes,
-      );
+      console.error('[rateLimitMiddleware] loginLimiter unexpected error:', rateLimiterRes);
       return next();
     }
     return tooManyRequests(res, LOGIN_LIMIT, rateLimiterRes.msBeforeNext);
@@ -196,17 +184,10 @@ const limitChangePassword = async (req, res, next) => {
     return next();
   } catch (rateLimiterRes) {
     if (rateLimiterRes instanceof Error) {
-      console.error(
-        "[rateLimitMiddleware] changePasswordLimiter error:",
-        rateLimiterRes,
-      );
+      console.error('[rateLimitMiddleware] changePasswordLimiter error:', rateLimiterRes);
       return next();
     }
-    return tooManyRequests(
-      res,
-      CHANGE_PASSWORD_LIMIT,
-      rateLimiterRes.msBeforeNext,
-    );
+    return tooManyRequests(res, CHANGE_PASSWORD_LIMIT, rateLimiterRes.msBeforeNext);
   }
 };
 
@@ -219,10 +200,7 @@ const limitRegister = async (req, res, next) => {
     return next();
   } catch (rateLimiterRes) {
     if (rateLimiterRes instanceof Error) {
-      console.error(
-        "[rateLimitMiddleware] registerLimiter unexpected error:",
-        rateLimiterRes,
-      );
+      console.error('[rateLimitMiddleware] registerLimiter unexpected error:', rateLimiterRes);
       return next();
     }
     return tooManyRequests(res, REGISTER_LIMIT, rateLimiterRes.msBeforeNext);

@@ -1,4 +1,4 @@
-const SolutionVideo = require("../../models/solutionVideo");
+const SolutionVideo = require('../../models/solutionVideo');
 
 const attachVideoDetails = async (problem, problemId) => {
   const video = await SolutionVideo.findOne({

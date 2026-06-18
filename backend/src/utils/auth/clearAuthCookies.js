@@ -1,17 +1,14 @@
-const clearAuthCookies = (res) => {
-  // clear access token cookie
-  res.cookie("accessToken", null, {
-    expires: new Date(Date.now()),
-    httpOnly: true,
-    sameSite: "strict",
-  });
+const isProduction = process.env.NODE_ENV === 'production';
 
-  // clear refresh token cookie
-  res.cookie("refreshToken", null, {
-    expires: new Date(Date.now()),
+const clearAuthCookies = (res) => {
+  const cookieOptions = {
     httpOnly: true,
-    sameSite: "strict",
-  });
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'strict',
+  };
+
+  res.clearCookie('accessToken', cookieOptions);
+  res.clearCookie('refreshToken', cookieOptions);
 };
 
 module.exports = clearAuthCookies;

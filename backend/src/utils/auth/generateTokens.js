@@ -1,4 +1,4 @@
-const {generateAccessToken,generateRefreshToken,} = require("../../services/auth/tokenService");
+const { generateAccessToken, generateRefreshToken } = require('../../services/auth/tokenService');
 
 const generateTokens = (user) => {
   const payload = {
@@ -11,7 +11,7 @@ const generateTokens = (user) => {
 
   const refreshToken = generateRefreshToken(payload);
 
-  return{
+  return {
     accessToken,
     refreshToken,
   };

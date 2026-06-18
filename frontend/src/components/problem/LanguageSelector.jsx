@@ -6,7 +6,7 @@ function LanguageSelector({ LANGS, selectedLanguage, handleLanguageChange }) {
           key={language.key}
           className={`
             lang-btn
-            ${selectedLanguage === language.key ? "active-lang" : "inactive"}
+            ${selectedLanguage === language.key ? 'active-lang' : 'inactive'}
           `}
           onClick={() => handleLanguageChange(language.key)}
         >
