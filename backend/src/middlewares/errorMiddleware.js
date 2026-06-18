@@ -1,6 +1,7 @@
 const STATUS_CODES = require('../constants/statusCodes');
 
 const errorMiddleware = (err, req, res, next) => {
+
   if (err.code === 11000) {
     const field = Object.keys(err.keyValue)[0];
     return res.status(STATUS_CODES.CONFLICT).json({

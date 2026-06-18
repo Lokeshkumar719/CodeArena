@@ -5,15 +5,13 @@ const attachVideoDetails = async (problem, problemId) => {
     problemId,
   });
 
-  if (!video) {
-    return problem;
-  }
-
   return {
     ...problem.toObject(),
-    secureUrl: video.secureUrl,
-    thumbnailUrl: video.thumbnailUrl,
-    duration: video.duration,
+    videoSolution: video
+      ? {
+          youtubeUrl: video.youtubeUrl,
+        }
+      : null,
   };
 };
 
