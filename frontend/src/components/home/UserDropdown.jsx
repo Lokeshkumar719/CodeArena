@@ -2,14 +2,7 @@ import { NavLink } from 'react-router';
 import Chevron from './Chevron';
 import { s } from '../../styles/pages/homepageStyles';
 
-function UserDropdown({
-  user,
-  openPanel,
-  toggle,
-  setOpenPanel,
-  handleLogout,
-  userDropdownRef,
-}) {
+function UserDropdown({ user, openPanel, toggle, setOpenPanel, handleLogout, userDropdownRef }) {
   return (
     <div style={{ position: 'relative' }} ref={userDropdownRef}>
       <button style={s.userBtn} onClick={() => toggle('user')}>
@@ -19,20 +12,12 @@ function UserDropdown({
       {openPanel === 'user' && (
         <div style={s.dropdown}>
           {user?.role?.toLowerCase() === 'admin' && (
-            <NavLink
-              to='/admin'
-              style={s.dropdownItem}
-              onClick={() => setOpenPanel(null)}
-            >
+            <NavLink to="/admin" style={s.dropdownItem} onClick={() => setOpenPanel(null)}>
               ⚙️ Admin
             </NavLink>
           )}
 
-          <NavLink
-            to='/change-password'
-            style={s.dropdownItem}
-            onClick={() => setOpenPanel(null)}
-          >
+          <NavLink to="/change-password" style={s.dropdownItem} onClick={() => setOpenPanel(null)}>
             🔒 Change Password
           </NavLink>
 

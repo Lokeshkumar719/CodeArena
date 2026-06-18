@@ -1,13 +1,17 @@
-const bcrypt = require("bcrypt");
-const User = require("../../models/user");
-const { redisClient } = require("../../config/redis");
-const AUTH_CONFIG = require("../../constants/authConstants");
-const generateTokens = require("../../utils/auth/generateTokens");
-const hashToken = require("../../utils/auth/hashToken");
+const bcrypt = require('bcrypt');
+
+const User = require('../../models/user');
+
+const { redisClient } = require('../../config/redis');
+
+const AUTH_CONFIG = require('../../constants/authConstants');
+
+const generateTokens = require('../../utils/auth/generateTokens');
+const hashToken = require('../../utils/auth/hashToken');
 const {
   accessTokenCookieOptions,
   refreshTokenCookieOptions,
-} = require("../../utils/auth/cookieOptions");
+} = require('../../utils/auth/cookieOptions');
 
 const storeRefreshSession = async (userId, refreshToken) => {
   // hash refresh token before storing
@@ -23,14 +27,10 @@ const registerUser = async (userData, role) => {
     ...userData,
     role,
   };
+
   const user = await User.create(newUserData);
-  const { accessToken, refreshToken } = generateTokens(user);
-  await storeRefreshSession(user._id, refreshToken);
-  return {
-    user,
-    accessToken,
-    refreshToken,
-  };
+
+  return user;
 };
 
 const loginUser = async (user) => {

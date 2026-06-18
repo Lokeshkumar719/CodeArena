@@ -18,24 +18,15 @@ const createProblem = asyncHandler(async (req, res) => {
   const { referenceSolution, visibleTestCases, hiddenTestCases } = req.body;
 
   if (!Array.isArray(referenceSolution)) {
-    throw new ApiError(
-      STATUS_CODES.BAD_REQUEST,
-      "Reference solution is required",
-    );
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Reference solution is required');
   }
 
   if (!Array.isArray(visibleTestCases)) {
-    throw new ApiError(
-      STATUS_CODES.BAD_REQUEST,
-      "Visible testcases are required",
-    );
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Visible testcases are required');
   }
 
   if (!Array.isArray(hiddenTestCases)) {
-    throw new ApiError(
-      STATUS_CODES.BAD_REQUEST,
-      "Hidden testcases are required",
-    );
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Hidden testcases are required');
   }
 
   // validate reference solutions against all testcases
@@ -53,7 +44,7 @@ const createProblem = asyncHandler(async (req, res) => {
 
   return res.status(STATUS_CODES.CREATED).json({
     success: true,
-    message: "Problem created successfully",
+    message: 'Problem created successfully',
   });
 });
 
@@ -65,30 +56,21 @@ const updateProblem = asyncHandler(async (req, res) => {
   const { referenceSolution, visibleTestCases, hiddenTestCases } = req.body;
 
   if (!Array.isArray(referenceSolution)) {
-    throw new ApiError(
-      STATUS_CODES.BAD_REQUEST,
-      "Reference solution is required",
-    );
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Reference solution is required');
   }
 
   if (!Array.isArray(visibleTestCases)) {
-    throw new ApiError(
-      STATUS_CODES.BAD_REQUEST,
-      "Visible testcases are required",
-    );
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Visible testcases are required');
   }
 
   if (!Array.isArray(hiddenTestCases)) {
-    throw new ApiError(
-      STATUS_CODES.BAD_REQUEST,
-      "Hidden testcases are required",
-    );
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Hidden testcases are required');
   }
 
   const dsaProblem = await Problem.findById(id);
 
   if (!dsaProblem) {
-    throw new ApiError(STATUS_CODES.NOT_FOUND, "Problem not found");
+    throw new ApiError(STATUS_CODES.NOT_FOUND, 'Problem not found');
   }
 
   // validate reference solutions against all testcases
@@ -101,14 +83,13 @@ const updateProblem = asyncHandler(async (req, res) => {
     { ...req.body },
     {
       runValidators: true,
-      returnDocument: "after",
-    },
+      returnDocument: 'after',
+    }
   );
-
 
   return res.status(STATUS_CODES.OK).json({
     success: true,
-    message: "Problem updated successfully",
+    message: 'Problem updated successfully',
     data: newProblem,
   });
 });
@@ -121,7 +102,7 @@ const deleteProblem = asyncHandler(async (req, res) => {
   const problemToDelete = await Problem.findById(id);
 
   if (!problemToDelete) {
-    throw new ApiError(STATUS_CODES.NOT_FOUND, "Problem not found");
+    throw new ApiError(STATUS_CODES.NOT_FOUND, 'Problem not found');
   }
 
   // delete related submissions
@@ -141,7 +122,7 @@ const deleteProblem = asyncHandler(async (req, res) => {
       $pull: {
         problemSolved: id,
       },
-    },
+    }
   );
 
   // Save released number
@@ -154,7 +135,7 @@ const deleteProblem = asyncHandler(async (req, res) => {
 
   return res.status(STATUS_CODES.OK).json({
     success: true,
-    message: "Problem deleted successfully",
+    message: 'Problem deleted successfully',
   });
 });
 
@@ -164,11 +145,11 @@ const getProblemByIdAdmin = asyncHandler(async (req, res) => {
   validateObjectId(id);
 
   const reqdProblem = await Problem.findById(id).select(
-    "_id problemNo title description inputFormat outputFormat constraints timeLimit memoryLimit difficulty tags visibleTestCases hiddenTestCases startCode referenceSolution",
+    '_id problemNo title description inputFormat outputFormat constraints timeLimit memoryLimit difficulty tags visibleTestCases hiddenTestCases startCode referenceSolution'
   );
 
   if (!reqdProblem) {
-    throw new ApiError(STATUS_CODES.NOT_FOUND, "Problem not found");
+    throw new ApiError(STATUS_CODES.NOT_FOUND, 'Problem not found');
   }
 
   const responseData = await attachVideoDetails(reqdProblem, id);
@@ -185,11 +166,11 @@ const getProblemById = asyncHandler(async (req, res) => {
   validateObjectId(id);
 
   const reqdProblem = await Problem.findById(id).select(
-    "_id problemNo title description inputFormat outputFormat constraints timeLimit memoryLimit difficulty tags visibleTestCases startCode referenceSolution",
+    '_id problemNo title description inputFormat outputFormat constraints timeLimit memoryLimit difficulty tags visibleTestCases startCode referenceSolution'
   );
 
   if (!reqdProblem) {
-    throw new ApiError(STATUS_CODES.NOT_FOUND, "Problem not found");
+    throw new ApiError(STATUS_CODES.NOT_FOUND, 'Problem not found');
   }
 
   const responseData = await attachVideoDetails(reqdProblem, id);
@@ -200,12 +181,6 @@ const getProblemById = asyncHandler(async (req, res) => {
   });
 });
 
-
-/**
- * GET /problems
- * Controller is intentionally thin — only handles HTTP layer concerns.
- * All logic lives in the service.
- */
 async function getProblems(req, res) {
   try {
     // Auth middleware guarantees req.user exists for protected routes
@@ -225,10 +200,10 @@ async function getProblems(req, res) {
       ...result.data,
     });
   } catch (err) {
-    console.error("[listProblems] Unexpected error:", err);
+    console.error('[listProblems] Unexpected error:', err);
     return res.status(500).json({
       success: false,
-      errors: ["Internal server error. Please try again."],
+      errors: ['Internal server error. Please try again.'],
     });
   }
 }
@@ -236,8 +211,8 @@ async function getProblems(req, res) {
 const solvedProblems = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const user = await User.findById(userId).populate({
-    path: "problemSolved",
-    select: "_id title difficulty tags",
+    path: 'problemSolved',
+    select: '_id title difficulty tags',
   });
   return res.status(STATUS_CODES.OK).json({
     success: true,

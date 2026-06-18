@@ -7,8 +7,8 @@ const clearAuthCookies = (res) => {
     sameSite: isProduction ? 'none' : 'strict',
   };
 
-  res.clearCookie('accessToken',cookieOptions);
-  res.clearCookie('refreshToken',cookieOptions);
+  res.clearCookie('accessToken', cookieOptions);
+  res.clearCookie('refreshToken', cookieOptions);
 };
 
 module.exports = clearAuthCookies;

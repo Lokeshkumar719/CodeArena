@@ -1,64 +1,59 @@
-import { useEffect, useState, useCallback, useRef } from "react";
-import { NavLink } from "react-router";
-import { useDispatch, useSelector } from "react-redux";
-import axiosClient from "../utils/axiosClient";
-import { logoutUser } from "../authSlice";
-import toast from "react-hot-toast";
-import ProblemListSkeleton from "../components/skeletons/ProblemListSkeleton";
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { NavLink } from 'react-router';
+import { useDispatch, useSelector } from 'react-redux';
+import axiosClient from '../utils/axiosClient';
+import { logoutUser } from '../authSlice';
+import toast from 'react-hot-toast';
+import ProblemListSkeleton from '../components/skeletons/ProblemListSkeleton';
 
-import useDebounce from "../hooks/useDebounce";
-import CustomSelect from "../components/home/CustomSelect";
-import Chevron from "../components/home/Chevron";
-import ProblemCard from "../components/home/ProblemCard";
+import useDebounce from '../hooks/useDebounce';
+import CustomSelect from '../components/home/CustomSelect';
+import Chevron from '../components/home/Chevron';
+import ProblemCard from '../components/home/ProblemCard';
 import UserDropdown from '../components/home/UserDropdown';
 import Pagination from '../components/home/Pagination';
 
 import { tagOptions } from '../constants/problemTags';
-import {
-  PAGE_LIMIT,
-  difficultyOptions,
-  statusOptions,
-} from '../constants/filterOptions';
+import { PAGE_LIMIT, difficultyOptions, statusOptions } from '../constants/filterOptions';
 
-import { s } from "../styles/pages/homepageStyles";
+import { s } from '../styles/pages/homepageStyles';
 
 const getDifficultyStyle = (difficulty) => {
   const base = {
-    borderRadius: "999px",
-    fontSize: "12px",
+    borderRadius: '999px',
+    fontSize: '12px',
     fontWeight: 600,
-    padding: "4px 12px",
+    padding: '4px 12px',
   };
   const styles = {
     easy: {
-      background: "rgba(34,197,94,0.1)",
-      color: "#22c55e",
-      border: "1px solid rgba(34,197,94,0.2)",
+      background: 'rgba(34,197,94,0.1)',
+      color: '#22c55e',
+      border: '1px solid rgba(34,197,94,0.2)',
     },
     medium: {
-      background: "rgba(234,179,8,0.1)",
-      color: "#eab308",
-      border: "1px solid rgba(234,179,8,0.2)",
+      background: 'rgba(234,179,8,0.1)',
+      color: '#eab308',
+      border: '1px solid rgba(234,179,8,0.2)',
     },
     hard: {
-      background: "rgba(239,68,68,0.1)",
-      color: "#ef4444",
-      border: "1px solid rgba(239,68,68,0.2)",
+      background: 'rgba(239,68,68,0.1)',
+      color: '#ef4444',
+      border: '1px solid rgba(239,68,68,0.2)',
     },
   };
   return {
     ...base,
     ...(styles[difficulty?.toLowerCase()] || {
-      background: "rgba(99,102,241,0.1)",
-      color: "#a5b4fc",
-      border: "1px solid rgba(99,102,241,0.2)",
+      background: 'rgba(99,102,241,0.1)',
+      color: '#a5b4fc',
+      border: '1px solid rgba(99,102,241,0.2)',
     }),
   };
 };
 
 // ── Generic single-select dropdown (replaces <select>) ────────────────────
 // Renders identically on Windows, macOS, Linux — no OS chrome involved.
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -80,8 +75,7 @@ function Homepage() {
   // "difficulty" | "status" | "tags" | "user" | null
   const [openPanel, setOpenPanel] = useState(null);
 
-  const toggle = (panel) =>
-    setOpenPanel((prev) => (prev === panel ? null : panel));
+  const toggle = (panel) => setOpenPanel((prev) => (prev === panel ? null : panel));
 
   // ── Refs for outside-click ────────────────────────────────────────────────
   const difficultyRef = useRef(null);
@@ -96,29 +90,29 @@ function Homepage() {
         setOpenPanel(null);
       }
     };
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
   // ── Filter + search state ─────────────────────────────────────────────────
-  const [searchInput, setSearchInput] = useState("");
+  const [searchInput, setSearchInput] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({
-    difficulty: "",
+    difficulty: '',
     tags: [],
-    status: "",
+    status: '',
   });
 
   const debouncedSearch = useDebounce(searchInput, 400);
 
   const buildQueryString = useCallback((page, search, f) => {
     const params = new URLSearchParams();
-    params.set("page", page);
-    params.set("limit", PAGE_LIMIT);
-    if (search.trim()) params.set("q", search.trim());
-    if (f.difficulty) params.set("difficulty", f.difficulty);
-    if (f.tags.length > 0) params.set("tags", f.tags.join(","));
-    if (f.status) params.set("status", f.status);
+    params.set('page', page);
+    params.set('limit', PAGE_LIMIT);
+    if (search.trim()) params.set('q', search.trim());
+    if (f.difficulty) params.set('difficulty', f.difficulty);
+    if (f.tags.length > 0) params.set('tags', f.tags.join(','));
+    if (f.status) params.set('status', f.status);
     return params.toString();
   }, []);
 
@@ -131,93 +125,89 @@ function Homepage() {
         const qs = buildQueryString(page, search, f);
         const { data } = await axiosClient.get(`/problem/getProblems?${qs}`);
         if (!data.success) {
-          toast.error(data.errors?.[0] || "Invalid query");
+          toast.error(data.errors?.[0] || 'Invalid query');
           return;
         }
         setProblems(data.problems);
         setPagination(data.pagination);
       } catch (error) {
-        toast.error(
-          error.response?.data?.errors?.[0] || "Failed to fetch problems",
-        );
+        toast.error(error.response?.data?.errors?.[0] || 'Failed to fetch problems');
       } finally {
         setLoading(false);
       }
     },
-    [buildQueryString],
+    [buildQueryString]
   );
 
   useEffect(() => {
     fetchProblems(currentPage, debouncedSearch, filters);
   }, [currentPage, debouncedSearch, filters]);
 
-  const isFirstRender = useRef(true);
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
+  // const isFirstRender = useRef(true);
+  // useEffect(() => {
+  //   if (isFirstRender.current) {
+  //     isFirstRender.current = false;
+  //     return;
+  //   }
+  //   setCurrentPage(1);
+  // }, [debouncedSearch, filters]);
+
+  const updateFilter = (key, value) => {
     setCurrentPage(1);
-  }, [debouncedSearch, filters]);
 
-  const updateFilter = (key, value) =>
-    setFilters((prev) => ({ ...prev, [key]: value }));
-
-  const toggleTag = (tag) =>
     setFilters((prev) => ({
       ...prev,
-      tags: prev.tags.includes(tag)
-        ? prev.tags.filter((t) => t !== tag)
-        : [...prev.tags, tag],
+      [key]: value,
     }));
+  };
+
+  const toggleTag = (tag) => {
+    setCurrentPage(1);
+
+    setFilters((prev) => ({
+      ...prev,
+      tags: prev.tags.includes(tag) ? prev.tags.filter((t) => t !== tag) : [...prev.tags, tag],
+    }));
+  };
 
   const clearAllFilters = () => {
-    setSearchInput("");
-    setFilters({ difficulty: "", tags: [], status: "" });
+    setSearchInput('');
+    setFilters({ difficulty: '', tags: [], status: '' });
     setCurrentPage(1);
     setOpenPanel(null);
   };
 
   const hasActiveFilters =
-    searchInput.trim() ||
-    filters.difficulty ||
-    filters.tags.length > 0 ||
-    filters.status;
+    searchInput.trim() || filters.difficulty || filters.tags.length > 0 || filters.status;
 
   const handleLogout = async () => {
     const resultAction = await dispatch(logoutUser());
     if (logoutUser.fulfilled.match(resultAction)) {
-      toast.success("Logged out successfully", { duration: 500 });
+      toast.success('Logged out successfully', { duration: 500 });
       setOpenPanel(null);
       return;
     }
-    toast.error(resultAction.payload || "Logout failed");
+    toast.error(resultAction.payload || 'Logout failed');
   };
 
-  const {
-    currentPage: pg,
-    totalPages,
-    totalProblems,
-    hasNextPage,
-    hasPrevPage,
-  } = pagination;
+  const { currentPage: pg, totalPages, totalProblems, hasNextPage, hasPrevPage } = pagination;
 
   return (
     <div style={s.page}>
       {/* ── Navbar ── */}
       <nav style={s.navbar}>
-        <NavLink to="/" style={{ textDecoration: "none" }}>
+        <NavLink to="/" style={{ textDecoration: 'none' }}>
           <span style={s.logo}>CodeArena</span>
         </NavLink>
 
-<UserDropdown
-  user={user}
-  openPanel={openPanel}
-  toggle={toggle}
-  setOpenPanel={setOpenPanel}
-  handleLogout={handleLogout}
-  userDropdownRef={userDropdownRef}
-/>
+        <UserDropdown
+          user={user}
+          openPanel={openPanel}
+          toggle={toggle}
+          setOpenPanel={setOpenPanel}
+          handleLogout={handleLogout}
+          userDropdownRef={userDropdownRef}
+        />
       </nav>
 
       <div style={s.main}>
@@ -238,10 +228,19 @@ function Homepage() {
             type="text"
             placeholder="Search by problem number or title…"
             value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
+            onChange={(e) => {
+              setCurrentPage(1);
+              setSearchInput(e.target.value);
+            }}
           />
           {searchInput && (
-            <button style={s.searchClear} onClick={() => setSearchInput("")}>
+            <button
+              style={s.searchClear}
+              onClick={() => {
+                setCurrentPage(1);
+                setSearchInput('');
+              }}
+            >
               ✕
             </button>
           )}
@@ -252,45 +251,41 @@ function Homepage() {
           {/* Difficulty — custom dropdown */}
           <CustomSelect
             value={filters.difficulty}
-            onChange={(v) => updateFilter("difficulty", v)}
+            onChange={(v) => updateFilter('difficulty', v)}
             options={difficultyOptions}
             placeholder="All Difficulties"
             dropdownRef={difficultyRef}
-            isOpen={openPanel === "difficulty"}
-            onToggle={() => toggle("difficulty")}
+            isOpen={openPanel === 'difficulty'}
+            onToggle={() => toggle('difficulty')}
           />
 
           {/* Status — custom dropdown */}
           <CustomSelect
             value={filters.status}
-            onChange={(v) => updateFilter("status", v)}
+            onChange={(v) => updateFilter('status', v)}
             options={statusOptions}
             placeholder="All Problems"
             dropdownRef={statusRef}
-            isOpen={openPanel === "status"}
-            onToggle={() => toggle("status")}
+            isOpen={openPanel === 'status'}
+            onToggle={() => toggle('status')}
           />
 
           {/* Tags — multi-select panel */}
           <div style={s.tagDropdownWrapper} ref={tagDropdownRef}>
-            <button
-              style={s.selectBtn}
-              onClick={() => toggle("tags")}
-              type="button"
-            >
+            <button style={s.selectBtn} onClick={() => toggle('tags')} type="button">
               <span
                 style={{
-                  color: filters.tags.length > 0 ? "#e2e8f0" : "#9ca3af",
+                  color: filters.tags.length > 0 ? '#e2e8f0' : '#9ca3af',
                 }}
               >
                 {filters.tags.length === 0
-                  ? "All Tags"
-                  : `${filters.tags.length} tag${filters.tags.length > 1 ? "s" : ""} selected`}
+                  ? 'All Tags'
+                  : `${filters.tags.length} tag${filters.tags.length > 1 ? 's' : ''} selected`}
               </span>
-              <Chevron open={openPanel === "tags"} />
+              <Chevron open={openPanel === 'tags'} />
             </button>
 
-            {openPanel === "tags" && (
+            {openPanel === 'tags' && (
               <div style={s.tagDropdownPanel}>
                 <div style={s.tagGrid}>
                   {tagOptions.map((tag) => {
@@ -313,7 +308,7 @@ function Homepage() {
                 {filters.tags.length > 0 && (
                   <button
                     style={s.clearTagsBtn}
-                    onClick={() => updateFilter("tags", [])}
+                    onClick={() => updateFilter('tags', [])}
                     type="button"
                   >
                     Clear tags
@@ -324,11 +319,7 @@ function Homepage() {
           </div>
 
           {hasActiveFilters && (
-            <button
-              style={s.clearAllBtn}
-              onClick={clearAllFilters}
-              type="button"
-            >
+            <button style={s.clearAllBtn} onClick={clearAllFilters} type="button">
               ✕ Clear all
             </button>
           )}
@@ -338,20 +329,16 @@ function Homepage() {
         {filters.tags.length > 0 && (
           <div
             style={{
-              display: "flex",
-              gap: "8px",
-              flexWrap: "wrap",
-              marginBottom: "20px",
+              display: 'flex',
+              gap: '8px',
+              flexWrap: 'wrap',
+              marginBottom: '20px',
             }}
           >
             {filters.tags.map((tag) => (
               <span key={tag} style={s.activeTagPill}>
                 {tag}
-                <button
-                  style={s.removeTagBtn}
-                  onClick={() => toggleTag(tag)}
-                  type="button"
-                >
+                <button style={s.removeTagBtn} onClick={() => toggleTag(tag)} type="button">
                   ✕
                 </button>
               </span>
@@ -364,7 +351,7 @@ function Homepage() {
           <ProblemListSkeleton count={5} />
         ) : problems.length === 0 ? (
           <div style={s.emptyState}>
-            No problems found.{" "}
+            No problems found.{' '}
             {hasActiveFilters && (
               <button style={s.inlineClear} onClick={clearAllFilters}>
                 Clear filters
@@ -385,16 +372,16 @@ function Homepage() {
 
         {/* ── Pagination ── */}
         <Pagination
-  loading={loading}
-  problems={problems}
-  pg={pg}
-  totalPages={totalPages}
-  totalProblems={totalProblems}
-  hasNextPage={hasNextPage}
-  hasPrevPage={hasPrevPage}
-  setCurrentPage={setCurrentPage}
-  pageLimit={PAGE_LIMIT}
-/>
+          loading={loading}
+          problems={problems}
+          pg={pg}
+          totalPages={totalPages}
+          totalProblems={totalProblems}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          setCurrentPage={setCurrentPage}
+          pageLimit={PAGE_LIMIT}
+        />
       </div>
     </div>
   );

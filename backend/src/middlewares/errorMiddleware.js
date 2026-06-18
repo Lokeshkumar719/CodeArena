@@ -1,4 +1,4 @@
-const STATUS_CODES = require("../constants/statusCodes");
+const STATUS_CODES = require('../constants/statusCodes');
 
 const errorMiddleware = (err, req, res, next) => {
   if (err.code === 11000) {
@@ -13,11 +13,9 @@ const errorMiddleware = (err, req, res, next) => {
     console.error(err);
   }
 
-  return res.status(
-    err.statusCode || STATUS_CODES.INTERNAL_SERVER_ERROR,
-  ).json({
+  return res.status(err.statusCode || STATUS_CODES.INTERNAL_SERVER_ERROR).json({
     success: false,
-    message: err.message || "Internal Server Error",
+    message: err.message || 'Internal Server Error',
   });
 };
 

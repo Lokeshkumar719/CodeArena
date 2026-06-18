@@ -23,17 +23,14 @@ const generateUploadSignature = asyncHandler(async (req, res) => {
   // verify problem exists
   const problem = await Problem.findById(problemId);
   if (!problem) {
-    throw new ApiError(STATUS_CODES.NOT_FOUND, "Problem not found");
+    throw new ApiError(STATUS_CODES.NOT_FOUND, 'Problem not found');
   }
   // allow only one video solution per problem
   const existingVideo = await SolutionVideo.findOne({
     problemId,
   });
   if (existingVideo) {
-    throw new ApiError(
-      STATUS_CODES.CONFLICT,
-      "Video solution already exists for this problem",
-    );
+    throw new ApiError(STATUS_CODES.CONFLICT, 'Video solution already exists for this problem');
   }
   // generate unique public_id for video
   const timestamp = Math.round(new Date().getTime() / 1000);
@@ -46,7 +43,7 @@ const generateUploadSignature = asyncHandler(async (req, res) => {
   // generate cloudinary signature
   const signature = cloudinary.utils.api_sign_request(
     uploadParams,
-    process.env.CLOUDINARY_API_SECRET,
+    process.env.CLOUDINARY_API_SECRET
   );
   return res.status(STATUS_CODES.OK).json({
     success: true,
@@ -68,30 +65,24 @@ const saveVideoMetadata = asyncHandler(async (req, res) => {
   // verify problem exists
   const problem = await Problem.findById(problemId);
   if (!problem) {
-    throw new ApiError(STATUS_CODES.NOT_FOUND, "Problem not found");
+    throw new ApiError(STATUS_CODES.NOT_FOUND, 'Problem not found');
   }
   // allow only one video solution per problem
   const existingVideo = await SolutionVideo.findOne({
     problemId,
   });
   if (existingVideo) {
-    throw new ApiError(
-      STATUS_CODES.CONFLICT,
-      "Video solution already exists for this problem",
-    );
+    throw new ApiError(STATUS_CODES.CONFLICT, 'Video solution already exists for this problem');
   }
   // verify upload exists on cloudinary
   const cloudinaryResource = await cloudinary.api.resource(cloudinaryPublicId, {
-    resource_type: "video",
+    resource_type: 'video',
   });
   if (!cloudinaryResource) {
-    throw new ApiError(
-      STATUS_CODES.BAD_REQUEST,
-      "Video not found on Cloudinary",
-    );
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Video not found on Cloudinary');
   }
   const thumbnailUrl = cloudinary.image(cloudinaryResource.public_id, {
-    resource_type: "video",
+    resource_type: 'video',
   });
   // create solution video record
   const videoSolution = await SolutionVideo.create({
@@ -105,7 +96,7 @@ const saveVideoMetadata = asyncHandler(async (req, res) => {
 
   return res.status(STATUS_CODES.CREATED).json({
     success: true,
-    message: "Video solution saved successfully",
+    message: 'Video solution saved successfully',
     data: {
       id: videoSolution._id,
       thumbnailUrl: videoSolution.thumbnailUrl,
@@ -135,17 +126,17 @@ const deleteVideo = asyncHandler(async (req, res) => {
   });
 
   if (!video) {
-    throw new ApiError(STATUS_CODES.NOT_FOUND, "Video not uploaded for this");
+    throw new ApiError(STATUS_CODES.NOT_FOUND, 'Video not uploaded for this');
   }
 
   await cloudinary.uploader.destroy(video.cloudinaryPublicId, {
-    resource_type: "video",
+    resource_type: 'video',
     invalidate: true,
   });
 
   return res.status(STATUS_CODES.OK).json({
     success: true,
-    message: "Video deleted successfully",
+    message: 'Video deleted successfully',
   });
 });
 

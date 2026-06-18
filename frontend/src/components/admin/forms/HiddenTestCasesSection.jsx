@@ -13,7 +13,7 @@ function HiddenTestCasesSection({
         <h2 style={s.cardTitle}>Hidden Test Cases</h2>
 
         <button
-          type='button'
+          type="button"
           style={s.addBtn}
           onClick={() =>
             appendHidden({
@@ -30,7 +30,7 @@ function HiddenTestCasesSection({
         fields={hiddenFields}
         register={register}
         remove={removeHidden}
-        type='hiddenTestCases'
+        type="hiddenTestCases"
       />
     </div>
   );
