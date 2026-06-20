@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import axiosClient from '../../utils/axiosClient';
@@ -40,9 +40,9 @@ const problemSchema = z.object({
       })
     )
     .min(1),
-  hiddenTestCases: z
-    .array(z.object({ input: z.string().min(1), output: z.string().min(1) }))
-    .min(1),
+  hiddenTestCasesZip: z.any().refine((file) => file instanceof File, {
+    message: 'Hidden testcases ZIP is required',
+  }),
   startCode: z
     .array(
       z.object({
@@ -72,6 +72,7 @@ function CreateProblem() {
     handleSubmit,
     watch,
     reset,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(problemSchema),
@@ -84,7 +85,6 @@ function CreateProblem() {
       timeLimit: 2,
       memoryLimit: 262144,
       visibleTestCases: [{ input: '', output: '', explanation: '' }],
-      hiddenTestCases: [{ input: '', output: '' }],
       startCode: languageOptions.map((lang) => ({
         language: lang.value,
         initialCode: '',
@@ -101,11 +101,6 @@ function CreateProblem() {
     append: appendVisible,
     remove: removeVisible,
   } = useFieldArray({ control, name: 'visibleTestCases' });
-  const {
-    fields: hiddenFields,
-    append: appendHidden,
-    remove: removeHidden,
-  } = useFieldArray({ control, name: 'hiddenTestCases' });
 
   const watchedData = watch();
 
@@ -126,17 +121,50 @@ function CreateProblem() {
   const onSubmit = async (data) => {
     try {
       setIsSubmitting(true);
-      await axiosClient.post('/problem/create', data);
+
+      const formData = new FormData();
+
+      formData.append('title', data.title);
+      formData.append('description', data.description);
+      formData.append('inputFormat', data.inputFormat);
+      formData.append('outputFormat', data.outputFormat);
+      formData.append('constraints', data.constraints);
+      formData.append('difficulty', data.difficulty);
+      formData.append('timeLimit', data.timeLimit);
+      formData.append('memoryLimit', data.memoryLimit);
+
+      formData.append('tags', JSON.stringify(data.tags));
+
+      formData.append('visibleTestCases', JSON.stringify(data.visibleTestCases));
+
+      formData.append('startCode', JSON.stringify(data.startCode));
+
+      formData.append('referenceSolution', JSON.stringify(data.referenceSolution));
+
+      formData.append('hiddenTestCasesZip', data.hiddenTestCasesZip);
+
+      await axiosClient.post('/problem/create', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
       localStorage.removeItem('createProblemDraft');
+
       toast.success('Problem created successfully!');
+
       navigate('/admin');
     } catch (error) {
       if (error.rateLimitedFor) {
         startCooldown(error.rateLimitedFor);
+
         toast.error(error.response?.data?.message || 'Too many requests. Please slow down.');
+
         return;
       }
+
       toast.error(getErrorMessage(error));
+
       if (import.meta.env.DEV) console.error(error);
     } finally {
       setIsSubmitting(false);
@@ -194,15 +222,9 @@ function CreateProblem() {
             TestCaseBlock={TestCaseBlock}
           />
 
-          <HiddenTestCasesSection
-            appendHidden={appendHidden}
-            hiddenFields={hiddenFields}
-            register={register}
-            removeHidden={removeHidden}
-            TestCaseBlock={TestCaseBlock}
-          />
-
           {/* Code Templates */}
+          <HiddenTestCasesSection setValue={setValue} watch={watch} />
+
           <CodeTemplatesSection languageOptions={languageOptions} register={register} />
 
           {/* Rate limit banner — shown above submit so admin sees it clearly */}

@@ -6,6 +6,7 @@ const asyncHandler = require('../../utils/asyncHandler');
 const getExecutionLimits = require('../../utils/judge/getExecutionLimits');
 const ApiError = require('../../utils/ApiError');
 const validateSubmissionInput = require('../../utils/validation/validateSubmissionInput');
+const extractHiddenTestcasesFromR2 = require('../../services/storage/extractHiddenTestcasesFromR2');
 
 const executeCode = require('../../services/execution/executionService');
 
@@ -33,8 +34,9 @@ const submitCode = asyncHandler(async (req, res) => {
     throw new ApiError(STATUS_CODES.NOT_FOUND, 'Problem not found');
   }
 
-  // combine visible + hidden testcases
-  const allTestcases = [...problem.visibleTestCases, ...problem.hiddenTestCases];
+  const hiddenTestCases = await extractHiddenTestcasesFromR2(problem.hiddenTestCasesZip);
+
+  const allTestcases = [...problem.visibleTestCases, ...hiddenTestCases];
 
   // create initial pending submission
   const submittedResult = await Submission.create({

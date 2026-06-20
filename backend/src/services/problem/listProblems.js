@@ -1,8 +1,8 @@
-// services/problem.service.js
 const mongoose = require('mongoose');
 
 const { Problem } = require('../../models/problem');
 const Submission = require('../../models/submission');
+const SolutionVideo = require('../../models/solutionVideo');
 
 const { buildProblemQuery, buildPagination } = require('../../utils/problem/buildProblemQuery');
 
@@ -39,9 +39,12 @@ async function listProblems(queryParams, userId) {
     }
   }
 
-  const [totalProblems, problems] = await Promise.all([
+  const [totalProblems, problems, videos] = await Promise.all([
     Problem.countDocuments(filter),
+
     Problem.find(filter, LISTING_PROJECTION).sort({ problemNo: 1 }).skip(skip).limit(limit).lean(),
+
+    SolutionVideo.find({}, { problemId: 1, _id: 0 }).lean(),
   ]);
 
   const totalPages = Math.ceil(totalProblems / limit);
@@ -62,10 +65,15 @@ async function listProblems(queryParams, userId) {
     }
   }
 
+  const videoSet = new Set(videos.map((video) => video.problemId.toString()));
+
   const annotated = problems.map((p) => ({
     ...p,
+
     isSolved:
       status === 'solved' ? true : status === 'unsolved' ? false : solvedSet.has(p._id.toString()),
+
+    hasVideo: videoSet.has(p._id.toString()),
   }));
 
   return {
@@ -79,6 +87,7 @@ async function listProblems(queryParams, userId) {
         hasPrevPage: page > 1,
         limit,
       },
+
       problems: annotated,
     },
   };
@@ -91,7 +100,10 @@ async function getSolvedProblemIds(userId) {
   ).lean();
 
   const uniqueIds = [...new Set(accepted.map((s) => s.problemId.toString()))];
+
   return uniqueIds.map((id) => new mongoose.Types.ObjectId(id));
 }
 
-module.exports = { listProblems };
+module.exports = {
+  listProblems,
+};
