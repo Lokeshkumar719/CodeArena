@@ -1,5 +1,3 @@
-const cloudinary = require('cloudinary').v2;
-
 const { Problem } = require('../../models/problem');
 const SolutionVideo = require('../../models/solutionVideo');
 
@@ -7,7 +5,6 @@ const asyncHandler = require('../../utils/asyncHandler');
 const STATUS_CODES = require('../../constants/statusCodes');
 const ApiError = require('../../utils/ApiError');
 const validateObjectId = require('../../utils/validation/validateObjectId');
-
 
 const uploadVideo = asyncHandler(async (req, res) => {
   const { problemId } = req.params;
@@ -20,22 +17,15 @@ const uploadVideo = asyncHandler(async (req, res) => {
   const problem = await Problem.findById(problemId);
 
   if (!problem) {
-    throw new ApiError(
-      STATUS_CODES.NOT_FOUND,
-      'Problem not found'
-    );
+    throw new ApiError(STATUS_CODES.NOT_FOUND, 'Problem not found');
   }
 
   const existingVideo = await SolutionVideo.findOne({
     problemId,
   });
 
- 
   if (existingVideo) {
-    throw new ApiError(
-      STATUS_CODES.CONFLICT,
-      'Video solution already exists for this problem'
-    );
+    throw new ApiError(STATUS_CODES.CONFLICT, 'Video solution already exists for this problem');
   }
 
   const video = await SolutionVideo.create({
@@ -72,10 +62,7 @@ const updateVideo = asyncHandler(async (req, res) => {
   );
 
   if (!video) {
-    throw new ApiError(
-      STATUS_CODES.NOT_FOUND,
-      'Video solution not found'
-    );
+    throw new ApiError(STATUS_CODES.NOT_FOUND, 'Video solution not found');
   }
 
   return res.status(STATUS_CODES.OK).json({
@@ -95,10 +82,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
   });
 
   if (!video) {
-    throw new ApiError(
-      STATUS_CODES.NOT_FOUND,
-      'Video solution not found'
-    );
+    throw new ApiError(STATUS_CODES.NOT_FOUND, 'Video solution not found');
   }
 
   return res.status(STATUS_CODES.OK).json({

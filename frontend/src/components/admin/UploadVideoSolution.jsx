@@ -23,12 +23,9 @@ function UploadVideoSolution() {
     try {
       setLoading(true);
 
-      const response = await axiosClient.post(
-        `/video/upload/${problemId}`,
-        {
-          youtubeUrl: data.youtubeUrl.trim(),
-        }
-      );
+      const response = await axiosClient.post(`/video/upload/${problemId}`, {
+        youtubeUrl: data.youtubeUrl.trim(),
+      });
 
       toast.success(response.data.message);
 
@@ -38,10 +35,7 @@ function UploadVideoSolution() {
         navigate('/admin/video');
       }, 1000);
     } catch (error) {
-      toast.error(
-        error.response?.data?.message ||
-          'Failed to upload video solution'
-      );
+      toast.error(error.response?.data?.message || 'Failed to upload video solution');
     } finally {
       setLoading(false);
     }
@@ -52,87 +46,56 @@ function UploadVideoSolution() {
       {/* Navbar */}
       <nav style={s.navbar}>
         <div style={s.navLeft}>
-          <button
-            onClick={() => navigate(-1)}
-            style={s.backBtn}
-          >
-            <svg
-              width='16'
-              height='16'
-              fill='none'
-              viewBox='0 0 24 24'
-              stroke='currentColor'
-            >
+          <button onClick={() => navigate(-1)} style={s.backBtn}>
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
-                strokeLinecap='round'
-                strokeLinejoin='round'
+                strokeLinecap="round"
+                strokeLinejoin="round"
                 strokeWidth={2}
-                d='M15 19l-7-7 7-7'
+                d="M15 19l-7-7 7-7"
               />
             </svg>
             Back
           </button>
 
-          <NavLink
-            to='/'
-            style={{ textDecoration: 'none' }}
-          >
+          <NavLink to="/" style={{ textDecoration: 'none' }}>
             <span style={s.logo}>CodeArena</span>
           </NavLink>
         </div>
 
-        <NavLink
-          to='/admin'
-          style={s.adminLink}
-        >
-          <span style={s.adminBox}>
-            Admin Dashboard
-          </span>
+        <NavLink to="/admin" style={s.adminLink}>
+          <span style={s.adminBox}>Admin Dashboard</span>
         </NavLink>
       </nav>
 
       <div style={s.main}>
         <div style={s.header}>
-          <h1 style={s.heading}>
-            Upload Video Solution
-          </h1>
+          <h1 style={s.heading}>Upload Video Solution</h1>
 
-          <p style={s.subheading}>
-            Add a YouTube editorial video for this
-            problem
-          </p>
+          <p style={s.subheading}>Add a YouTube editorial video for this problem</p>
         </div>
 
         <div style={s.card}>
-          <form
-            onSubmit={handleSubmit(onSubmit)}
-          >
+          <form onSubmit={handleSubmit(onSubmit)}>
             <div style={s.formGroup}>
-              <label style={s.label}>
-                YouTube URL
-              </label>
+              <label style={s.label}>YouTube URL</label>
 
               <input
-                type='url'
-                placeholder='https://www.youtube.com/watch?v=...'
+                type="url"
+                placeholder="https://www.youtube.com/watch?v=..."
                 style={s.input}
                 disabled={loading}
                 {...register('youtubeUrl', {
-                  required:
-                    'YouTube URL is required',
+                  required: 'YouTube URL is required',
 
                   validate: (value) => {
                     try {
-                      const parsedUrl =
-                        new URL(value);
+                      const parsedUrl = new URL(value);
 
                       return (
-                        parsedUrl.hostname ===
-                          'www.youtube.com' ||
-                        parsedUrl.hostname ===
-                          'youtube.com' ||
-                        parsedUrl.hostname ===
-                          'youtu.be' ||
+                        parsedUrl.hostname === 'www.youtube.com' ||
+                        parsedUrl.hostname === 'youtube.com' ||
+                        parsedUrl.hostname === 'youtu.be' ||
                         'Invalid YouTube URL'
                       );
                     } catch {
@@ -142,11 +105,7 @@ function UploadVideoSolution() {
                 })}
               />
 
-              {errors.youtubeUrl && (
-                <p style={s.errorText}>
-                  {errors.youtubeUrl.message}
-                </p>
-              )}
+              {errors.youtubeUrl && <p style={s.errorText}>{errors.youtubeUrl.message}</p>}
             </div>
 
             <div
@@ -157,19 +116,15 @@ function UploadVideoSolution() {
               }}
             >
               <button
-                type='submit'
+                type="submit"
                 disabled={loading}
                 style={{
                   ...s.submitBtn,
                   opacity: loading ? 0.6 : 1,
-                  cursor: loading
-                    ? 'not-allowed'
-                    : 'pointer',
+                  cursor: loading ? 'not-allowed' : 'pointer',
                 }}
               >
-                {loading
-                  ? 'Saving...'
-                  : 'Save Video'}
+                {loading ? 'Saving...' : 'Save Video'}
               </button>
             </div>
           </form>

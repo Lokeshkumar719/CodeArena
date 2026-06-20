@@ -1,6 +1,7 @@
 const { submitBatch, submitToken } = require('../execution/judge0Service');
 
 const { JUDGE0_STATUS } = require('../../constants/judgeStatus');
+const { MAX_BATCH_SIZE } = require('../../constants/judge0');
 
 const getSubmissionResult = require('../../utils/judge/getSubmissionResult');
 
@@ -19,9 +20,17 @@ const executeCode = async (
     ...executionLimits,
   }));
 
-  const submitResult = await submitBatch(submissions);
-  const resultTokens = submitResult.map((value) => value.token);
-  const testResult = await submitToken(resultTokens);
+  // submit in batch of 20 testCases
+  const testResult = [];
+  for (let i = 0; i < submissions.length; i += MAX_BATCH_SIZE) {
+    const batch = submissions.slice(i, i + MAX_BATCH_SIZE);
+    const submitResult = await submitBatch(batch);
+
+    const resultTokens = submitResult.map((value) => value.token);
+    const batchResult = await submitToken(resultTokens);
+
+    testResult.push(...batchResult);
+  }
 
   let testCasesPassed = 0;
   let runtime = 0;
@@ -40,13 +49,12 @@ const executeCode = async (
     }
     testCasesPassed++;
     if (test.time) {
-      runtime += parseFloat(test.time);
+      runtime = Math.max(runtime, parseFloat(test.time));
     }
     memory = Math.max(memory, test.memory || 0);
   }
 
   return {
-    // true && {a:1} returns {a:1} but false && {a:1} returns false
     ...(includeTestResult && {
       testResult,
     }),

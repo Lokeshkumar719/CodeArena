@@ -42,11 +42,7 @@ async function listProblems(queryParams, userId) {
   const [totalProblems, problems, videos] = await Promise.all([
     Problem.countDocuments(filter),
 
-    Problem.find(filter, LISTING_PROJECTION)
-      .sort({ problemNo: 1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
+    Problem.find(filter, LISTING_PROJECTION).sort({ problemNo: 1 }).skip(skip).limit(limit).lean(),
 
     SolutionVideo.find({}, { problemId: 1, _id: 0 }).lean(),
   ]);
@@ -75,11 +71,7 @@ async function listProblems(queryParams, userId) {
     ...p,
 
     isSolved:
-      status === 'solved'
-        ? true
-        : status === 'unsolved'
-          ? false
-          : solvedSet.has(p._id.toString()),
+      status === 'solved' ? true : status === 'unsolved' ? false : solvedSet.has(p._id.toString()),
 
     hasVideo: videoSet.has(p._id.toString()),
   }));

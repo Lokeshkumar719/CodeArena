@@ -47,19 +47,19 @@ export const s = {
   },
 
   // YouTube Player
- playerWrap: {
-  width: '100%',
-  aspectRatio: '16 / 9',
-  borderRadius: '16px',
-  overflow: 'hidden',
-  border: '1px solid #1e2738',
-  background: '#000',
-},
+  playerWrap: {
+    width: '100%',
+    aspectRatio: '16 / 9',
+    borderRadius: '16px',
+    overflow: 'hidden',
+    border: '1px solid #1e2738',
+    background: '#000',
+  },
 
   iframe: {
-  width: '100%',
-  height: '100%',
-  border: 'none',
-  display: 'block',
-},
+    width: '100%',
+    height: '100%',
+    border: 'none',
+    display: 'block',
+  },
 };
