@@ -260,12 +260,9 @@ const ProblemPage = () => {
                   <ProblemDescription problem={problem} getDifficultyBadge={getDifficultyBadge} />
                 )}
                 {activeLeftTab === 'editorial' && (
-                  <Editorial
-                    secureUrl={problem.secureUrl}
-                    thumbnailUrl={problem.thumbnailUrl}
-                    duration={problem.duration}
-                  />
+                  <Editorial youtubeUrl={problem.videoSolution?.youtubeUrl} />
                 )}
+
                 {activeLeftTab === 'solutions' && (
                   <div>
                     <p className="section-title">Solutions</p>
@@ -418,8 +415,8 @@ const ProblemPage = () => {
                   <span>Submit</span>
 
                   <div className="shortcut-keys">
-                    <kbd>{isMac? '⌘' : 'Ctrl'}</kbd>
-                    <kbd>{isMac? 'Return' : 'Enter'}</kbd>
+                    <kbd>{isMac ? '⌘' : 'Ctrl'}</kbd>
+                    <kbd>{isMac ? 'Return' : 'Enter'}</kbd>
                   </div>
                 </div>
               )}

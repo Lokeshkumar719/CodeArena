@@ -1,15 +1,20 @@
 const express = require('express');
-const adminMiddleware = require('../../middlewares/auth/adminMiddleware');
+
 const authMiddleware = require('../../middlewares/auth/authMiddleware');
-const videoRouter = express.Router();
+const adminMiddleware = require('../../middlewares/auth/adminMiddleware');
+
 const {
-  generateUploadSignature,
-  saveVideoMetadata,
+  uploadVideo,
+  updateVideo,
   deleteVideo,
 } = require('../../controllers/video/videoController');
 
-videoRouter.get('/create/:problemId', authMiddleware, adminMiddleware, generateUploadSignature);
-videoRouter.post('/save', authMiddleware, adminMiddleware, saveVideoMetadata);
+const videoRouter = express.Router();
+
+videoRouter.post('/upload/:problemId', authMiddleware, adminMiddleware, uploadVideo);
+
+videoRouter.put('/update/:problemId', authMiddleware, adminMiddleware, updateVideo);
+
 videoRouter.delete('/delete/:problemId', authMiddleware, adminMiddleware, deleteVideo);
 
 module.exports = videoRouter;

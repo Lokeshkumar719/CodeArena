@@ -9,13 +9,30 @@ const STATUS_CODES = require('../../constants/statusCodes');
 const ApiError = require('../../utils/ApiError');
 const validateObjectId = require('../../utils/validation/validateObjectId');
 const getNextProblemNo = require('../../utils/problem/getNextProblemNo');
+const uploadHiddenTestcasesZip = require('../../services/storage/uploadHiddenTestcasesZip');
 
 const validateReferenceSolutions = require('../../services/problem/validateReferenceSolutions');
 const attachVideoDetails = require('../../services/problem/attachVideoDetails');
 const { listProblems } = require('../../services/problem/listProblems');
+const extractHiddenTestcasesFromZip = require('../../services/storage/extractHiddenTestcasesFromZip');
+const deleteHiddenTestcasesZip = require('../../services/storage/deleteHiddenTestcasesZip');
+
+const { MAX_REFERENCE_VALIDATION_TESTCASES } = require('../../constants/judge0');
 
 const createProblem = asyncHandler(async (req, res) => {
-  const { referenceSolution, visibleTestCases, hiddenTestCases } = req.body;
+  let tags;
+  let visibleTestCases;
+  let startCode;
+  let referenceSolution;
+
+  try {
+    tags = JSON.parse(req.body.tags);
+    visibleTestCases = JSON.parse(req.body.visibleTestCases);
+    startCode = JSON.parse(req.body.startCode);
+    referenceSolution = JSON.parse(req.body.referenceSolution);
+  } catch {
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Invalid request payload');
+  }
 
   if (!Array.isArray(referenceSolution)) {
     throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Reference solution is required');
@@ -25,20 +42,44 @@ const createProblem = asyncHandler(async (req, res) => {
     throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Visible testcases are required');
   }
 
-  if (!Array.isArray(hiddenTestCases)) {
-    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Hidden testcases are required');
+  if (!req.file) {
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Hidden testcases ZIP is required');
   }
 
-  // validate reference solutions against all testcases
+  const hiddenTestCases = extractHiddenTestcasesFromZip(req.file.buffer);
+
   const allTestCases = [...visibleTestCases, ...hiddenTestCases];
 
-  await validateReferenceSolutions(referenceSolution, allTestCases);
+  const validationTestCases = allTestCases.slice(0, MAX_REFERENCE_VALIDATION_TESTCASES);
+
+  await validateReferenceSolutions(referenceSolution, validationTestCases);
 
   const problemNo = await getNextProblemNo();
 
+  const hiddenTestCasesZip = await uploadHiddenTestcasesZip(req.file.buffer, problemNo);
+
+  if (!hiddenTestCasesZip?.key) {
+    throw new ApiError(STATUS_CODES.INTERNAL_SERVER_ERROR, 'Failed to upload hidden testcases');
+  }
+
   await Problem.create({
+    title: req.body.title,
+    description: req.body.description,
+    inputFormat: req.body.inputFormat,
+    outputFormat: req.body.outputFormat,
+    constraints: req.body.constraints,
+
+    difficulty: req.body.difficulty,
+    timeLimit: Number(req.body.timeLimit),
+    memoryLimit: Number(req.body.memoryLimit),
+
+    tags,
+    visibleTestCases,
+    startCode,
+    referenceSolution,
+
     problemNo,
-    ...req.body,
+    hiddenTestCasesZip,
     problemCreator: req.user._id,
   });
 
@@ -53,7 +94,19 @@ const updateProblem = asyncHandler(async (req, res) => {
 
   validateObjectId(id);
 
-  const { referenceSolution, visibleTestCases, hiddenTestCases } = req.body;
+  let tags;
+  let visibleTestCases;
+  let startCode;
+  let referenceSolution;
+
+  try {
+    tags = JSON.parse(req.body.tags);
+    visibleTestCases = JSON.parse(req.body.visibleTestCases);
+    startCode = JSON.parse(req.body.startCode);
+    referenceSolution = JSON.parse(req.body.referenceSolution);
+  } catch {
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Invalid request payload');
+  }
 
   if (!Array.isArray(referenceSolution)) {
     throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Reference solution is required');
@@ -63,8 +116,8 @@ const updateProblem = asyncHandler(async (req, res) => {
     throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Visible testcases are required');
   }
 
-  if (!Array.isArray(hiddenTestCases)) {
-    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Hidden testcases are required');
+  if (!req.file) {
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Hidden testcases ZIP is required');
   }
 
   const dsaProblem = await Problem.findById(id);
@@ -73,14 +126,36 @@ const updateProblem = asyncHandler(async (req, res) => {
     throw new ApiError(STATUS_CODES.NOT_FOUND, 'Problem not found');
   }
 
-  // validate reference solutions against all testcases
+  const hiddenTestCases = extractHiddenTestcasesFromZip(req.file.buffer);
+
   const allTestCases = [...visibleTestCases, ...hiddenTestCases];
 
-  await validateReferenceSolutions(referenceSolution, allTestCases);
+  const validationTestCases = allTestCases.slice(0, MAX_REFERENCE_VALIDATION_TESTCASES);
+
+  await validateReferenceSolutions(referenceSolution, validationTestCases);
+
+  const hiddenTestCasesZip = await uploadHiddenTestcasesZip(req.file.buffer, dsaProblem.problemNo);
 
   const newProblem = await Problem.findByIdAndUpdate(
     id,
-    { ...req.body },
+    {
+      title: req.body.title,
+      description: req.body.description,
+      inputFormat: req.body.inputFormat,
+      outputFormat: req.body.outputFormat,
+      constraints: req.body.constraints,
+
+      difficulty: req.body.difficulty,
+      timeLimit: Number(req.body.timeLimit),
+      memoryLimit: Number(req.body.memoryLimit),
+
+      tags,
+      visibleTestCases,
+      startCode,
+      referenceSolution,
+
+      hiddenTestCasesZip,
+    },
     {
       runValidators: true,
       returnDocument: 'after',
@@ -130,6 +205,10 @@ const deleteProblem = asyncHandler(async (req, res) => {
     value: problemToDelete.problemNo,
   });
 
+  // delete hidden testcase ZIP from R2
+
+  await deleteHiddenTestcasesZip(problemToDelete.hiddenTestCasesZip);
+
   // delete actual problem
   await Problem.findByIdAndDelete(id);
 
@@ -145,7 +224,7 @@ const getProblemByIdAdmin = asyncHandler(async (req, res) => {
   validateObjectId(id);
 
   const reqdProblem = await Problem.findById(id).select(
-    '_id problemNo title description inputFormat outputFormat constraints timeLimit memoryLimit difficulty tags visibleTestCases hiddenTestCases startCode referenceSolution'
+    '_id problemNo title description inputFormat outputFormat constraints timeLimit memoryLimit difficulty tags visibleTestCases hiddenTestCasesZip startCode referenceSolution'
   );
 
   if (!reqdProblem) {

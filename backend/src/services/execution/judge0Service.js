@@ -13,7 +13,10 @@ const waiting = (timer) => {
 };
 
 const handleJudge0Error = (error) => {
-  console.error(error);
+  console.error(
+    'Judge0 Error:',
+    error.response?.data?.error || error.response?.data?.message || error.message
+  );
 
   const judge0Unavailable =
     error.response?.status === 403 ||
@@ -28,7 +31,10 @@ const handleJudge0Error = (error) => {
     );
   }
 
-  throw error;
+  throw new ApiError(
+    STATUS_CODES.BAD_REQUEST,
+    error.response?.data?.error || error.response?.data?.message || 'Judge0 request failed'
+  );
 };
 
 const submitBatch = async (submissions) => {
@@ -75,9 +81,7 @@ const submitToken = async (resultTokens) => {
       const results = response.data;
       const submissions = results.submissions;
 
-      const isResultObtained = submissions.every(
-        (result) => result.status.id > 2
-      );
+      const isResultObtained = submissions.every((result) => result.status.id > 2);
 
       if (isResultObtained) {
         const decodedSubmissions = submissions.map((submission) => ({

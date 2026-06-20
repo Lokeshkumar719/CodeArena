@@ -8,7 +8,7 @@ const judge0Client = axios.create({
     'x-rapidapi-host': 'judge0-ce.p.rapidapi.com',
     'Content-Type': 'application/json',
   },
-  timeout: 60000,
+  timeout: 180000,
 });
 
 module.exports = judge0Client;
