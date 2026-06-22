@@ -47,9 +47,7 @@ const problemSchema = z.object({
     )
     .min(1, 'At least one visible test case required'),
 
-  hiddenTestCasesZip: z.any().refine((file) => file instanceof File, {
-    message: 'Hidden testcase ZIP is required',
-  }),
+  hiddenTestCasesZip: z.any().optional(),
 
   startCode: z
     .array(
@@ -78,6 +76,7 @@ function UpdateProblem() {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { cooldown, startCooldown } = useRateLimit();
+  const [existingZip, setExistingZip] = useState(null);
 
   const {
     register,
@@ -135,7 +134,7 @@ function UpdateProblem() {
         }
 
         const response = await axiosClient.get(`/problem/admin/problemById/${id}`);
-
+        setExistingZip(response.data.data.hiddenTestCasesZip);
         reset(response.data.data);
       } catch (error) {
         toast.error(getErrorMessage(error));
@@ -204,7 +203,9 @@ function UpdateProblem() {
       formData.append('startCode', JSON.stringify(data.startCode));
       formData.append('referenceSolution', JSON.stringify(data.referenceSolution));
 
-      formData.append('hiddenTestCasesZip', data.hiddenTestCasesZip);
+      if (data.hiddenTestCasesZip instanceof File) {
+        formData.append('hiddenTestCasesZip', data.hiddenTestCasesZip);
+      }
 
       await axiosClient.put(`/problem/update/${id}`, formData, {
         headers: {
@@ -278,7 +279,7 @@ function UpdateProblem() {
             TestCaseBlock={TestCaseBlock}
           />
 
-          <HiddenTestCasesSection setValue={setValue} watch={watch} />
+          <HiddenTestCasesSection setValue={setValue} watch={watch} existingZip={existingZip} />
 
           <CodeTemplatesSection languageOptions={languageOptions} register={register} />
 

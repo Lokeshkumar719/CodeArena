@@ -9,8 +9,9 @@ const STATUS_CODES = require('../../constants/statusCodes');
 const ApiError = require('../../utils/ApiError');
 const validateObjectId = require('../../utils/validation/validateObjectId');
 const getNextProblemNo = require('../../utils/problem/getNextProblemNo');
-const uploadHiddenTestcasesZip = require('../../services/storage/uploadHiddenTestcasesZip');
+const slugify = require('../../utils/problem/slugify');
 
+const uploadHiddenTestcasesZip = require('../../services/storage/uploadHiddenTestcasesZip');
 const validateReferenceSolutions = require('../../services/problem/validateReferenceSolutions');
 const attachVideoDetails = require('../../services/problem/attachVideoDetails');
 const { listProblems } = require('../../services/problem/listProblems');
@@ -54,7 +55,19 @@ const createProblem = asyncHandler(async (req, res) => {
 
   await validateReferenceSolutions(referenceSolution, validationTestCases);
 
+  const title = req.body.title.trim();
+
+  const existingProblem = await Problem.findOne({
+    title,
+  });
+
+  if (existingProblem) {
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Problem title already exists');
+  }
+
   const problemNo = await getNextProblemNo();
+
+  const slug = slugify(title);
 
   const hiddenTestCasesZip = await uploadHiddenTestcasesZip(req.file.buffer, problemNo);
 
@@ -63,7 +76,8 @@ const createProblem = asyncHandler(async (req, res) => {
   }
 
   await Problem.create({
-    title: req.body.title,
+    title,
+    slug,
     description: req.body.description,
     inputFormat: req.body.inputFormat,
     outputFormat: req.body.outputFormat,
@@ -116,30 +130,45 @@ const updateProblem = asyncHandler(async (req, res) => {
     throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Visible testcases are required');
   }
 
-  if (!req.file) {
-    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Hidden testcases ZIP is required');
-  }
-
   const dsaProblem = await Problem.findById(id);
 
   if (!dsaProblem) {
     throw new ApiError(STATUS_CODES.NOT_FOUND, 'Problem not found');
   }
 
-  const hiddenTestCases = extractHiddenTestcasesFromZip(req.file.buffer);
+  const title = req.body.title.trim();
 
-  const allTestCases = [...visibleTestCases, ...hiddenTestCases];
+  if (title !== dsaProblem.title) {
+    const existingProblem = await Problem.findOne({
+      title: req.body.title.trim(),
+    });
 
-  const validationTestCases = allTestCases.slice(0, MAX_REFERENCE_VALIDATION_TESTCASES);
+    if (existingProblem) {
+      throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Problem title already exists');
+    }
+  }
 
-  await validateReferenceSolutions(referenceSolution, validationTestCases);
+  const slug = slugify(title);
 
-  const hiddenTestCasesZip = await uploadHiddenTestcasesZip(req.file.buffer, dsaProblem.problemNo);
+  let hiddenTestCasesZip = dsaProblem.hiddenTestCasesZip;
+
+  if (req.file) {
+    const hiddenTestCases = extractHiddenTestcasesFromZip(req.file.buffer);
+
+    const allTestCases = [...visibleTestCases, ...hiddenTestCases];
+
+    const validationTestCases = allTestCases.slice(0, MAX_REFERENCE_VALIDATION_TESTCASES);
+
+    await validateReferenceSolutions(referenceSolution, validationTestCases);
+
+    hiddenTestCasesZip = await uploadHiddenTestcasesZip(req.file.buffer, dsaProblem.problemNo);
+  }
 
   const newProblem = await Problem.findByIdAndUpdate(
     id,
     {
-      title: req.body.title,
+      title,
+      slug,
       description: req.body.description,
       inputFormat: req.body.inputFormat,
       outputFormat: req.body.outputFormat,
@@ -239,20 +268,18 @@ const getProblemByIdAdmin = asyncHandler(async (req, res) => {
   });
 });
 
-const getProblemById = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+const getProblemBySlug = asyncHandler(async (req, res) => {
+  const { slug } = req.params;
 
-  validateObjectId(id);
-
-  const reqdProblem = await Problem.findById(id).select(
-    '_id problemNo title description inputFormat outputFormat constraints timeLimit memoryLimit difficulty tags visibleTestCases startCode referenceSolution'
+  const reqdProblem = await Problem.findOne({ slug }).select(
+    '_id problemNo title slug description inputFormat outputFormat constraints timeLimit memoryLimit difficulty tags visibleTestCases startCode referenceSolution'
   );
 
   if (!reqdProblem) {
     throw new ApiError(STATUS_CODES.NOT_FOUND, 'Problem not found');
   }
 
-  const responseData = await attachVideoDetails(reqdProblem, id);
+  const responseData = await attachVideoDetails(reqdProblem, reqdProblem._id);
 
   return res.status(STATUS_CODES.OK).json({
     success: true,
@@ -260,32 +287,20 @@ const getProblemById = asyncHandler(async (req, res) => {
   });
 });
 
-async function getProblems(req, res) {
-  try {
-    // Auth middleware guarantees req.user exists for protected routes
-    const userId = req.user?._id ?? null;
+const getProblems = asyncHandler(async (req, res) => {
+  const userId = req.user?._id ?? null;
 
-    const result = await listProblems(req.query, userId);
+  const result = await listProblems(req.query, userId);
 
-    if (!result.success) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({
-        success: false,
-        errors: result.errors,
-      });
-    }
-
-    return res.status(STATUS_CODES.OK).json({
-      success: true,
-      ...result.data,
-    });
-  } catch (err) {
-    console.error('[listProblems] Unexpected error:', err);
-    return res.status(500).json({
-      success: false,
-      errors: ['Internal server error. Please try again.'],
-    });
+  if (!result.success) {
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, result.errors?.[0] || 'Failed to fetch problems');
   }
-}
+
+  return res.status(STATUS_CODES.OK).json({
+    success: true,
+    ...result.data,
+  });
+});
 
 const solvedProblems = asyncHandler(async (req, res) => {
   const userId = req.user._id;
@@ -317,7 +332,7 @@ module.exports = {
   createProblem,
   updateProblem,
   deleteProblem,
-  getProblemById,
+  getProblemBySlug,
   getProblems,
   solvedProblems,
   submittedProblem,

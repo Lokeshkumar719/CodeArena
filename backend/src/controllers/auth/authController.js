@@ -252,13 +252,12 @@ const changePassword = asyncHandler(async (req, res) => {
 const adminRegister = asyncHandler(async (req, res) => {
   await validateUserRegistration(req.body);
 
-  const user = await registerUser({ ...req.body, isVerified: true }, 'admin');
-  const { accessToken, refreshToken } = await loginUser(user);
+  await registerUser({ ...req.body, isVerified: true }, 'admin');
 
-  res.cookie('accessToken', accessToken, accessTokenCookieOptions);
-  res.cookie('refreshToken', refreshToken, refreshTokenCookieOptions);
-
-  return sendTokenResponse(res, user, 'Admin registered successfully', STATUS_CODES.CREATED);
+  return res.status(STATUS_CODES.CREATED).json({
+    success: true,
+    message: 'Admin registered successfully',
+  });
 });
 
 const deleteProfile = asyncHandler(async (req, res) => {

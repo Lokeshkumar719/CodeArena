@@ -10,7 +10,7 @@ const {
   createProblem,
   updateProblem,
   deleteProblem,
-  getProblemById,
+  getProblemBySlug,
   getProblems,
   solvedProblems,
   submittedProblem,
@@ -39,9 +39,9 @@ problemRouter.delete('/delete/:id', authMiddleware, adminMiddleware, deleteProbl
 
 problemRouter.get('/admin/problemById/:id', authMiddleware, adminMiddleware, getProblemByIdAdmin);
 
-problemRouter.get('/problemById/:id', authMiddleware, getProblemById);
 problemRouter.get('/getProblems', authMiddleware, getProblems);
 problemRouter.get('/problemSolvedByUser', authMiddleware, solvedProblems);
 problemRouter.get('/problemSubmmision/:id', authMiddleware, submittedProblem);
+problemRouter.get('/:slug', authMiddleware, getProblemBySlug);
 
 module.exports = problemRouter;
