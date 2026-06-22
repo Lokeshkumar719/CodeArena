@@ -1,6 +1,6 @@
 const sendTokenResponse = (res, user, message, statusCode) => {
   const reply = {
-    firstName: user.firstName,
+    username: user.username,
     emailId: user.emailId,
     _id: user._id,
     role: user.role,

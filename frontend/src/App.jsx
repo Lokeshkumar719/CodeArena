@@ -108,7 +108,7 @@ function App() {
       />
 
       <Route
-        path="/problem/:problemId"
+        path="/problem/:slug"
         element={isAuthenticated ? <ProblemPage /> : <Navigate to="/login" />}
       />
 

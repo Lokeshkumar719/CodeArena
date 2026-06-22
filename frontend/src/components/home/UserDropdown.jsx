@@ -6,7 +6,7 @@ function UserDropdown({ user, openPanel, toggle, setOpenPanel, handleLogout, use
   return (
     <div style={{ position: 'relative' }} ref={userDropdownRef}>
       <button style={s.userBtn} onClick={() => toggle('user')}>
-        {user?.firstName} <Chevron open={openPanel === 'user'} />
+        {user?.username} <Chevron open={openPanel === 'user'} />
       </button>
 
       {openPanel === 'user' && (
