@@ -11,8 +11,14 @@ import useRateLimit from '../hooks/useRateLimit.jsx';
 import { s } from '../styles/pages/signupStyles';
 
 const signupSchema = z.object({
-  firstName: z.string().min(3, 'Minimum character should be 3'),
+  username: z
+    .string()
+    .min(3, 'Minimum character should be 3')
+    .max(20, 'Maximum character should be 20')
+    .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers and underscores'),
+
   emailId: z.string().email('Invalid Email'),
+
   password: z.string().min(8, 'Password must be at least 8 characters long'),
 });
 
@@ -42,8 +48,8 @@ function Signup() {
     };
   }, [dispatch]);
 
-  const onSubmit = async ({ firstName, emailId, password }) => {
-    const resultAction = await dispatch(registerUser({ firstName, emailId, password }));
+  const onSubmit = async ({ username, emailId, password }) => {
+    const resultAction = await dispatch(registerUser({ username, emailId, password }));
     if (registerUser.fulfilled.match(resultAction)) {
       toast.success('Verification email sent. Please check your inbox.', {
         duration: 2000,
@@ -68,16 +74,15 @@ function Signup() {
         </div>
 
         <div style={s.form}>
-          {/* First Name */}
           <div style={s.fieldGroup}>
-            <label style={s.label}>First Name</label>
+            <label style={s.label}>Username</label>
             <input
               type="text"
-              placeholder="John"
-              style={{ ...s.input, ...(errors.firstName ? s.inputError : {}) }}
-              {...register('firstName')}
+              placeholder="Enter username"
+              style={{ ...s.input, ...(errors.username ? s.inputError : {}) }}
+              {...register('username')}
             />
-            {errors.firstName && <span style={s.errorMsg}>{errors.firstName.message}</span>}
+            {errors.username && <span style={s.errorMsg}>{errors.username.message}</span>}
           </div>
 
           {/* Email */}

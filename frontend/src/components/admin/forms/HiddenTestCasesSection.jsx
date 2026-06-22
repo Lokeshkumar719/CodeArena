@@ -1,7 +1,9 @@
 import { s } from '../../../styles/admin/updateProblemStyles';
 
-function HiddenTestCasesSection({ setValue, watch }) {
-  const selectedFile = watch('hiddenTestCasesZip') || null;
+function HiddenTestCasesSection({ setValue, watch, existingZip = null }) {
+  const selectedFile = watch('hiddenTestCasesZip');
+  const hasExistingZip = !!existingZip && !selectedFile;
+  const isUpdateMode = !!existingZip;
 
   return (
     <div style={s.card}>
@@ -40,6 +42,8 @@ function HiddenTestCasesSection({ setValue, watch }) {
       <input
         type="file"
         accept=".zip"
+        style={{ display: 'none' }}
+        id="zipInput"
         onChange={(e) => {
           const file = e.target.files?.[0];
 
@@ -51,16 +55,32 @@ function HiddenTestCasesSection({ setValue, watch }) {
         }}
       />
 
-      {selectedFile && (
-        <p
-          style={{
-            marginTop: '12px',
-            color: '#22c55e',
-            fontWeight: 600,
-          }}
-        >
-          ✓ {selectedFile.name}
+      <button
+        type="button"
+        style={s.uploadBtn}
+        onClick={() => document.getElementById('zipInput').click()}
+      >
+        {isUpdateMode ? 'Replace ZIP' : 'Upload ZIP'}
+      </button>
+
+      {selectedFile ? (
+        <p style={{ color: '#facc15', marginTop: '12px', fontWeight: 600 }}>
+          📦 {isUpdateMode ? 'Replacement ZIP selected:' : 'ZIP selected:'} {selectedFile.name}
+          {isUpdateMode && (
+            <>
+              <br />
+              <span style={{ color: '#f87171', fontSize: '12px' }}>
+                ⚠ This will replace existing ZIP
+              </span>
+            </>
+          )}
         </p>
+      ) : hasExistingZip ? (
+        <p style={{ color: '#22c55e', marginTop: '12px', fontWeight: 600 }}>
+          ✓ Current ZIP available
+        </p>
+      ) : (
+        <p style={{ color: '#94a3b8', marginTop: '12px' }}>No ZIP uploaded</p>
       )}
     </div>
   );
