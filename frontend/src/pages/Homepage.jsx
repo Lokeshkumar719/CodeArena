@@ -52,11 +52,6 @@ const getDifficultyStyle = (difficulty) => {
   };
 };
 
-// ── Generic single-select dropdown (replaces <select>) ────────────────────
-// Renders identically on Windows, macOS, Linux — no OS chrome involved.
-
-// ─────────────────────────────────────────────────────────────────────────────
-
 function Homepage() {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
@@ -71,13 +66,10 @@ function Homepage() {
   });
   const [loading, setLoading] = useState(false);
 
-  // ── Which panel is open — only one at a time ──────────────────────────────
-  // "difficulty" | "status" | "tags" | "user" | null
   const [openPanel, setOpenPanel] = useState(null);
 
   const toggle = (panel) => setOpenPanel((prev) => (prev === panel ? null : panel));
 
-  // ── Refs for outside-click ────────────────────────────────────────────────
   const difficultyRef = useRef(null);
   const statusRef = useRef(null);
   const tagDropdownRef = useRef(null);
@@ -120,8 +112,6 @@ function Homepage() {
     async (page, search, f) => {
       setLoading(true);
       try {
-        /// For testing purpose add here an await delay of 5s to see the skeleton loader in action
-        // await new Promise(resolve => setTimeout(resolve, 7000));
         const qs = buildQueryString(page, search, f);
         const { data } = await axiosClient.get(`/problem/getProblems?${qs}`);
         if (!data.success) {
@@ -142,15 +132,6 @@ function Homepage() {
   useEffect(() => {
     fetchProblems(currentPage, debouncedSearch, filters);
   }, [currentPage, debouncedSearch, filters]);
-
-  // const isFirstRender = useRef(true);
-  // useEffect(() => {
-  //   if (isFirstRender.current) {
-  //     isFirstRender.current = false;
-  //     return;
-  //   }
-  //   setCurrentPage(1);
-  // }, [debouncedSearch, filters]);
 
   const updateFilter = (key, value) => {
     setCurrentPage(1);

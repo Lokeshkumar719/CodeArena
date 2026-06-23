@@ -16,8 +16,6 @@ import { PAGE_LIMIT, difficultyOptions } from '../../constants/filterOptions';
 
 import { s } from '../../styles/admin/deleteProblemStyles';
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 const DeleteProblem = () => {
   const navigate = useNavigate();
 
@@ -72,8 +70,6 @@ const DeleteProblem = () => {
     async (page, search, f) => {
       try {
         setLoading(true);
-        /// For testing purpose add here an await delay of 5s to see the skeleton loader in action
-        // await new Promise(resolve => setTimeout(resolve, 5000));
 
         const qs = buildQueryString(page, search, f);
         const { data } = await axiosClient.get(`/problem/getProblems?${qs}`);

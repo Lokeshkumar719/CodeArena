@@ -1,7 +1,6 @@
 export const s = {
   wrap: {
     width: '100%',
-    // maxWidth: '896px',
     margin: '0 auto',
     fontFamily: "'Sora', sans-serif",
   },

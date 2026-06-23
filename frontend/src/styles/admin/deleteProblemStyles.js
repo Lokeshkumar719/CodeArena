@@ -92,7 +92,7 @@ export const s = {
     alignItems: 'flex-start',
   },
 
-  // ── Unified filter button — identical to Homepage ─────────────────────
+  //  Unified filter button — identical to Homepage
   selectWrapper: { position: 'relative' },
   selectBtn: {
     background: '#0c1018',
