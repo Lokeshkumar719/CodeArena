@@ -19,7 +19,7 @@ export const s = {
   },
   logo: { fontSize: '22px', fontWeight: 700, color: '#a5b4fc', letterSpacing: '0.01em' },
 
-  // ── User button in navbar — slightly different from filter buttons ─────
+  // User button in navbar — slightly different from filter buttons
   userBtn: {
     background: 'transparent',
     border: '1px solid #1e2738',
@@ -109,7 +109,7 @@ export const s = {
     alignItems: 'flex-start',
   },
 
-  // ── Unified filter button — used by ALL three dropdowns ───────────────
+  // Unified filter button — used by ALL three dropdowns
   selectWrapper: { position: 'relative' },
   selectBtn: {
     background: '#0c1018',
@@ -118,6 +118,7 @@ export const s = {
     color: '#9ca3af',
     fontSize: '14px',
     fontWeight: 500,
+
     // fixed padding — same on every OS, no OS chrome to fight
     padding: '10px 14px 10px 16px',
     cursor: 'pointer',
@@ -131,7 +132,7 @@ export const s = {
     userSelect: 'none',
   },
 
-  // ── Dropdown list for single-select ──────────────────────────────────
+  // Dropdown list for single-select
   selectDropdown: {
     position: 'absolute',
     top: 'calc(100% + 6px)',

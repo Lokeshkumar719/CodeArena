@@ -26,7 +26,7 @@ problemRouter.post(
   createProblem
 );
 
-problemRouter.put(
+problemRouter.patch(
   '/update/:id',
   authMiddleware,
   adminMiddleware,

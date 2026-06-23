@@ -11,15 +11,27 @@ function UserDropdown({ user, openPanel, toggle, setOpenPanel, handleLogout, use
 
       {openPanel === 'user' && (
         <div style={s.dropdown}>
+          <NavLink
+            to={`/profile/${user?.username}`}
+            style={s.dropdownItem}
+            onClick={() => setOpenPanel(null)}
+          >
+            👤 My Profile
+          </NavLink>
+
+          <NavLink to="/profile/edit" style={s.dropdownItem} onClick={() => setOpenPanel(null)}>
+            ✏️ Edit Profile
+          </NavLink>
+
+          <NavLink to="/change-password" style={s.dropdownItem} onClick={() => setOpenPanel(null)}>
+            🔒 Change Password
+          </NavLink>
+
           {user?.role?.toLowerCase() === 'admin' && (
             <NavLink to="/admin" style={s.dropdownItem} onClick={() => setOpenPanel(null)}>
               ⚙️ Admin
             </NavLink>
           )}
-
-          <NavLink to="/change-password" style={s.dropdownItem} onClick={() => setOpenPanel(null)}>
-            🔒 Change Password
-          </NavLink>
 
           <button
             onClick={handleLogout}

@@ -34,12 +34,6 @@ const userSchema = new Schema(
       index: true,
     },
 
-    age: {
-      type: Number,
-      min: 5,
-      max: 80,
-    },
-
     role: {
       type: String,
       enum: ['user', 'admin'],
@@ -81,6 +75,20 @@ const userSchema = new Schema(
 
     emailVerificationTokenExpires: {
       type: Date,
+    },
+
+    bio: {
+      type: String,
+      trim: true,
+      maxlength: 200,
+      default: '',
+    },
+
+    institution: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+      default: '',
     },
   },
   {
