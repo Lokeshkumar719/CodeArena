@@ -207,7 +207,7 @@ function UpdateProblem() {
         formData.append('hiddenTestCasesZip', data.hiddenTestCasesZip);
       }
 
-      await axiosClient.put(`/problem/update/${id}`, formData, {
+      await axiosClient.patch(`/problem/update/${id}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

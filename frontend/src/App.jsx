@@ -22,6 +22,8 @@ import ChangePassword from './pages/ChangePassword';
 import CheckEmail from './pages/CheckEmail';
 import VerifyEmail from './pages/VerifyEmail';
 import ResendVerification from './pages/ResendVerification';
+import Profile from './pages/Profile';
+import EditProfile from './pages/EditProfile';
 
 import CreateProblem from './components/admin/CreateProblem';
 import UpdateProblem from './components/admin/UpdateProblem';
@@ -143,6 +145,10 @@ function App() {
         path="/admin/update/:id"
         element={isAuthenticated && isAdmin ? <UpdateProblem /> : <Navigate to="/" />}
       />
+
+      <Route path="/profile/:username" element={<Profile />} />
+
+      <Route path="/profile/edit" element={<EditProfile />} />
     </Routes>
   );
 }

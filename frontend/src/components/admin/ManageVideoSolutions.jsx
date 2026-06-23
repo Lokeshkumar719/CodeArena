@@ -141,10 +141,6 @@ const ManageVideoSolutions = () => {
 
   const { currentPage: pg, totalPages, totalProblems, hasNextPage, hasPrevPage } = pagination;
 
-  // if (loading && problems.length === 0) {
-  //   return <div style={{ minHeight: "100vh", background: "#080c14" }} />;
-  // }
-
   if (loading) return <TableSkeletonvideo rows={5} />;
 
   return (
