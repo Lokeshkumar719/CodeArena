@@ -3,7 +3,7 @@ function TechStack() {
 
   const backend = ['Node.js', 'Express.js', 'MongoDB', 'Redis'];
 
-  const infrastructure = ['Judge0', 'Cloudinary', 'Render', 'Vercel', 'Resend'];
+  const infrastructure = ['Judge0', 'Cloudfare', 'Render', 'Vercel', 'Resend'];
 
   const renderSection = (title, technologies) => (
     <div className="rounded-2xl border border-base-300 bg-base-200/20 p-8">

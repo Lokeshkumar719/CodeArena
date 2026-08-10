@@ -141,10 +141,6 @@ const ManageVideoSolutions = () => {
 
   const { currentPage: pg, totalPages, totalProblems, hasNextPage, hasPrevPage } = pagination;
 
-  // if (loading && problems.length === 0) {
-  //   return <div style={{ minHeight: "100vh", background: "#080c14" }} />;
-  // }
-
   if (loading) return <TableSkeletonvideo rows={5} />;
 
   return (
@@ -283,7 +279,7 @@ const ManageVideoSolutions = () => {
           <table style={s.table}>
             <thead>
               <tr>
-                {['#', 'Title', 'Difficulty', 'Tags', 'Actions'].map((h) => (
+                {['#', 'Title', 'Difficulty', 'Tags', 'Video', 'Actions'].map((h) => (
                   <th key={h} style={s.th}>
                     {h}
                   </th>
@@ -294,7 +290,7 @@ const ManageVideoSolutions = () => {
               {problems.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     style={{ padding: '40px', textAlign: 'center', color: '#4b5563' }}
                   >
                     No problems found
@@ -320,24 +316,33 @@ const ManageVideoSolutions = () => {
                       </div>
                     </td>
                     <td style={s.td}>
+                      <span style={problem.hasVideo ? s.videoExists : s.videoMissing}>
+                        {problem.hasVideo ? 'Available' : 'Missing'}
+                      </span>
+                    </td>
+
+                    <td style={s.td}>
                       <div style={s.actionRow}>
                         <button
                           onClick={() => navigate(`/admin/upload/${problem._id}`)}
                           style={s.uploadBtn}
                         >
-                          ↑ Upload Video
+                          {problem.hasVideo ? '✎ Update Video' : '↑ Upload Video'}
                         </button>
-                        <button
-                          onClick={() => handleDeleteVideo(problem._id)}
-                          disabled={deletingId === problem._id}
-                          style={{
-                            ...s.deleteBtn,
-                            opacity: deletingId === problem._id ? 0.6 : 1,
-                            cursor: deletingId === problem._id ? 'not-allowed' : 'pointer',
-                          }}
-                        >
-                          {deletingId === problem._id ? 'Deleting...' : '✕ Delete Video'}
-                        </button>
+
+                        {problem.hasVideo && (
+                          <button
+                            onClick={() => handleDeleteVideo(problem._id)}
+                            disabled={deletingId === problem._id}
+                            style={{
+                              ...s.deleteBtn,
+                              opacity: deletingId === problem._id ? 0.6 : 1,
+                              cursor: deletingId === problem._id ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            {deletingId === problem._id ? 'Deleting...' : '✕ Delete Video'}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

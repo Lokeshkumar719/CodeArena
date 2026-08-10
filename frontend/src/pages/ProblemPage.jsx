@@ -16,8 +16,8 @@ import useRateLimit from '../hooks/useRateLimit.jsx';
 
 import './ProblemPage.css';
 
-const LANG_STORAGE_KEY = (problemId) => `lang_${problemId}`;
-const CODE_STORAGE_KEY = (problemId, lang) => `code_${problemId}_${lang}`;
+const LANG_STORAGE_KEY = (slug) => `lang_${slug}`;
+const CODE_STORAGE_KEY = (slug, lang) => `code_${slug}_${lang}`;
 
 const ProblemPage = () => {
   const [problem, setProblem] = useState(null);
@@ -40,30 +40,33 @@ const ProblemPage = () => {
 
   const editorRef = useRef(null);
   const splitLayoutRef = useRef(null);
-  const { problemId } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
   const isMac = navigator.platform.includes('Mac');
 
-  // ── Restore saved language ───────────────────────────────────────────────
+  // Restore saved language
   useEffect(() => {
-    const saved = localStorage.getItem(LANG_STORAGE_KEY(problemId));
-    if (saved) setSelectedLanguage(saved);
-  }, [problemId]);
+    const saved = localStorage.getItem(LANG_STORAGE_KEY(slug));
 
-  // ── Fetch problem + build codeMap ────────────────────────────────────────
+    if (saved) {
+      setSelectedLanguage(saved);
+    }
+  }, [slug]);
+
+  // Fetch problem + build codeMap
   useEffect(() => {
     const fetchProblem = async () => {
       setLoading(true);
       setCodeReady(false);
       try {
-        const response = await axiosClient.get(`/problem/problemById/${problemId}`);
+        const response = await axiosClient.get(`/problem/${slug}`);
         const problemData = response.data?.data;
 
         const map = {};
         problemData?.startCode?.forEach((sc) => {
           const initial = sc.initialCode ?? '';
-          const saved = localStorage.getItem(CODE_STORAGE_KEY(problemId, sc.language));
-          map[sc.language] = map[sc.language] = saved ?? initial;
+          const saved = localStorage.getItem(CODE_STORAGE_KEY(slug, sc.language));
+          map[sc.language] = saved ?? initial;
         });
 
         setProblem(problemData);
@@ -76,7 +79,7 @@ const ProblemPage = () => {
       }
     };
     fetchProblem();
-  }, [problemId]);
+  }, [slug]);
 
   // ── Drag resize ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -107,7 +110,7 @@ const ProblemPage = () => {
   const handleEditorChange = (value) => {
     const v = value ?? '';
     setCodeMap((prev) => ({ ...prev, [selectedLanguage]: v }));
-    localStorage.setItem(CODE_STORAGE_KEY(problemId, selectedLanguage), v);
+    localStorage.setItem(CODE_STORAGE_KEY(slug, selectedLanguage), v);
   };
 
   const handleEditorDidMount = (editor) => {
@@ -116,7 +119,7 @@ const ProblemPage = () => {
 
   const handleLanguageChange = (language) => {
     setSelectedLanguage(language);
-    localStorage.setItem(LANG_STORAGE_KEY(problemId), language);
+    localStorage.setItem(LANG_STORAGE_KEY(slug), language);
   };
 
   const handleRun = useCallback(async () => {
@@ -124,7 +127,7 @@ const ProblemPage = () => {
     setIsRunning(true);
     setRunResult(null);
     try {
-      const response = await axiosClient.post(`/submission/run/${problemId}`, {
+      const response = await axiosClient.post(`/submission/run/${problem?._id}`, {
         code: currentCode,
         language: selectedLanguage,
       });
@@ -145,14 +148,14 @@ const ProblemPage = () => {
     } finally {
       setIsRunning(false);
     }
-  }, [isRunning, isSubmitting, runRateLimit.cooldown, problemId, currentCode, selectedLanguage]);
+  }, [isRunning, isSubmitting, runRateLimit.cooldown, problem?._id, currentCode, selectedLanguage]);
 
   const handleSubmitCode = useCallback(async () => {
     if (isRunning || isSubmitting || submitRateLimit.cooldown > 0) return;
     setIsSubmitting(true);
     setSubmitResult(null);
     try {
-      const response = await axiosClient.post(`/submission/submit/${problemId}`, {
+      const response = await axiosClient.post(`/submission/submit/${problem?._id}`, {
         code: currentCode,
         language: selectedLanguage,
       });
@@ -170,7 +173,14 @@ const ProblemPage = () => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [isRunning, isSubmitting, submitRateLimit.cooldown, problemId, currentCode, selectedLanguage]);
+  }, [
+    isRunning,
+    isSubmitting,
+    submitRateLimit.cooldown,
+    problem?._id,
+    currentCode,
+    selectedLanguage,
+  ]);
 
   const getLanguageForMonaco = (lang) =>
     ({ javascript: 'javascript', java: 'java', cpp: 'cpp' })[lang] ?? 'javascript';
@@ -260,12 +270,9 @@ const ProblemPage = () => {
                   <ProblemDescription problem={problem} getDifficultyBadge={getDifficultyBadge} />
                 )}
                 {activeLeftTab === 'editorial' && (
-                  <Editorial
-                    secureUrl={problem.secureUrl}
-                    thumbnailUrl={problem.thumbnailUrl}
-                    duration={problem.duration}
-                  />
+                  <Editorial youtubeUrl={problem.videoSolution?.youtubeUrl} />
                 )}
+
                 {activeLeftTab === 'solutions' && (
                   <div>
                     <p className="section-title">Solutions</p>
@@ -290,7 +297,7 @@ const ProblemPage = () => {
                 {activeLeftTab === 'submissions' && (
                   <div>
                     <p className="section-title">My Submissions</p>
-                    <SubmissionHistory problemId={problemId} />
+                    <SubmissionHistory problemId={problem?._id} />
                   </div>
                 )}
               </>
@@ -418,8 +425,8 @@ const ProblemPage = () => {
                   <span>Submit</span>
 
                   <div className="shortcut-keys">
-                    <kbd>{isMac? '⌘' : 'Ctrl'}</kbd>
-                    <kbd>{isMac? 'Return' : 'Enter'}</kbd>
+                    <kbd>{isMac ? '⌘' : 'Ctrl'}</kbd>
+                    <kbd>{isMac ? 'Return' : 'Enter'}</kbd>
                   </div>
                 </div>
               )}

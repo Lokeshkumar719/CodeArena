@@ -8,19 +8,14 @@ const AUTH_CONFIG = require('../constants/authConstants');
 
 const userSchema = new Schema(
   {
-    firstName: {
+    username: {
       type: String,
       required: true,
-      minLength: 3,
-      maxLength: 20,
+      unique: true,
       trim: true,
-    },
-
-    lastName: {
-      type: String,
-      minLength: 3,
-      maxLength: 20,
-      trim: true,
+      minlength: 3,
+      maxlength: 20,
+      match: [/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers and underscores'],
     },
 
     emailId: {
@@ -37,12 +32,6 @@ const userSchema = new Schema(
       },
 
       index: true,
-    },
-
-    age: {
-      type: Number,
-      min: 5,
-      max: 80,
     },
 
     role: {
@@ -87,6 +76,20 @@ const userSchema = new Schema(
     emailVerificationTokenExpires: {
       type: Date,
     },
+
+    bio: {
+      type: String,
+      trim: true,
+      maxlength: 200,
+      default: '',
+    },
+
+    institution: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+      default: '',
+    },
   },
   {
     timestamps: true,
@@ -110,20 +113,15 @@ userSchema.post('findOneAndDelete', async function (userInfo) {
 
 userSchema.methods.createResetPasswordToken = function () {
   const resetToken = crypto.randomBytes(32).toString('hex');
-
   const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-
   this.resetPasswordToken = hashedToken;
-
   this.resetPasswordExpires = Date.now() + AUTH_CONFIG.RESET_PASSWORD_TOKEN_EXPIRY;
-
   return resetToken;
 };
 
 userSchema.methods.createEmailVerificationToken = function () {
   const verificationToken = crypto.randomBytes(32).toString('hex');
   const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
-
   this.emailVerificationToken = hashedToken;
   this.emailVerificationTokenExpires = Date.now() + AUTH_CONFIG.EMAIL_VERIFICATION_EXPIRY;
   return verificationToken;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import axiosClient from '../../utils/axiosClient';
@@ -47,14 +47,7 @@ const problemSchema = z.object({
     )
     .min(1, 'At least one visible test case required'),
 
-  hiddenTestCases: z
-    .array(
-      z.object({
-        input: z.string().min(1, 'Input is required'),
-        output: z.string().min(1, 'Output is required'),
-      })
-    )
-    .min(1, 'At least one hidden test case required'),
+  hiddenTestCasesZip: z.any().optional(),
 
   startCode: z
     .array(
@@ -83,6 +76,7 @@ function UpdateProblem() {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { cooldown, startCooldown } = useRateLimit();
+  const [existingZip, setExistingZip] = useState(null);
 
   const {
     register,
@@ -90,6 +84,7 @@ function UpdateProblem() {
     handleSubmit,
     watch,
     reset,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(problemSchema),
@@ -106,14 +101,6 @@ function UpdateProblem() {
           explanation: '',
         },
       ],
-
-      hiddenTestCases: [
-        {
-          input: '',
-          output: '',
-        },
-      ],
-
       startCode: languageOptions.map((lang) => ({
         language: lang.value,
         initialCode: '',
@@ -135,15 +122,6 @@ function UpdateProblem() {
     name: 'visibleTestCases',
   });
 
-  const {
-    fields: hiddenFields,
-    append: appendHidden,
-    remove: removeHidden,
-  } = useFieldArray({
-    control,
-    name: 'hiddenTestCases',
-  });
-
   useEffect(() => {
     const fetchProblem = async () => {
       try {
@@ -156,7 +134,7 @@ function UpdateProblem() {
         }
 
         const response = await axiosClient.get(`/problem/admin/problemById/${id}`);
-
+        setExistingZip(response.data.data.hiddenTestCasesZip);
         reset(response.data.data);
       } catch (error) {
         toast.error(getErrorMessage(error));
@@ -208,7 +186,32 @@ function UpdateProblem() {
   const onSubmit = async (data) => {
     try {
       setIsSubmitting(true);
-      await axiosClient.put(`/problem/update/${id}`, data);
+      const formData = new FormData();
+
+      formData.append('title', data.title);
+      formData.append('description', data.description);
+      formData.append('inputFormat', data.inputFormat);
+      formData.append('outputFormat', data.outputFormat);
+      formData.append('constraints', data.constraints);
+
+      formData.append('difficulty', data.difficulty);
+      formData.append('timeLimit', data.timeLimit);
+      formData.append('memoryLimit', data.memoryLimit);
+
+      formData.append('tags', JSON.stringify(data.tags));
+      formData.append('visibleTestCases', JSON.stringify(data.visibleTestCases));
+      formData.append('startCode', JSON.stringify(data.startCode));
+      formData.append('referenceSolution', JSON.stringify(data.referenceSolution));
+
+      if (data.hiddenTestCasesZip instanceof File) {
+        formData.append('hiddenTestCasesZip', data.hiddenTestCasesZip);
+      }
+
+      await axiosClient.patch(`/problem/update/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       sessionStorage.removeItem(draftKey);
       toast.success('Problem updated successfully!');
       navigate('/admin/update-list');
@@ -276,13 +279,7 @@ function UpdateProblem() {
             TestCaseBlock={TestCaseBlock}
           />
 
-          <HiddenTestCasesSection
-            appendHidden={appendHidden}
-            hiddenFields={hiddenFields}
-            register={register}
-            removeHidden={removeHidden}
-            TestCaseBlock={TestCaseBlock}
-          />
+          <HiddenTestCasesSection setValue={setValue} watch={watch} existingZip={existingZip} />
 
           <CodeTemplatesSection languageOptions={languageOptions} register={register} />
 

@@ -3,7 +3,7 @@ const STATUS_CODES = require('../../constants/statusCodes');
 const ApiError = require('../ApiError');
 
 const validateUser = async (data) => {
-  const mandatoryField = ['firstName', 'emailId', 'password'];
+  const mandatoryField = ['username', 'emailId', 'password'];
 
   const isAllowed = mandatoryField.every((k) => Object.keys(data).includes(k));
 
@@ -27,12 +27,12 @@ const validateUser = async (data) => {
     );
   }
 
-  const name = data.firstName?.trim();
+  const name = data.username?.trim();
 
-  if (!name) throw new ApiError(STATUS_CODES.BAD_REQUEST, 'First name is required');
+  if (!name) throw new ApiError(STATUS_CODES.BAD_REQUEST, 'username is required');
 
   if (name.length < 3 || name.length > 20)
-    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'First name must be 3-20 characters long');
+    throw new ApiError(STATUS_CODES.BAD_REQUEST, 'username must be 3-20 characters long');
 };
 
 module.exports = validateUser;

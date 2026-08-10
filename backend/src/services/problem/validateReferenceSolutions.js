@@ -2,6 +2,7 @@ const { getLanguageById } = require('../../utils/judge/judge0Utils');
 const { submitBatch, submitToken } = require('../execution/judge0Service');
 const { JUDGE0_STATUS } = require('../../constants/judgeStatus');
 const STATUS_CODES = require('../../constants/statusCodes');
+const { MAX_POLLING_RETRIES, POLLING_INTERVAL, MAX_BATCH_SIZE } = require('../../constants/judge0');
 const ApiError = require('../../utils/ApiError');
 
 const validateReferenceSolutions = async (referenceSolution, testCases) => {
@@ -26,6 +27,8 @@ const validateReferenceSolutions = async (referenceSolution, testCases) => {
     // validate all testcases passed
     for (const test of testResult) {
       if (test.status_id !== JUDGE0_STATUS.ACCEPTED) {
+        console.log('Language:', language);
+        console.log(JSON.stringify(test, null, 2));
         throw new ApiError(STATUS_CODES.BAD_REQUEST, `Reference solution failed for ${language}`);
       }
     }

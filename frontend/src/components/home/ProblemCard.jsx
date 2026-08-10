@@ -14,7 +14,7 @@ function ProblemCard({ problem, getDifficultyStyle }) {
         >
           {problem.problemNo && <span style={s.problemNo}>#{problem.problemNo}</span>}
 
-          <NavLink to={`/problem/${problem._id}`} style={s.problemTitle}>
+          <NavLink to={`/problem/${problem.slug}`} style={s.problemTitle}>
             {problem.title}
           </NavLink>
         </div>

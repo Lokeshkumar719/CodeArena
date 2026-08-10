@@ -11,6 +11,7 @@ const problemRouter = require('./routes/problem/problemRoutes');
 const submitRouter = require('./routes/submission/submissionRoutes');
 const videoRouter = require('./routes/video/videoRoutes');
 const statsRoutes = require('./routes/statsRoutes');
+const profileRouter = require('./routes/profile/profileRoutes');
 
 const errorMiddleware = require('./middlewares/errorMiddleware');
 const { redisClient, connectRedis } = require('./config/redis');
@@ -67,6 +68,7 @@ app.use('/problem', problemRouter);
 app.use('/submission', submitRouter);
 app.use('/video', videoRouter);
 app.use('/api/stats', statsRoutes);
+app.use('/profile', profileRouter);
 
 app.use(errorMiddleware);
 
@@ -76,7 +78,6 @@ process.on('SIGINT', async () => {
   } catch (error) {
     console.error(error);
   }
-
   process.exit(0);
 });
 
