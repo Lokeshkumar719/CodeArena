@@ -5,13 +5,14 @@
 
 # File Purpose
 
-Registration page: collects first name, email, password; validates and registers via Redux; redirects when authenticated.
+Registration page: collects username, email, password; validates and registers via Redux; redirects to email verification check.
 
 # Responsibilities
 
 - Zod validation for signup fields.
 - Dispatch `registerUser` with form data.
-- Redirect to `/` on successful auth.
+- Redirect to `/check-email` on successful registration.
+- Handle rate-limiting via `useRateLimit`.
 - NavLink to login.
 
 # Main Functions / Components / Classes
@@ -19,25 +20,31 @@ Registration page: collects first name, email, password; validates and registers
 | Symbol | Type | Role |
 |--------|------|------|
 | `Signup` | default export component | Page UI |
-| `signupSchema` | Zod object | `firstName` min 3, `emailId` email, `password` min 8 |
+| `signupSchema` | Zod object | `username` min 3, `emailId` email, `password` min 8 |
 
 # Internal Logic
 
-Same pattern as Login: `useForm` + `registerUser` on submit; `useEffect` navigates to `/` when `isAuthenticated`; password visibility toggle; does not read or display `state.auth.error`.
+1. `useForm` + `zodResolver`.
+2. `onSubmit` → `dispatch(registerUser(data))`.
+3. If successful, `navigate('/check-email')` (Registration does NOT authenticate the user).
+4. If rate-limited, triggers `startCooldown`.
+5. Password visibility toggle.
+6. Reads and displays `state.auth.error`.
 
 # Inputs and Outputs
 
 | Input | Output |
 |-------|--------|
-| `{ firstName, emailId, password }` | `registerUser` thunk |
-| Auth success | Navigate `/` |
+| `{ username, emailId, password }` | `registerUser` thunk |
+| Auth success | Navigate `/check-email` |
 
 # Dependencies
 
-| Module | Role |
-|--------|------|
-| `react-hook-form`, `zod`, `@hookform/resolvers/zod` | Form |
-| `react-redux` | `registerUser`, `isAuthenticated`, `loading` |
+- `react-hook-form`, `zod`, `@hookform/resolvers/zod`
+- `react-redux`
+- `../hooks/useRateLimit`
+- `react-router` (`NavLink`, `useNavigate`)
+
 | `react-router` | Navigation / links |
 | `../authSlice` | `registerUser` |
 

@@ -9,7 +9,7 @@ Admin dashboard landing page: four cards linking to create, update, delete, and 
 
 # Responsibilities
 
-- Present static `adminOptions` configuration (title, description, icon, DaisyUI button color, route).
+- Present static `adminOptions` configuration (title, description, icon, colors, route).
 - Render responsive grid of cards with `NavLink` navigation.
 - No API calls or Redux in this file.
 
@@ -24,7 +24,7 @@ Icons from `lucide-react`: `Plus`, `Edit`, `Trash2`, `Video`, `ArrowRight`.
 
 # Internal Logic
 
-Map `adminOptions` → card with icon, title, description, `NavLink` button to `option.route`.
+Map `adminOptions` → card with icon, title, description, `NavLink` button to `option.route`. Styles are implemented using JS-in-JS (`adminPageStyles.js`).
 
 # Inputs and Outputs
 
@@ -34,10 +34,10 @@ Map `adminOptions` → card with icon, title, description, `NavLink` button to `
 
 # Dependencies
 
-| Package | Role |
-|---------|------|
-| `lucide-react` | Icons |
-| `react-router` | `NavLink` |
+- `lucide-react`
+- `react-router`
+- `../styles/pages/adminPageStyles`
+
 
 # Used By
 

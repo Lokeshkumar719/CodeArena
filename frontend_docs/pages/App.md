@@ -5,49 +5,63 @@
 
 # File Purpose
 
-Root routed application shell: runs initial auth check, shows loading gate, and defines all React Router routes with auth/admin guards.
+Root application component responsible for routing, global layout layout wrapper, route change progress bars (NProgress), and triggering initial authentication state verification.
 
 # Responsibilities
 
-- Dispatch `checkAuth()` on mount.
-- Block UI with spinner while `state.auth.loading` is true.
-- Render `Routes` / `Route` with conditional `Navigate` redirects.
-- Enforce authenticated access to `/` and admin-only paths.
+- Initialize `checkAuth()` thunk on mount.
+- Show `LoadingScreen` globally while `loading` is true.
+- Define client-side routes via `react-router` `<Routes>`.
+- Render `NProgress` loading bar on route changes.
+- Implement route protection (Private vs Public routes).
 
 # Main Functions / Components / Classes
 
 | Symbol | Type | Role |
 |--------|------|------|
-| `App` | function component | Default export; route table |
-| `isAdmin` | derived boolean | `user?.role?.toLowerCase() === "admin"` |
+| `App` | default export component | Router container |
 
 # Internal Logic
 
-1. `useEffect` → `dispatch(checkAuth())` once (deps: `[dispatch]`).
-2. If `loading`, return centered DaisyUI `loading-spinner`.
-3. Compute `isAdmin` from Redux `user.role` (case-insensitive).
-4. Routes:
-   - `/` → `Homepage` if authenticated, else `Navigate` to `/signup`
-   - `/login`, `/signup` → auth forms if guest, else `Navigate` to `/`
-   - `/admin/*` → admin components if authenticated **and** admin, else `Navigate` to `/`
-   - `/problem/:problemId` → `ProblemPage` (**no auth guard** in this file)
+1. `useEffect` dispatches `checkAuth()`.
+2. `useEffect` listens to location changes to start/done `nprogress` bar.
+3. Renders a `min-h-screen` flex column wrapper.
+4. If `loading` is true, halts routing and shows `LoadingScreen`.
 
-# Inputs and Outputs
+## Routes (Protected vs Public)
 
-| Input (Redux / router) | UI output |
-|------------------------|-----------|
-| `loading`, `isAuthenticated`, `user` | Spinner or route-matched page |
-| URL path | Matched component or redirect |
+**Public Routes:**
+- `/` → `LandingPage` (if not authenticated) OR `Homepage` (if authenticated)
+- `/login` → `Login`
+- `/signup` → `Signup`
+- `/check-email` → `CheckEmail`
+- `/verify-email/:token` → `VerifyEmail`
+- `/resend-verification` → `ResendVerification`
+- `/forgot-password` → `ForgotPassword`
+- `/reset-password/:token` → `ResetPassword`
+- `/profile/:username` → `Profile`
+
+**Protected Routes (Require Authentication):**
+- `/change-password` → `ChangePassword`
+- `/profile/edit` → `EditProfile`
+- `/problem/:slug` → `ProblemPage`
+
+**Admin Routes (Protected):**
+- `/admin` → `Admin`
+- `/admin/create` → `CreateProblem`
+- `/admin/update-list` → `UpdateProblemList`
+- `/admin/update/:id` → `UpdateProblem`
+- `/admin/delete` → `DeleteProblem`
+- `/admin/video` → `ManageVideoSolutions`
+- `/admin/upload/:problemId` → `UploadVideoSolution`
 
 # Dependencies
 
-| Import | Role |
-|--------|------|
-| `react-router` | `Routes`, `Route`, `Navigate` |
-| `react-redux` | `useDispatch`, `useSelector` |
-| `react` | `useEffect` |
-| `./authSlice` | `checkAuth` |
-| Pages: `Login`, `Signup`, `Homepage`, `ProblemPage`, `Admin` |
+- `react-router`
+- `react-redux`
+- `nprogress`
+- All page components.
+p`, `Homepage`, `ProblemPage`, `Admin` |
 | Components: `AdminPanel`, `AdminUpdate`, `AdminUpdateList`, `AdminDelete`, `AdminVideo`, `AdminUpload` |
 
 # Used By

@@ -12,37 +12,40 @@ Redux Toolkit slice and async thunks for user registration, login, session valid
 - Define four `createAsyncThunk` actions that call user auth REST endpoints.
 - Maintain `auth` state: `user`, `isAuthenticated`, `loading`, `error`.
 - Handle pending/fulfilled/rejected transitions for each thunk.
+- Provide sync reducers to clear errors and reset auth state.
 
 # Main Functions / Components / Classes
 
 | Export | Type | Description |
 |--------|------|-------------|
-| `registerUser` | async thunk | `POST /user/register` → `response.data.user` |
-| `loginUser` | async thunk | `POST /user/login` → `response.data.user` |
-| `checkAuth` | async thunk | `GET /user/check` → `data.user` |
+| `registerUser` | async thunk | `POST /user/register` → returns `response.data` |
+| `loginUser` | async thunk | `POST /user/login` → returns `response.data.data` (the user object) |
+| `checkAuth` | async thunk | `GET /user/check` → returns `response.data.data` (the user object) |
 | `logoutUser` | async thunk | `POST /user/logout` → clears session |
+| `clearError` | sync action | Clears the current `error` string |
+| `resetAuthState` | sync action | Resets `user` and `isAuthenticated` (used after password change) |
 | default | reducer | `authSlice.reducer` registered as `state.auth` |
 
 **Slice name:** `auth`  
-**Initial state:** `{ user: null, isAuthenticated: false, loading: true, error: null }`  
-**Sync reducers:** empty object (no `reducers` cases).
+**Initial state:** `{ user: null, isAuthenticated: false, loading: false, error: null }`  
 
 # Internal Logic
 
-- Each thunk uses `axiosClient` and `rejectWithValue(error)` on failure (except `checkAuth` on 401 returns `rejectWithValue(null)`).
-- **Fulfilled:** sets `loading: false`, `isAuthenticated: !!action.payload`, `user: action.payload`.
-- **Rejected:** sets `loading: false`, `error` from `action.payload?.message || 'Something went wrong'`, clears user unless logout fulfilled.
-- **checkAuth rejected:** same as other rejections (401 still clears auth via rejected handler).
+- Each thunk uses `axiosClient` and `rejectWithValue(error)` on failure (extracting rate-limit data or error message).
+- **registerUser fulfilled:** Registration does NOT log the user in. It sets `isAuthenticated: false` and `user: null`, and navigates them to email verification.
+- **loginUser / checkAuth fulfilled:** Sets `loading: false`, `isAuthenticated: true`, `user: action.payload`.
+- **Rejected:** Sets `loading: false`, `error` from the payload, and clears the user (unless it's just a logout).
 - **logout fulfilled:** `user: null`, `isAuthenticated: false`, `error: null`.
 
 # Inputs and Outputs
 
 | Thunk | Argument | Success payload |
 |-------|----------|-----------------|
-| `registerUser` | `{ firstName, emailId, password }` | User object from API |
-| `loginUser` | `{ emailId, password }` | User object from API |
-| `checkAuth` | none | User object or undefined |
+| `registerUser` | `{ username, emailId, password }` | Full API response |
+| `loginUser` | `{ emailId, password }` | User object |
+| `checkAuth` | none | User object |
 | `logoutUser` | none | `null` |
+
 
 # Dependencies
 

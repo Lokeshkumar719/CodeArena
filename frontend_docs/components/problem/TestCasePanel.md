@@ -28,6 +28,7 @@ Expected fields: `success`, `runtime`, `memory`, `testCases[]` with `stdin`, `ex
 - Pass/fail per case: `tc.status_id === 3` → `.tc-pass` "✓ Passed", else `.tc-fail`.
 - Top-level success uses `runResult.success` for card styling (`.result-success` / `.result-error`).
 
+
 # Inputs and Outputs
 
 | Input | Output |

@@ -5,66 +5,43 @@
 
 # File Purpose
 
-Video editorial player for a problem: custom controls, progress scrubber, or empty state when no video URL exists.
+Video editorial player for a problem, showing a YouTube iframe or an empty state when no video URL exists.
 
 # Responsibilities
 
-- Render placeholder when `secureUrl` is missing.
-- HTML5 `<video>` with poster, play/pause, time display, range seek.
-- Track `currentTime` via `timeupdate` listener.
+- Render placeholder when `youtubeUrl` is missing.
+- Parse `youtubeUrl` to extract the `videoId` (supports both standard and `youtu.be` links).
+- Render a privacy-enhanced YouTube iframe (`youtube-nocookie.com`).
 
 # Main Functions / Components / Classes
 
 | Symbol | Type | Role |
 |--------|------|------|
 | `Editorial` | default export | Player UI |
-| Props | `secureUrl`, `thumbnailUrl`, `duration` | From problem document (Cloudinary) |
-| `formatTime` | helper | Seconds → `M:SS` |
-| `togglePlayPause` | handler | Play/pause + `isPlaying` state |
+| Props | `youtubeUrl` | From problem document |
 
 # Internal Logic
 
-- If `!secureUrl`: centered empty state with `Video` icon from `lucide-react`.
-- Otherwise: video `onClick` toggles play; bottom overlay shows on hover or when paused (`isHovering || !isPlaying`).
-- Range `max={duration || 0}`; onChange sets `videoRef.current.currentTime`.
+1. If `!youtubeUrl`: renders centered empty state with `Video` icon from `lucide-react`.
+2. Tries to extract `videoId`:
+   - If `youtu.be`, takes the pathname slice.
+   - Else, uses `searchParams.get('v')`.
+3. Returns an `<iframe>` configured for autoplay and fullscreen.
 
 # Inputs and Outputs
 
 | Prop | Usage |
 |------|--------|
-| `secureUrl` | `video` src |
-| `thumbnailUrl` | `poster` |
-| `duration` | Total time for scrubber and label |
+| `youtubeUrl` | parsed to `videoId` for iframe src |
 
 # Dependencies
 
-`react` (`useState`, `useRef`, `useEffect`), `lucide-react` (`Pause`, `Play`, `Video`).
+- `lucide-react`
+- `../styles/problem/editorialStyles`
 
 # Used By
 
 - [`../pages/ProblemPage.md`](../pages/ProblemPage.md) — left tab `editorial`, props from `problem.secureUrl`, `thumbnailUrl`, `duration`
-
-# API Connections
-
-None directly; URLs produced by backend/Cloudinary via [`AdminUpload.md`](./AdminUpload.md).
-
-# Database Connections
-
-None.
-
-# State/Context Dependencies
-
-Local: `isPlaying`, `currentTime`, `isHovering`; ref `videoRef`.
-
-# Related Files
-
-- [`AdminUpload.md`](./AdminUpload.md)
-- [`../pages/ProblemPage.md`](../pages/ProblemPage.md)
-
-# Next Files To Read
-
-1. Backend solution video model
-2. [`AdminUpload.md`](./AdminUpload.md)
 
 # Common Risks / Notes
 

@@ -31,18 +31,25 @@ erDiagram
 ## User Schema Highlights
 
 - `emailId`: unique, indexed, immutable, validated email
+- `username`: unique, trimmed, 3–20 chars, alphanumeric + underscores
 - `role`: `user` | `admin`
 - `problemSolved`: array of `ObjectId` ref `Problem`
-- `password`: bcrypt hash
+- `password`: bcrypt hash (hashed via `pre('save')` hook)
 - `resetPasswordToken` / `resetPasswordExpires`: Used for password reset flow (hashed tokens)
+- `isVerified`: Boolean, default `false` — gates login access
+- `emailVerificationToken` / `emailVerificationTokenExpires`: Used for email verification flow (hashed tokens)
+- `bio`: String, trimmed, max 200 chars, default `''`
+- `institution`: String, trimmed, max 100 chars, default `''`
 - **Hook:** `post('findOneAndDelete')` deletes all submissions for that user
 
 ## Problem Schema Highlights
 
 - `problemNo`: Integer identifier, automatically incremented and unique
 - `title`: Indexed for text search
+- `slug`: Unique slug for URL routing
 - `description`, `inputFormat`, `outputFormat`, `constraints`: Rich text / markdown
-- `visibleTestCases` / `hiddenTestCases`: Arrays of input/output objects
+- `visibleTestCases`: Array of input/output/explanation objects
+- `hiddenTestCasesZip.key`: Reference to the Cloudflare R2 object key containing the hidden test cases ZIP file
 - `startCode[]`: Starter templates per language
 - `referenceSolution[]`: Validated via Judge0 before saving
 - `tags`: Validated against `VALID_TAGS` enum array
@@ -62,12 +69,13 @@ Instead of relying solely on Mongo ObjectIds, problems have human-readable seque
 ## Submission Schema Highlights
 
 - Compound Index: `{ userId: 1, problemId: 1 }`
+- Secondary Index: `{ userId: 1, status: 1 }`
 - `status`: Enum containing standard execution states (`accepted`, `wrong_answer`, `time_limit_exceeded`, etc.)
 - Tracking metrics: `runtime`, `memory`, `testCasesPassed`, `testCasesTotal`
 
 ## SolutionVideo Schema
 
-- Links `problemId` + `userId` + Cloudinary metadata (`cloudinaryPublicId`, `secureUrl`, `thumbnailUrl`, `duration`)
+- Links `problemId` + `userId` + `youtubeUrl` (validated standard YouTube URL)
 
 ## Redis Data Structures
 
@@ -91,7 +99,7 @@ Uses `buildProblemQuery.js` to construct complex Mongo queries:
 - Array intersection (tags): `{ tags: { $all: requestedTags } }`
 - Difficulty matching: `{ difficulty: value }`
 - Excludes solved/unsolved using `$in`/`$nin` with `Submission` aggregate lookups.
-- Projections explicitly exclude heavy arrays (`hiddenTestCases`, `startCode`, `description`) for performance.
+- Projections explicitly exclude heavy fields (`hiddenTestCasesZip`, `startCode`, `description`) for performance.
 
 ## Related
 

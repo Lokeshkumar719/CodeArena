@@ -10,10 +10,12 @@ Defined in `backend/src/index.js`:
 
 | Mount | Router file | Purpose |
 |-------|-------------|---------|
-| `/user` | `routes/userAuth.js` | Registration, login, logout, refresh, reset, check |
-| `/problem` | `routes/problemCreator.js` | Problem CRUD + search/list + submission history |
-| `/submission` | `routes/submit.js` | Run & submit code (rate limited) |
-| `/video` | `routes/videoCreator.js` | Cloudinary upload signing & metadata |
+| `/user` | `routes/auth/authRoutes.js` | Registration, login, logout, refresh, reset, check, email verification |
+| `/problem` | `routes/problem/problemRoutes.js` | Problem CRUD + search/list + submission history |
+| `/submission` | `routes/submission/submissionRoutes.js` | Run & submit code (rate limited) |
+| `/video` | `routes/video/videoRoutes.js` | YouTube video metadata management |
+| `/profile` | `routes/profile/profileRoutes.js` | User profile data retrieval and updates |
+| `/api/stats` | `routes/statsRoutes.js` | Platform statistics |
 
 ## End-to-End Flows
 
@@ -21,13 +23,21 @@ Defined in `backend/src/index.js`:
 
 ```
 Signup.jsx → dispatch(registerUser)
-  → POST /user/register { firstName, emailId, password }
+  → POST /user/register { username, emailId, password }
   → rateLimitMiddleware (limitRegister, IP-based, fixed window)
-  → userAuthenticate.register → validate → bcrypt → User.create
-  → authService.registerUser → generateTokens (access + refresh)
-  → store hashed refresh token in Redis
-  → Set-Cookie accessToken (15m), refreshToken (7d)
-  → Redux auth.fulfilled → navigate /
+  → userAuthenticate.register → validate → bcrypt → User.create (unverified)
+  → generate email verification token → hash → store in DB
+  → send verification email via Resend API
+  → return success message (User is NOT logged in)
+```
+
+**Email Verification:**
+```
+CheckEmail.jsx (Prompt user to check email)
+User clicks link in email → GET /user/verify-email/:token
+  → hash token → find user in DB
+  → update user to verified → clear token fields
+  → User can now log in
 ```
 
 ### 2. User login & token refresh
@@ -73,7 +83,7 @@ Homepage.jsx
 
 ```
 ProblemPage.jsx
-  → GET /problem/problemById/:id
+  → GET /problem/:slug
   → POST /submission/run/:id { code, language }
        → rateLimitMiddleware (limitRunCode, userId-based token bucket)
        → visible test cases only → Judge0 batch → poll → JSON result
@@ -100,9 +110,10 @@ SubmissionHistory.jsx
 ### 8. Admin create problem
 
 ```
-AdminPanel.jsx
-  → POST /problem/create (userMiddleware, adminMiddleware, limitSubmitCode)
+CreateProblem.jsx
+  → POST /problem/create (userMiddleware, adminMiddleware, limitSubmitCode, uploadZipMiddleware)
        body includes inputFormat, outputFormat, constraints, test cases, startCode, referenceSolution
+       file includes `hiddenTestCasesZip` (uploaded to R2)
        → validateReferenceSolutions against visible+hidden tests via Judge0
        → getNextProblemNo (atomic counter)
        → Problem.create({ problemNo, ...req.body, problemCreator: req.user._id })
@@ -111,10 +122,11 @@ AdminPanel.jsx
 ### 9. Admin video upload
 
 ```
-AdminUpload.jsx
-  → GET /video/create/:problemId (userMiddleware, adminMiddleware)
-  → POST to Cloudinary (plain axios, not axiosClient)
-  → POST /video/save (userMiddleware, adminMiddleware)
+UploadVideoSolution.jsx
+  → POST /video/upload/:problemId (userMiddleware, adminMiddleware)
+  → Body contains { youtubeUrl }
+  → Validate YouTube URL format
+  → Save SolutionVideo to database
 ```
 
 ## Complete Endpoint Reference
@@ -130,7 +142,9 @@ AdminUpload.jsx
 | POST | `/forgot-password` | `limitLogin` | `forgotPassword` |
 | POST | `/reset-password/:token`| — | `resetPassword` |
 | POST | `/change-password` | `userMiddleware`, `limitChangePassword` | `changePassword` |
-| GET | `/check` | `userMiddleware` | inline JSON |
+| GET | `/check` | `userMiddleware` | check Auth status |
+| GET | `/verify-email/:token` | — | `verifyEmail` |
+| POST | `/resend-verification` | `limitLogin` | `resendVerificationEmail` |
 | POST | `/admin/Register` | `userMiddleware`, `adminMiddleware` | `adminRegister` |
 | DELETE | `/profile` | `userMiddleware` | `deleteProfile` |
 
@@ -138,14 +152,28 @@ AdminUpload.jsx
 
 | Method | Path | Middleware | Handler |
 |--------|------|------------|---------|
-| POST | `/create` | `userMiddleware`, `adminMiddleware`, `limitSubmitCode` | `createProblem` |
-| PUT | `/update/:id` | `userMiddleware`, `adminMiddleware`, `limitSubmitCode` | `updateProblem` |
+| POST | `/create` | `userMiddleware`, `adminMiddleware`, `limitSubmitCode`, `upload.single('hiddenTestCasesZip')` | `createProblem` |
+| PATCH | `/update/:id` | `userMiddleware`, `adminMiddleware`, `limitSubmitCode`, `upload.single('hiddenTestCasesZip')` | `updateProblem` |
 | DELETE | `/delete/:id` | `userMiddleware`, `adminMiddleware` | `deleteProblem` |
 | GET | `/admin/problemById/:id` | `userMiddleware`, `adminMiddleware` | `getProblemByIdAdmin` |
-| GET | `/problemById/:id` | `userMiddleware` | `getProblemById` |
+| GET | `/:slug` | `userMiddleware` | `getProblemBySlug` |
 | GET | `/getProblems` | `userMiddleware` | `getProblems` |
 | GET | `/problemSolvedByUser` | `userMiddleware` | `solvedProblems` |
 | GET | `/problemSubmmision/:id` | `userMiddleware` | `submittedProblem` |
+
+### `/profile`
+
+| Method | Path | Middleware | Handler |
+|--------|------|------------|---------|
+| GET | `/me` | `userMiddleware` | `getMyProfile` |
+| PATCH | `/me` | `userMiddleware` | `updateMyProfile` |
+| GET | `/:username` | — | `getPublicProfile` |
+
+### `/api/stats`
+
+| Method | Path | Middleware | Handler |
+|--------|------|------------|---------|
+| GET | `/` | — | `getPlatformStats` |
 
 ### `/submission`
 
@@ -158,8 +186,8 @@ AdminUpload.jsx
 
 | Method | Path | Middleware | Handler |
 |--------|------|------------|---------|
-| GET | `/create/:problemId` | `userMiddleware`, `adminMiddleware` | `generateUploadSignature` |
-| POST | `/save` | `userMiddleware`, `adminMiddleware` | `saveVideoMetadata` |
+| POST | `/upload/:problemId` | `userMiddleware`, `adminMiddleware` | `uploadVideo` |
+| PUT | `/update/:problemId` | `userMiddleware`, `adminMiddleware` | `updateVideo` |
 | DELETE | `/delete/:problemId` | `userMiddleware`, `adminMiddleware` | `deleteVideo` |
 
 ## External API Integrations
@@ -172,11 +200,12 @@ AdminUpload.jsx
 
 ### Resend (Email)
 - Service: `backend/src/services/auth/emailService.js`
-- Used for: Sending forgot password links
+- Used for: Sending forgot password links and email verification links
 
-### Cloudinary (Video)
-- Config: `backend/src/controllers/videoSection.js`
-- Upload signature generation and media deletion
+### Cloudflare R2 (Storage)
+- Client: `backend/src/config/r2Client.js`
+- Used for: Storing `hiddenTestCasesZip` files securely.
+- Service: `storageServices.js` orchestrates uploads and deletions to the R2 bucket.
 
 ## Error Handling
 

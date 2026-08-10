@@ -5,13 +5,12 @@
 
 # File Purpose
 
-Right-panel code tab: language selector, Monaco editor, and action bar for run/submit.
+Right-panel code tab: language selector and Monaco editor.
 
 # Responsibilities
 
-- Render only when `activeRightTab === "code"`; otherwise return `null`.
 - Wire Monaco `Editor` with theme and editor options.
-- Compose `LanguageSelector` and `ActionBar`.
+- Compose `LanguageSelector`.
 
 # Main Functions / Components / Classes
 
@@ -24,7 +23,7 @@ Monaco options include: `vs-dark`, JetBrains Mono, no minimap, word wrap, `autom
 
 # Internal Logic
 
-Flex column: `LanguageSelector` → `.editor-wrap` with full-height Editor → `.action-bar` with `ActionBar`.
+Flex column: `LanguageSelector` → `.editor-wrap` with full-height Editor.
 
 `onMount` → `handleEditorDidMount` (stores editor in parent ref). `onChange` → `handleEditorChange`.
 
@@ -43,7 +42,7 @@ Flex column: `LanguageSelector` → `.editor-wrap` with full-height Editor → `
 |--------|------|
 | `@monaco-editor/react` | Editor |
 | `./LanguageSelector` | Language buttons |
-| `./ActionBar` | Run/Submit |
+| `./LanguageSelector` | Language picker |
 
 # Used By
 
@@ -64,7 +63,7 @@ Stateless; all state from `ProblemPage`.
 # Related Files
 
 - [`LanguageSelector.md`](./LanguageSelector.md)
-- [`ActionBar.md`](./ActionBar.md)
+
 - [`../../pages/ProblemPage.css.md`](../../pages/ProblemPage.css.md)
 
 # Next Files To Read

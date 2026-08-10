@@ -9,8 +9,8 @@
 - MongoDB instance (local or Atlas)
 - Redis server (local or managed)
 - RapidAPI account with Judge0 CE API key
-- Cloudinary account (for editorial videos / admin upload)
-- Resend account (for password reset emails)
+- Cloudflare R2 account (for storing hidden testcases)
+- Resend account (for password reset and email verification)
 
 ## Repository Layout
 
@@ -32,9 +32,10 @@ JWT_KEY=your-access-token-secret
 JWT_REFRESH_KEY=your-refresh-token-secret
 REDIS_URL=redis://127.0.0.1:6379
 RAPID_API_KEY=your-judge0-rapidapi-key
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
+R2_ENDPOINT=your-cloudflare-r2-endpoint
+R2_ACCESS_KEY_ID=your-r2-access-key
+R2_SECRET_ACCESS_KEY=your-r2-secret-key
+R2_BUCKET_NAME=your-r2-bucket-name
 RESEND_API_KEY=your_resend_key
 FRONTEND_URL=http://localhost:5173
 ```
@@ -59,7 +60,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`. API must be reachable at `http://localhost:3000` (hardcoded in `frontend/src/utils/axiosClient.js`).
+Open `http://localhost:5173`. API must be reachable at `http://localhost:3000` (configured via `import.meta.env.VITE_API_URL` in `frontend/src/utils/axiosClient.js`).
 
 ## First-Time Data
 

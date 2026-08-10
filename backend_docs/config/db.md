@@ -2,11 +2,13 @@
 
 MongoDB connection helper for the CodeArena backend. Exports a single async function that connects Mongoose to the database URI from the environment.
 
+**Documented Source File:** `backend/src/config/db.js`
+
 # Responsibilities
 
 - Load `dotenv` when the module is required
 - Call `mongoose.connect` with `process.env.DB_CONNECT_STRING`
-- Export the connect function for use at server startup (`index.js`) and in standalone scripts (`seedProblems.js`)
+- Export the connect function for use at server startup (`backend/src/index.js`)
 
 # Main Functions / Components / Classes
 
@@ -29,7 +31,7 @@ MongoDB connection helper for the CodeArena backend. Exports a single async func
 | Output | Description |
 |--------|-------------|
 | Resolved promise | Mongoose connected; no return value used by callers |
-| Rejected promise | Propagates to `index.js` `initialiseConnection` catch or `seedProblems` catch |
+| Rejected promise | Propagates to `index.js` `initialiseConnection` catch block |
 
 # Dependencies
 
@@ -38,7 +40,6 @@ MongoDB connection helper for the CodeArena backend. Exports a single async func
 # Used By
 
 - [index.md](./index.md) — `backend/src/index.js` calls `main()` during `initialiseConnection`
-- [../database/seedProblems.md](../database/seedProblems.md) — connects directly via `mongoose.connect` (duplicate pattern, does not import this file)
 
 # API Connections
 
@@ -47,7 +48,7 @@ None. This module only opens a database connection.
 # Database Connections
 
 - **MongoDB** via Mongoose `mongoose.connect(process.env.DB_CONNECT_STRING)`
-- Default connection pool and options are Mongoose defaults (not customized in this file)
+- Default connection pool and options are Mongoose defaults
 
 # State/Context Dependencies
 
@@ -57,22 +58,20 @@ None. This module only opens a database connection.
 # Related Files
 
 - [index.md](./index.md)
-- [../database/user.md](../database/user.md)
-- [../database/problems.md](../database/problems.md)
-- [../database/submission.md](../database/submission.md)
-- [../database/solutionVideo.md](../database/solutionVideo.md)
-- [../docs/DATABASE_FLOW.md](../docs/DATABASE_FLOW.md)
+- [../models/user.md](../models/user.md)
+- [../models/problem.md](../models/problem.md)
+- [../models/submission.md](../models/submission.md)
+- [../models/solutionVideo.md](../models/solutionVideo.md)
 
 # Next Files To Read
 
-1. [../database/user.md](../database/user.md) — primary auth collection schema
+1. [../models/user.md](../models/user.md) — primary auth collection schema
 2. [index.md](./index.md) — when connection runs relative to HTTP listen
 
 # Common Risks / Notes
 
 - No connection error handlers or retry logic in this file.
 - No explicit `mongoose.connection.on('error')` logging here.
-- `seedProblems.js` duplicates connect logic instead of reusing `main`.
 - Connection is not closed on process shutdown from this module.
 
-# Last Reviewed: 2026-05-18
+# Last Reviewed: 2026-08-10

@@ -25,7 +25,7 @@ CSS classes (no JS exports). Key selectors:
 | `.panel-content`, `.problem-title`, `.badge-*`, `.desc-text`, `.example-*` | `ProblemDescription.jsx`, inline solutions in `ProblemPage.jsx` |
 | `.lang-bar`, `.lang-btn` | `LanguageSelector.jsx` |
 | `.editor-wrap` | `CodeEditorPanel.jsx` |
-| `.action-bar`, `.run-btn`, `.submit-btn` | `CodeEditorPanel.jsx`, `ActionBar.jsx` |
+| `.action-bar`, `.run-btn`, `.submit-btn` | `ProblemPage.jsx` |
 | `.result-panel`, `.result-card`, `.tc-*` | `ResultPanel.jsx`, `TestCasePanel.jsx` |
 | `.section-title`, `.solution-*` | `ProblemPage.jsx` solutions tab |
 | `.tab-bar`, `.tab-btn` | **Not referenced in current JSX** — `ProblemTabs.jsx` uses Tailwind instead |

@@ -2,12 +2,14 @@
 
 Express application entry point for the CodeArena backend. Boots middleware, mounts HTTP routers, connects MongoDB and Redis in parallel, then starts the HTTP server on `process.env.PORT`.
 
+**Documented Source File:** `backend/src/index.js`
+
 # Responsibilities
 
 - Load environment variables via `dotenv`
-- Configure CORS for the Vite dev frontend (`http://localhost:5173`) with credentials
+- Configure CORS for the frontend origin with credentials
 - Parse JSON bodies and cookies
-- Mount route prefixes: `/user`, `/problem`, `/submission`, `/video`
+- Mount route prefixes: `/user`, `/problem`, `/submission`, `/video`, `/profile`, `/api`
 - Register global error handler as the final middleware
 - Orchestrate startup: `mongoose.connect` + `redis.connect`, then `app.listen`
 
@@ -25,7 +27,7 @@ Express application entry point for the CodeArena backend. Boots middleware, mou
 2. Middleware order: `cors` → `express.json()` → `cookieParser()` → routers → `errorMiddleware`.
 3. `initialiseConnection` uses `Promise.all([main(), redisClient.connect()])` where `main` is the default export from `config/db.js` (Mongoose connect).
 4. On success, logs `"DB connected"` and listens on `process.env.PORT`.
-5. On failure, logs `"Error Occurred: "` + error; **does not** call `process.exit` or start the server.
+5. On failure, logs `"Error Occurred: "` + error.
 
 # Inputs and Outputs
 
@@ -34,7 +36,7 @@ Express application entry point for the CodeArena backend. Boots middleware, mou
 | `process.env.PORT` | Environment |
 | `process.env.DB_CONNECT_STRING` | Used indirectly via `db.js` |
 | `process.env.REDIS_URL` | Used indirectly via `redis.js` |
-| HTTP requests | Clients (frontend on port 5173) |
+| HTTP requests | Clients |
 
 | Output | Description |
 |--------|-------------|
@@ -49,7 +51,12 @@ Express application entry point for the CodeArena backend. Boots middleware, mou
 
 - `./config/db` — MongoDB connection function
 - `./config/redis` — Redis client (`.connect()` at startup)
-- `./routes/userAuth`, `problemCreator`, `submit`, `videoCreator`
+- `./routes/auth/authRoutes` — Auth routes (`/user`)
+- `./routes/problem/problemRoutes` — Problem routes (`/problem`)
+- `./routes/submission/submissionRoutes` — Submission routes (`/submission`)
+- `./routes/video/videoRoutes` — Solution video routes (`/video`)
+- `./routes/profile/profileRoutes` — Profile routes (`/profile`)
+- `./routes/statsRoutes` — Platform statistics routes (`/api`)
 - `./middlewares/errorMiddleware`
 
 # Used By
@@ -63,12 +70,12 @@ Exposes no routes directly; delegates to child routers:
 
 | Mount | Router |
 |-------|--------|
-| `/user` | `routes/userAuth.js` |
-| `/problem` | `routes/problemCreator.js` |
-| `/submission` | `routes/submit.js` |
-| `/video` | `routes/videoCreator.js` |
-
-See [../docs/API_FLOW.md](../docs/API_FLOW.md) for end-to-end client flows.
+| `/user` | `routes/auth/authRoutes.js` |
+| `/problem` | `routes/problem/problemRoutes.js` |
+| `/submission` | `routes/submission/submissionRoutes.js` |
+| `/video` | `routes/video/videoRoutes.js` |
+| `/profile` | `routes/profile/profileRoutes.js` |
+| `/api` | `routes/statsRoutes.js` |
 
 # Database Connections
 
@@ -77,33 +84,30 @@ See [../docs/API_FLOW.md](../docs/API_FLOW.md) for end-to-end client flows.
 
 # State/Context Dependencies
 
-- Requires `.env` (or environment) with `PORT`, `DB_CONNECT_STRING`, `REDIS_URL` at minimum for a successful boot
+- Requires `.env` with `PORT`, `DB_CONNECT_STRING`, `REDIS_URL`
 - No in-memory application state beyond Express and shared Mongoose/Redis singletons
 
 # Related Files
 
 - [db.md](./db.md)
 - [redis.md](./redis.md)
-- [../routes/userAuth.md](../routes/userAuth.md)
-- [../routes/problemCreator.md](../routes/problemCreator.md)
-- [../routes/submit.md](../routes/submit.md)
-- [../routes/videoCreator.md](../routes/videoCreator.md)
-- [../middleware/errorMiddleware.md](../middleware/errorMiddleware.md)
-- [../docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md)
-- [../docs/BACKEND_FLOW.md](../docs/BACKEND_FLOW.md)
+- [../routes/auth/authRoutes.md](../routes/auth/authRoutes.md)
+- [../routes/problem/problemRoutes.md](../routes/problem/problemRoutes.md)
+- [../routes/submission/submissionRoutes.md](../routes/submission/submissionRoutes.md)
+- [../routes/video/videoRoutes.md](../routes/video/videoRoutes.md)
+- [../routes/profile/profileRoutes.md](../routes/profile/profileRoutes.md)
+- [../routes/statsRoutes.md](../routes/statsRoutes.md)
+- [../middlewares/errorMiddleware.md](../middlewares/errorMiddleware.md)
 
 # Next Files To Read
 
-1. [../routes/userAuth.md](../routes/userAuth.md) — auth HTTP surface
+1. [../routes/auth/authRoutes.md](../routes/auth/authRoutes.md) — auth HTTP surface
 2. [db.md](./db.md) and [redis.md](./redis.md) — connection config
-3. [../middleware/errorMiddleware.md](../middleware/errorMiddleware.md) — global error shape
+3. [../middlewares/errorMiddleware.md](../middlewares/errorMiddleware.md) — global error shape
 
 # Common Risks / Notes
 
-- Startup failure only logs to console; the process may stay alive without listening.
-- CORS `origin` is hardcoded to `http://localhost:5173` (not configurable via env).
-- `helmet`, `morgan`, and `rate-limiter-flexible` are in `package.json` but **not** used here.
-- No WebSocket server is mounted (see [../websocket/README.md](../websocket/README.md)).
+- Startup failure logs to console.
 - `errorMiddleware` must remain last; order of `app.use` calls is security- and behavior-critical.
 
-# Last Reviewed: 2026-05-18
+# Last Reviewed: 2026-08-10

@@ -5,29 +5,31 @@
 
 # File Purpose
 
-Login page: email/password form with client validation, dispatches Redux login, redirects when authenticated.
+Login page: email/password form with client validation, dispatches Redux login, handles unverified emails, and handles rate limiting.
 
 # Responsibilities
 
 - Validate form with Zod + `react-hook-form`.
 - Dispatch `loginUser` with `{ emailId, password }`.
 - Redirect to `/` when `isAuthenticated` becomes true.
-- Link to signup via `NavLink`.
+- Display login errors, handle rate limiting, and prompt for email verification resend if necessary.
+- Link to Signup, Forgot Password, and Resend Verification.
 
 # Main Functions / Components / Classes
 
 | Symbol | Type | Role |
 |--------|------|------|
 | `Login` | default export component | Full page UI |
-| `loginSchema` | Zod schema | `emailId` email, `password` min 8 chars |
+| `loginSchema` | Zod schema | `emailId` email, `password` min 1 char |
 
 # Internal Logic
 
-1. `useSelector` → `isAuthenticated`, `loading`, `error` ( **`error` is not rendered in JSX** ).
+1. `useSelector` → `isAuthenticated`, `loading`, `error`.
 2. `useForm` with `zodResolver(loginSchema)`.
-3. `useEffect`: if `isAuthenticated`, `navigate("/")`.
-4. `onSubmit` → `dispatch(loginUser(data))`.
-5. Local `showPassword` toggles password field type and eye icon button.
+3. `useRateLimit` handles 429 errors from the backend.
+4. `useEffect`: if `isAuthenticated`, `navigate("/")`.
+5. `onSubmit` → `dispatch(loginUser(data))`. If unwrap fails, checks for rate limits and sets `showResendVerification` if the email is unverified.
+6. Local `showPassword` toggles password field type.
 
 # Inputs and Outputs
 
@@ -36,6 +38,7 @@ Login page: email/password form with client validation, dispatches Redux login, 
 | User form submit | Redux `loginUser` thunk |
 | `state.auth.isAuthenticated` | Client redirect to `/` |
 | `state.auth.loading` | Disables submit, shows loading on button |
+| `error` | Renders error alert or rate-limit message |
 
 # Dependencies
 
@@ -44,6 +47,7 @@ Login page: email/password form with client validation, dispatches Redux login, 
 | `react-hook-form`, `@hookform/resolvers/zod`, `zod` | Form validation |
 | `react-redux` | Dispatch / select auth |
 | `react-router` | `useNavigate`, `NavLink` |
+| `../hooks/useRateLimit` | Rate limiting hook |
 | `../authSlice` | `loginUser` |
 
 # Used By

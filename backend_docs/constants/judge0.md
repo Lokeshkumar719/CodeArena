@@ -1,11 +1,13 @@
 # File Purpose
 
-Shared constants for Judge0 integration: language ID map and polling configuration used by [../services/judge0Service.md](../services/judge0Service.md) and [../utils/problemUtility.md](../utils/problemUtility.md).
+Shared constants for Judge0 integration: language ID map and polling configuration.
+
+**Documented Source File:** `backend/src/constants/judge0.js`
 
 # Responsibilities
 
 - Map CodeArena language names to Judge0 CE numeric `language_id` values
-- Define polling retry count and delay between polls
+- Define CPU/Wall time multipliers and polling retry settings
 
 # Main Functions / Components / Classes
 
@@ -14,14 +16,18 @@ Shared constants for Judge0 integration: language ID map and polling configurati
 | `LANGUAGE_IDS` | `{ cpp: 54, java: 62, javascript: 63 }` |
 | `MAX_POLLING_RETRIES` | `10` |
 | `POLLING_INTERVAL` | `1000` (milliseconds) |
+| `MAX_BATCH_SIZE` | `15` |
+| `MAX_REFERENCE_VALIDATION_TESTCASES` | `10` |
+| `CPU_TIME_MULTIPLIER` | `3` |
+| `WALL_TIME_MULTIPLIER` | `5` |
 
 # Internal Logic
 
-Pure data module — no functions. Re-exported via `module.exports` object.
+Pure data module re-exported via `module.exports`.
 
 # Inputs and Outputs
 
-Consumed as `require('../constants/judge0')` — read-only constants.
+Consumable read-only constants.
 
 # Dependencies
 
@@ -29,12 +35,13 @@ None.
 
 # Used By
 
-- [../services/judge0Service.md](../services/judge0Service.md) — `MAX_POLLING_RETRIES`, `POLLING_INTERVAL`
-- [../utils/problemUtility.md](../utils/problemUtility.md) — `LANGUAGE_IDS`
+- [../services/execution/judge0Service.md](../services/execution/judge0Service.md) — `MAX_POLLING_RETRIES`, `POLLING_INTERVAL`
+- [../utils/judge/judge0Utils.md](../utils/judge/judge0Utils.md) — `LANGUAGE_IDS`
+- [../utils/judge/judgeUtils.md](../utils/judge/judgeUtils.md) — `CPU_TIME_MULTIPLIER`, `WALL_TIME_MULTIPLIER`
 
 # API Connections
 
-Values must stay aligned with [Judge0 CE language list](https://ce.judge0.com/languages) for the RapidAPI deployment in use.
+Values match the deployed Judge0 CE language list.
 
 # Database Connections
 
@@ -46,19 +53,17 @@ None.
 
 # Related Files
 
-- [../services/judge0Service.md](../services/judge0Service.md)
-- [../utils/problemUtility.md](../utils/problemUtility.md)
+- [../services/execution/judge0Service.md](../services/execution/judge0Service.md)
+- [../utils/judge/judge0Utils.md](../utils/judge/judge0Utils.md)
 - [judgeStatus.md](./judgeStatus.md)
 
 # Next Files To Read
 
 1. [judgeStatus.md](./judgeStatus.md)
-2. [../services/judge0Service.md](../services/judge0Service.md)
+2. [../services/execution/judge0Service.md](../services/execution/judge0Service.md)
 
 # Common Risks / Notes
 
-- Only three languages configured; must match `submission` schema enum and frontend Monaco language picker.
-- Changing `POLLING_INTERVAL` without adjusting `MAX_POLLING_RETRIES` changes total max wait (~10s today).
-- Language IDs are Judge0-version-specific; verify after API upgrades.
+- Language IDs must match Judge0 CE setup.
 
-# Last Reviewed: 2026-05-18
+# Last Reviewed: 2026-08-10

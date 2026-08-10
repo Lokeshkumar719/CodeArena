@@ -1,71 +1,31 @@
-# File Purpose
+# `backend/src/utils/asyncHandler.js`
 
-Higher-order function that wraps async Express route handlers and forwards rejected promises to `next(err)` for the global error middleware.
+**Layer:** Utility  
+**Documented Source File:** `backend/src/utils/asyncHandler.js`  
+**Purpose:** Higher-order function that wraps async Express route handlers and forwards rejected promises to `next(err)`.  
+**Last reviewed:** 2026-08-10
 
-# Responsibilities
+## Exported Function
 
-- Eliminate try/catch in controllers
-- Route exceptions to [../middleware/errorMiddleware.md](../middleware/errorMiddleware.md)
-
-# Main Functions / Components / Classes
-
-| Export | Signature |
-|--------|-----------|
-| `asyncHandler` | `(requestHandler) => (req, res, next) => void` |
-
-# Internal Logic
+### `asyncHandler(requestHandler)`
 
 ```javascript
-return (req, res, next) => {
-  Promise.resolve(requestHandler(req, res, next)).catch(next);
+const asyncHandler = (requestHandler) => {
+  return (req, res, next) => {
+    Promise.resolve(requestHandler(req, res, next)).catch(next);
+  };
 };
 ```
 
-- Does not wrap synchronous throws inside `requestHandler` unless they occur after Promise resolution
-- Does not call `next()` on success — handler must send response
+- Eliminates the need for `try/catch` blocks in every controller.
+- Forwards any rejected promise or thrown error to Express's `next()`, which routes it to the global [../middlewares/errorMiddleware.md](../middlewares/errorMiddleware.md).
 
-# Inputs and Outputs
+## Used By
 
-| Input | Output |
-|-------|--------|
-| Async function `(req, res, next)` | Express middleware |
-| Rejected promise / throw in async fn | `next(err)` |
-
-# Dependencies
-
-None.
-
-# Used By
-
-- [../auth/userAuthenticate.md](../auth/userAuthenticate.md) — all handlers
-- [../controllers/problemsControllers.md](../controllers/problemsControllers.md)
-- [../controllers/userSubmission.md](../controllers/userSubmission.md)
-- [../controllers/videoSection.md](../controllers/videoSection.md)
-- [../middleware/userMiddleware.md](../middleware/userMiddleware.md)
-
-# API Connections
-
-None.
-
-# Database Connections
-
-None.
-
-# State/Context Dependencies
-
-Requires `errorMiddleware` registered on app.
-
-# Related Files
-
-- [../middleware/errorMiddleware.md](../middleware/errorMiddleware.md)
-
-# Next Files To Read
-
-1. [../middleware/errorMiddleware.md](../middleware/errorMiddleware.md)
-
-# Common Risks / Notes
-
-- [../middleware/adminMiddleware.md](../middleware/adminMiddleware.md) does **not** use this wrapper — inconsistent error handling.
-- All thrown `Error` messages in auth become 500 responses.
-
-# Last Reviewed: 2026-05-18
+All controllers:
+- [../controllers/auth/authController.md](../controllers/auth/authController.md)
+- [../controllers/problem/problemController.md](../controllers/problem/problemController.md)
+- [../controllers/submission/submissionController.md](../controllers/submission/submissionController.md)
+- [../controllers/video/videoController.md](../controllers/video/videoController.md)
+- [../controllers/profile/profileController.md](../controllers/profile/profileController.md)
+- [../controllers/statsController.md](../controllers/statsController.md)

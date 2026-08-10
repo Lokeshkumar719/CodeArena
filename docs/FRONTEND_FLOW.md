@@ -22,20 +22,26 @@ index.html
 
 | Path | Component | Auth | Redirect logic |
 |------|-----------|-------------|----------------|
-| `/` | `Homepage` | Authenticated | Guests → `/signup` |
+| `/` | `LandingPage` | Guest | Authed → `/problems` |
+| `/problems` | `Homepage` | Authenticated | Guests → `/` |
 | `/login` | `Login` | Guest | Authed → `/` |
 | `/signup` | `Signup` | Guest | Authed → `/` |
 | `/forgot-password` | `ForgotPassword` | Guest | Authed → `/` |
 | `/reset-password/:token` | `ResetPassword`| Guest | Authed → `/` |
 | `/change-password` | `ChangePassword` | Authenticated | Guests → `/login` |
-| `/problem/:problemId` | `ProblemPage` | Authenticated | Guests → `/login` |
+| `/check-email` | `CheckEmail` | Guest | Authed → `/` |
+| `/verify-email/:token` | `VerifyEmail` | Guest | Authed → `/` |
+| `/resend-verification` | `ResendVerification` | Any | — |
+| `/profile/:username` | `Profile` | Any | — |
+| `/profile/edit` | `EditProfile` | Any | — |
+| `/problem/:slug` | `ProblemPage` | Authenticated | Guests → `/login` |
 | `/admin` | `Admin` | Admin | Non-admin → `/` |
-| `/admin/create` | `AdminPanel` | Admin | Non-admin → `/` |
-| `/admin/delete` | `AdminDelete` | Admin | Non-admin → `/` |
-| `/admin/update-list` | `AdminUpdateList` | Admin | Non-admin → `/` |
-| `/admin/update/:id` | `AdminUpdate` | Admin | Non-admin → `/` |
-| `/admin/video` | `AdminVideo` | Admin | Non-admin → `/` |
-| `/admin/upload/:problemId` | `AdminUpload` | Admin | Non-admin → `/` |
+| `/admin/create` | `CreateProblem` | Admin | Non-admin → `/` |
+| `/admin/delete` | `DeleteProblem` | Admin | Non-admin → `/` |
+| `/admin/update-list` | `UpdateProblemList` | Admin | Non-admin → `/` |
+| `/admin/update/:id` | `UpdateProblem` | Admin | Non-admin → `/` |
+| `/admin/video` | `ManageVideoSolutions` | Admin | Non-admin → `/` |
+| `/admin/upload/:problemId` | `UploadVideoSolution` | Admin | Non-admin → `/` |
 
 ## State Management
 
@@ -53,7 +59,7 @@ All other data is **local component state** (`useState` + `useEffect` fetch):
 
 ```javascript
 // frontend/src/utils/axiosClient.js
-baseURL: 'http://localhost:3000'
+baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000'
 withCredentials: true  // sends JWT cookies
 ```
 
@@ -61,7 +67,7 @@ The `axiosClient` has an **interceptor** that handles:
 1. **Rate limits (429):** Extracts `retryAfterSeconds` from the response and attaches it as `error.rateLimitedFor` for UI components.
 2. **Silent refresh (401):** On a 401 error, if it's not the refresh endpoint itself, it silently calls `POST /user/refresh` to get a new access token and then retries the original request.
 
-Direct `axios` (not `axiosClient`) is used only for Cloudinary upload in `AdminUpload.jsx` (since it's an external service).
+All API calls throughout the application use this configured `axiosClient`.
 
 ## Component Flows
 
@@ -84,8 +90,8 @@ ProblemPage (resizable split-layout)
 └── Right panel (tabs: code | testcase | result)
     ├── CodeEditorPanel (Monaco + LanguageSelector)
     ├── TestCasePanel (run results)
-    └── ResultPanel (submit results)
-    └── Action Bar (Run/Submit buttons with rate limit cooldowns)
+    ├── ResultPanel (submit results)
+    └── Action buttons (Run/Submit buttons with rate limit cooldowns)
 ```
 
 **Run:** `POST /submission/run/:id` → sets `activeRightTab = "testcase"`

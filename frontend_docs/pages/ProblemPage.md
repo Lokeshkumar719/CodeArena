@@ -9,8 +9,10 @@ Split-pane problem solver: description/editorial/solutions/submissions on the le
 
 # Responsibilities
 
-- Load problem by route param `problemId`.
-- Manage editor language, starter code, and user code state.
+- Load problem by route param `slug`.
+- Manage editor language, starter code, user code state, and `codeReady` synchronization.
+- Implement rate limiting (`useRateLimit`) for Run and Submit actions.
+- Provide keyboard shortcuts (Cmd/Ctrl + ' for Run, Cmd/Ctrl + Enter for Submit).
 - Run code against sample tests and submit for full evaluation.
 - Orchestrate child components and inline solutions tab markup.
 - Apply layout styles from [`ProblemPage.css.md`](./ProblemPage.css.md).
@@ -22,21 +24,23 @@ Split-pane problem solver: description/editorial/solutions/submissions on the le
 | `ProblemPage` | default export | Page container |
 | `getLanguageForMonaco` | helper | Maps `javascript` / `java` / `cpp` → Monaco language id |
 | `getDifficultyBadge` | helper | CSS class for difficulty badges |
-| `LANGS` | constant | Language picker options |
+| `LANGS` | constant array | Inline language picker options |
 | `LEFT_TABS` / `RIGHT_TABS` | constants | Tab id lists |
 
 # Internal Logic
 
-**Fetch (deps `[problemId]` only):**  
-`GET /problem/problemById/:problemId` → set `problem`, set `code` from `startCode` for current `selectedLanguage`.
+**Fetch (deps `[slug]`):**  
+`GET /problem/:slug` → set `problem`, set `code` from `startCode` for current `selectedLanguage`, set `codeReady(true)`.
 
 **Language change (deps `[selectedLanguage, problem]`):** Reset `code` from `problem.startCode`.
 
-**Run:** `POST /submission/run/:problemId` with `{ code, language }` → `runResult`, switch `activeRightTab` to `testcase`. On error, synthetic `{ success: false, error: 'Internal server error' }`.
+**Run:** Checks `runRateLimit`. `POST /submission/run/:slug` with `{ code, language }` → `runResult`, switch `activeRightTab` to `testcase`. Catch checks for 429 and starts cooldown.
 
-**Submit:** `POST /submission/submit/:problemId` → `submitResult`, tab `result`. Catch clears `submitResult` but still opens result tab.
+**Submit:** Checks `submitRateLimit`. `POST /submission/submit/:slug` → `submitResult`, switch `activeRightTab` to `result`. Catch checks for 429 and starts cooldown.
 
-**Tabs:** Left — description, editorial (`Editorial`), solutions (inline maps `referenceSolution`), submissions (`SubmissionHistory`). Right — `CodeEditorPanel`, conditional `TestCasePanel` / `ResultPanel`.
+**Keyboard Shortcuts:** `useEffect` listens for `keydown`. Prevents default and triggers Run/Submit handlers if `codeReady` and not already running/submitting.
+
+**Tabs:** Left — description, editorial (`Editorial`), solutions, submissions (`SubmissionHistory`). Right — `CodeEditorPanel`, conditional `TestCasePanel` / `ResultPanel`. The action bar (Run/Submit) is rendered inline at the bottom of the right panel, outside of the editor component itself.
 
 **Loading:** If `loading && !problem`, render `LoadingScreen`.
 
@@ -44,57 +48,19 @@ Split-pane problem solver: description/editorial/solutions/submissions on the le
 
 | Input | Output |
 |-------|--------|
-| `useParams().problemId` | Fetched problem document |
+| `useParams().slug` | Fetched problem document |
 | User code / language | Run/submit API bodies |
 | `runResult` / `submitResult` | Passed to result panels |
 
 # Dependencies
 
-| Import | Role |
-|--------|------|
-| `../utils/axiosClient` | HTTP |
-| `SubmissionHistory`, `Editorial` | Left panel tabs |
-| `problem/*` components | Layout, editor, panels |
-| `./ProblemPage.css` | Scoped layout/theme |
+- `react-redux`
+- `react-router` (`useParams`)
+- `react-hot-toast`
+- `../hooks/useRateLimit`
+- `../utils/axiosClient`
+- `../components/problem/*`
 
 # Used By
 
-- [`App.md`](./App.md) — `/problem/:problemId` (no route-level auth)
-
-# API Connections
-
-| Method | Path | Body |
-|--------|------|------|
-| GET | `/problem/problemById/:problemId` | — |
-| POST | `/submission/run/:problemId` | `{ code, language }` |
-| POST | `/submission/submit/:problemId` | `{ code, language }` |
-
-# Database Connections
-
-None in frontend.
-
-# State/Context Dependencies
-
-All local React state (no Redux on this page):  
-`problem`, `selectedLanguage`, `code`, `loading`, `isRunning`, `isSubmitting`, `runResult`, `submitResult`, `activeLeftTab`, `activeRightTab`, `editorRef`.
-
-# Related Files
-
-- [`ProblemPage.css.md`](./ProblemPage.css.md)
-- [`../components/problem/*.md`](../components/problem/)
-- [`../components/SubmissionHistory.md`](../components/SubmissionHistory.md)
-- [`../components/Editorial.md`](../components/Editorial.md)
-
-# Next Files To Read
-
-1. [`../components/problem/CodeEditorPanel.md`](../components/problem/CodeEditorPanel.md)
-2. [`ProblemPage.css.md`](./ProblemPage.css.md)
-3. [`../../docs/API_FLOW.md`](../../docs/API_FLOW.md)
-
-# Common Risks / Notes
-
-- Initial fetch `useEffect` omits `selectedLanguage` from deps — first load uses default `javascript` for starter code only.
-- Solutions tab shows `referenceSolution` when present; fallback message text may not match backend gating rules.
-- Top bar title says "CodeArena · Problem Solver" while brand elsewhere is CodeArena.
-
-# Last Reviewed: 2026-05-18
+- [`App.jsx`](./App.md) - Renders at `/problem/:slug`.

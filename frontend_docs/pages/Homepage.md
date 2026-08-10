@@ -5,47 +5,45 @@
 
 # File Purpose
 
-Authenticated home: paginated problem list, client-side filters, solved badges, logout, and admin nav for admin users.
+Authenticated dashboard showing a paginated, filterable, and searchable list of coding problems.
 
 # Responsibilities
 
-- Fetch paginated problems and (if `user` exists) solved problem IDs.
-- Client-side filter by difficulty, tag, solved/unsolved status.
-- Pagination controls (5 problems per page from API).
-- Navbar with user menu: Admin link (role `admin`), Logout.
+- Fetch and display the list of problems via `GET /problem/getProblems`.
+- Handle filtering by difficulty, tags, and text search query.
+- Maintain pagination state (current page, total pages).
+- Provide a navigation bar with the `UserDropdown`.
 
 # Main Functions / Components / Classes
 
 | Symbol | Type | Role |
 |--------|------|------|
-| `Homepage` | default export | Main page |
-| `tagOptions` | constant array | Filter dropdown values (27 tags) |
-| `getDifficultyBadgeColor` | helper | Maps difficulty → DaisyUI badge class |
+| `Homepage` | default export component | Full page UI |
+| `fetchProblems` | async handler | Calls API with filters |
 
 # Internal Logic
 
-1. `useEffect` on `[user, currentPage]`:
-   - `GET /problem/getAllProblems?page=&limit=5` → `problems`, `totalPages`, `totalProblems`
-   - If `user`: `GET /problem/problemSolvedByUser` → `solvedProblems`
-2. `filteredProblems` = filter `problems` by `filters` (difficulty, tag, status vs `solvedProblems` by `_id`).
-3. `handleLogout` → `dispatch(logoutUser())`, clears local `solvedProblems`.
-4. Pagination: Previous/Next + numeric page buttons; display range text uses `currentPage * 5`.
+1. Retrieves `user` from Redux state.
+2. Uses `useDebounce` to delay API calls while typing in the search box.
+3. `useEffect` triggers `fetchProblems` when `currentPage`, `filters`, or the debounced query changes.
+4. Handles logout via Redux `logoutUser()`.
+5. Renders `ProblemListSkeleton` when loading, otherwise `ProblemCard`s for each result.
+6. Problem links use `NavLink` to `/problem/:slug`.
 
 # Inputs and Outputs
 
 | Input | Output |
 |-------|--------|
-| `currentPage`, `filters` | Filtered card list UI |
-| `user` from Redux | Navbar name, admin link, triggers solved fetch |
-| Problem `_id` | `NavLink` to `/problem/:id` |
+| `currentPage`, `filters`, `searchQuery` | Filtered list UI |
+| `user` from Redux | Navbar name, admin link |
+| Problem `slug` | `NavLink` to `/problem/:slug` |
 
 # Dependencies
 
-| Module | Role |
-|--------|------|
-| `../utils/axiosClient` | Problem APIs |
-| `../authSlice` | `logoutUser`, `user` |
-| `react-redux`, `react-router` | State / links |
+- `react-redux` - For `user` and `logoutUser`.
+- `../hooks/useDebounce` - For search text input.
+- `../utils/axiosClient` - `GET /problem/getProblems`.
+- `../components/home/*` - Sub-components (`Pagination`, `ProblemCard`, `CustomSelect`, `UserDropdown`).
 
 # Used By
 

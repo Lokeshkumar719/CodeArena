@@ -6,7 +6,7 @@
 
 ## Overview
 
-CodeArena is a LeetCode-style web application where users register, browse DSA problems with server-side search/filter/pagination, write code in a Monaco editor, run against visible test cases, submit against hidden test cases (via Judge0), and track solved problems. Admins create/update/delete problems and upload editorial videos to Cloudinary.
+CodeArena is a LeetCode-style web application where users register, verify their email, browse DSA problems with server-side search/filter/pagination, write code in a Monaco editor, run against visible test cases, submit against hidden test cases (via Judge0), and track solved problems. Admins create/update/delete problems (uploading hidden test cases to Cloudflare R2) and link editorial videos via YouTube URLs.
 
 There is **no WebSocket or realtime layer** in the current codebase.
 
@@ -14,7 +14,7 @@ There is **no WebSocket or realtime layer** in the current codebase.
 
 ```mermaid
 flowchart TB
-  subgraph Client["Frontend (Vite + React 19)"]
+  subgraph Client["Frontend (React 19 + Vite)"]
     UI[Pages & Components]
     Redux[Redux Toolkit - auth slice]
     Axios["axiosClient (interceptors: 401 refresh, 429 rate-limit)"]
@@ -23,11 +23,11 @@ flowchart TB
   end
 
   subgraph Server["Backend (Express 4)"]
-    Routes["Routes: /user /problem /submission /video"]
+    Routes["Routes: /auth /problem /submission /video /profile /stats"]
     RL["Rate Limiters (Token Bucket + Fixed Window via Redis)"]
     MW["Middleware: JWT cookie verify (access+refresh tokens)"]
     Ctrl[Controllers]
-    Svc["Services (auth, problem, execution, judge0)"]
+    Svc["Services (auth, problem, execution, judge0, storage)"]
     Routes --> RL --> MW --> Ctrl
     Ctrl --> Svc
   end
@@ -36,7 +36,7 @@ flowchart TB
     MongoDB[(MongoDB via Mongoose)]
     Redis[("Redis (sessions, rate limits)")]
     J0[Judge0 CE via RapidAPI]
-    Cloud[Cloudinary]
+    R2[Cloudflare R2]
     Resend[Resend Email API]
   end
 
@@ -45,7 +45,7 @@ flowchart TB
   MW --> Redis
   RL --> Redis
   Svc --> J0
-  Ctrl --> Cloud
+  Svc --> R2
   Ctrl --> Resend
 ```
 
@@ -53,10 +53,10 @@ flowchart TB
 
 | Layer | Technology |
 |-------|------------|
-| Frontend | React 19, Vite 8, React Router 7, Redux Toolkit, Tailwind 3 + DaisyUI 5, Monaco Editor, react-hook-form + Zod 4, NProgress, react-hot-toast |
-| Backend | Node.js, Express 4, Mongoose 9, JWT (dual access+refresh cookies), bcrypt 6, Redis 5, rate-limiter-flexible 9, Resend (email) |
+| Frontend | React 19, Vite, React Router 7, Redux Toolkit, Tailwind CSS + DaisyUI, Monaco Editor, react-hook-form + Zod, NProgress, react-hot-toast |
+| Backend | Node.js, Express 4, Mongoose, JWT (dual access+refresh cookies), bcrypt, Redis, rate-limiter-flexible, Resend (email) |
 | Code execution | Judge0 CE (RapidAPI) with base64 encoding |
-| Media | Cloudinary (signed direct upload from browser) |
+| Media/Storage | YouTube (video links), Cloudflare R2 (hidden testcases) |
 | Database | MongoDB (Atlas or local) |
 | Caching/Sessions | Redis (refresh token sessions, rate limiter state, token bucket counters) |
 
@@ -64,14 +64,14 @@ flowchart TB
 
 | Feature | Frontend | Backend | Data |
 |---------|----------|---------|------|
-| Auth (register/login/logout) | `authSlice`, Login/Signup, axiosClient interceptor | `/user/*`, dual JWT, refresh rotation | `user` collection, Redis refresh sessions |
-| Password reset | ForgotPassword, ResetPassword, ChangePassword pages | `/user/forgot-password`, `/reset-password/:token`, `/change-password` | `user.resetPasswordToken`, `user.resetPasswordExpires`, Resend email |
-| Problem catalog | `Homepage` with server-side search/filter/pagination | `/problem/getProblems` with `buildProblemQuery` + `listProblems` service | `Problem`, `Submission` (for isSolved) |
+| Auth | `authSlice`, Login/Signup, Verify/Check Email | `/auth/*`, dual JWT, refresh rotation, Resend email | `user` collection, Redis sessions |
+| Profile & Stats | `Profile`, `EditProfile`, `axiosClient` | `/profile/*`, `/stats` | `user` collection, `Submission` aggregations |
+| Problem catalog | `Homepage` with server-side search/filter/pagination | `/problem/getProblems`, `listProblems` service | `Problem`, `Submission` (for isSolved) |
 | Problem solve | `ProblemPage` + problem components + `useRateLimit` hook | `/submission/run/:id`, `/submission/submit/:id` | `Problem`, `Submission` |
 | Submissions history | `SubmissionHistory` | `/problem/problemSubmmision/:id` | `Submission` |
-| Admin CRUD | Admin* components with pagination | `/problem/create\|update\|delete`, admin routes with rate limiting | `Problem`, `Counter`, `ReusableProblemNo` |
-| Editorial video | `Editorial`, `AdminUpload`, `AdminVideo` | `/video/*` + Cloudinary | `SolutionVideo` |
-| Rate limiting | `useRateLimit` hook, cooldown UI on run/submit/login/register | `rateLimitMiddleware` (Token Bucket for run/submit, Fixed Window for login/register/change-password) | Redis keys |
+| Admin CRUD | Admin* components with pagination | `/problem/create\|update\|delete`, admin routes with rate limiting | `Problem` (w/ R2 keys), `Counter`, `ReusableProblemNo` |
+| Editorial video | `Editorial`, `UploadVideoSolution`, `ManageVideoSolutions` | `/video/*` + YouTube integration | `SolutionVideo` |
+| Rate limiting | `useRateLimit` hook, cooldown UI on run/submit/login/register | `rateLimitMiddleware` (Token Bucket for run/submit, Fixed Window for login/register) | Redis keys |
 
 ## Configuration & Environment
 
@@ -85,9 +85,10 @@ Backend `.env` (not committed):
 | `JWT_REFRESH_KEY` | Refresh token signing secret |
 | `REDIS_URL` | Redis connection URL |
 | `RAPID_API_KEY` | Judge0 CE RapidAPI key |
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
-| `CLOUDINARY_API_KEY` | Cloudinary API key |
-| `CLOUDINARY_API_SECRET` | Cloudinary API secret |
+| `R2_ENDPOINT` | Cloudflare R2 endpoint URL |
+| `R2_ACCESS_KEY_ID` | Cloudflare R2 access key |
+| `R2_SECRET_ACCESS_KEY` | Cloudflare R2 secret key |
+| `R2_BUCKET_NAME` | Cloudflare R2 bucket name |
 | `RESEND_API_KEY` | Resend email API key |
 | `FRONTEND_URL` | Frontend URL for password reset emails |
 
@@ -114,8 +115,7 @@ See [AUTH_FLOW.md](./AUTH_FLOW.md).
 3. **Tag enum duplication:** `VALID_TAGS` in `models/problem.js` duplicated in frontend `Homepage.jsx` `tagOptions`.
 4. **Language ID duplication:** `constants/judge0.js` language IDs and frontend hardcoded `javascript|java|cpp`.
 5. **Cookie security:** `httpOnly` + `sameSite: "strict"` but no `secure` flag (HTTP-only local dev).
-6. **`deleteProblem` bug:** References `problem.problemNo` but variable is named `problemToDelete`.
-7. **`submission` schema** does not define `errorMessage` field; controller assigns it (Mongoose strict mode may strip it).
+6. **`submission` schema** does not define `errorMessage` field; controller assigns it (Mongoose strict mode may strip it).
 
 ## Changelog
 

@@ -2,6 +2,8 @@
 
 Preconfigured Axios HTTP client for the Judge0 CE API hosted on RapidAPI. Centralizes base URL, authentication headers, JSON content type, and request timeout for all Judge0 calls.
 
+**Documented Source File:** `backend/src/config/judge0Client.js`
+
 # Responsibilities
 
 - Load RapidAPI credentials from environment
@@ -43,7 +45,7 @@ No interceptors or retry logic are defined in this file.
 
 # Used By
 
-- [../services/judge0Service.md](../services/judge0Service.md) — sole consumer via `judge0Client.request(options)`
+- [../services/execution/judge0Service.md](../services/execution/judge0Service.md) — sole consumer via `judge0Client.request(options)`
 
 # API Connections
 
@@ -51,7 +53,7 @@ No interceptors or retry logic are defined in this file.
 |--------------|----------|
 | Judge0 CE (RapidAPI) | `https://judge0-ce.p.rapidapi.com` |
 
-Endpoints used indirectly through [../services/judge0Service.md](../services/judge0Service.md):
+Endpoints used indirectly through [../services/execution/judge0Service.md](../services/execution/judge0Service.md):
 
 - `POST /submissions/batch`
 - `GET /submissions/batch` (poll by tokens)
@@ -67,16 +69,15 @@ None.
 
 # Related Files
 
-- [../services/judge0Service.md](../services/judge0Service.md)
+- [../services/execution/judge0Service.md](../services/execution/judge0Service.md)
 - [../constants/judge0.md](../constants/judge0.md)
 - [../constants/judgeStatus.md](../constants/judgeStatus.md)
-- [../controllers/userSubmission.md](../controllers/userSubmission.md)
-- [../controllers/problemsControllers.md](../controllers/problemsControllers.md)
-- [../docs/BACKEND_FLOW.md](../docs/BACKEND_FLOW.md)
+- [../controllers/submission/submissionController.md](../controllers/submission/submissionController.md)
+- [../controllers/problem/problemController.md](../controllers/problem/problemController.md)
 
 # Next Files To Read
 
-1. [../services/judge0Service.md](../services/judge0Service.md) — batch submit and polling
+1. [../services/execution/judge0Service.md](../services/execution/judge0Service.md) — batch submit and polling
 2. [../constants/judge0.md](../constants/judge0.md) — polling tuning
 
 # Common Risks / Notes
@@ -86,4 +87,4 @@ None.
 - API key exposure risk if env leaks; never commit `.env`.
 - Judge0 CE queue limits and RapidAPI quotas apply outside this file.
 
-# Last Reviewed: 2026-05-18
+# Last Reviewed: 2026-08-10

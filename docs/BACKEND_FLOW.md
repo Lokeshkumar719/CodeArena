@@ -12,7 +12,7 @@ index.js
   express app
   trust proxy 1 (needed for IP rate limiting)
   cors (multi-origin array) + json (50mb limit) + cookieParser
-  mount routers: /user, /problem, /submission, /video
+  mount routers: /user, /problem, /submission, /video, /api/stats, /profile
   errorMiddleware (last)
   initialiseConnection():
     Promise.all([ mongoose.connect(), connectRedis() ])
@@ -39,8 +39,8 @@ flowchart LR
   Svc --> Redis[(Redis - Sessions/Tokens)]
   Svc --> J0[judge0Service]
   Svc --> Mail[emailService]
+  Svc --> R2[Cloudflare R2]
   
-  C --> CL[Cloudinary API]
   C --> Res[Response]
   C -.->|throw| E[errorMiddleware]
 ```
@@ -71,7 +71,10 @@ The codebase extracts significant business logic into the `services` directory:
 ### Problem Services
 - `listingProblems.js`: Advanced querying (search, filter, pagination, `isSolved` annotation)
 - `validateReferenceSolutions.js`: Execution verification during problem creation
-- `attachVideoDetails.js`: Joining Cloudinary data to problem responses
+- `attachVideoDetails.js`: Joining YouTube URL data to problem responses
+
+### Storage Services
+- `storageServices.js`: Interfaces with `r2Client` to upload and delete `.zip` files from Cloudflare R2
 
 ### Execution Service
 - `executionService.js`: Orchestrates batching testcases, calling Judge0, parsing results

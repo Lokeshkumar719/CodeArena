@@ -26,11 +26,11 @@ const useRateLimit = () => {
 
 ## Usage
 
-In `ProblemPage.jsx`:
+In `ProblemPage.jsx` and other components:
 ```javascript
 const runRateLimit = useRateLimit();
 
-const handleRun = async () => {
+const handleAction = async () => {
   if (runRateLimit.cooldown > 0) return;
   try {
     // ... api call
@@ -38,6 +38,19 @@ const handleRun = async () => {
     if (error.rateLimitedFor) {
       runRateLimit.startCooldown(error.rateLimitedFor);
     }
+  }
+}
+```
+
+## Used By
+
+- [`ProblemPage.jsx`](../pages/ProblemPage.md)
+- [`Login.jsx`](../pages/Login.md)
+- [`Signup.jsx`](../pages/Signup.md)
+- [`ChangePassword.jsx`](../pages/ChangePassword.md)
+- [`CreateProblem.jsx`](../components/admin/CreateProblem.md)
+- [`UpdateProblem.jsx`](../components/admin/UpdateProblem.md)
+
   }
 }
 

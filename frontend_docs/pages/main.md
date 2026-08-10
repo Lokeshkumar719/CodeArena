@@ -25,7 +25,11 @@ Application entry point: mounts the React root, wraps the tree with Redux, routi
 # Internal Logic
 
 1. Import global CSS (`./index.css`).
-2. Render tree (outer → inner): `StrictMode` → `Provider(store)` → `BrowserRouter` → `Toaster` + `App`.
+2. Render tree1. `document.getElementById('root')`
+2. StrictMode wrap.
+3. Provider wraps Router.
+4. Renders `<App />` inside Router.
+5. Renders `<Toaster />` from `react-hot-toast` for global toast notifications.
 
 No local state or effects in this file.
 
@@ -46,7 +50,8 @@ No local state or effects in this file.
 | `react-redux` | `Provider` |
 | `react-hot-toast` | `Toaster` |
 | `./index.css` | Global/Tailwind/DaisyUI styles |
-| `./App.jsx` | Root component |
+| `../App` | Root component |
+| `react-hot-toast` | Global `Toaster` |
 | `./store/store.js` | Redux store instance |
 
 # Used By

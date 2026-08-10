@@ -5,43 +5,40 @@
 
 # File Purpose
 
-Shared Axios instance for all backend API calls from the browser, with JSON defaults and cookie-based credentials.
+Shared Axios instance for all backend API calls from the browser, handling global configuration, silent token refresh, and rate-limit extraction.
 
 # Responsibilities
 
-- Single `baseURL` for the Express API.
-- Send cookies on cross-origin requests (`withCredentials: true`) for session/JWT cookies set by the backend.
-- Default `Content-Type: application/json`.
+- Provide a single `baseURL` using `import.meta.env.VITE_API_URL`.
+- Send cookies automatically (`withCredentials: true`) to manage HTTP-only JWTs.
+- Intercept 401 (Unauthorized) errors and attempt a silent token refresh via `POST /user/refresh-token`, unless the original request was an authentication route.
+- Intercept 429 (Too Many Requests) errors and parse the `retryAfterSeconds` into `error.rateLimitedFor` for use by `useRateLimit`.
 
 # Main Functions / Components / Classes
 
 | Export | Type | Description |
 |--------|------|-------------|
-| `axiosClient` (default) | Axios instance | Preconfigured `axios.create(...)` |
+| `axiosClient` (default) | Axios instance | Preconfigured instance with interceptors |
 
 # Internal Logic
 
-```javascript
-axios.create({
-  baseURL: 'http://localhost:3000',
-  withCredentials: true,
-  headers: { 'Content-Type': 'application/json' }
-});
-```
+1. **Configuration:**
+   - `baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000'`
+   - `withCredentials: true`
 
-No request/response interceptors in this file.
-
-# Inputs and Outputs
-
-| Caller provides | Returns |
-|-----------------|---------|
-| HTTP method, path, body (per call) | Axios response promise (`data`, `status`, etc.) |
+2. **Response Interceptor:**
+   - **On Success:** Returns the response directly.
+   - **On 429 Error:** Maps `error.response.data.retryAfterSeconds` to `error.rateLimitedFor`, then rejects.
+   - **On 401 Error:**
+     - Checks if the URL matches an `authRoutes` exclusion list (e.g., `/user/login`, `/user/refresh-token`).
+     - If excluded, immediately rejects.
+     - If not excluded, it queues a `POST /user/refresh-token` call.
+     - If the refresh succeeds, it modifies the original request config and retries it via `axiosClient(originalRequest)`.
+     - If the refresh fails, it redirects the browser to `/login`.
 
 # Dependencies
 
-| Package | Role |
-|---------|------|
-| `axios` | HTTP client |
+- `axios`
 
 # Used By
 
@@ -51,20 +48,6 @@ No request/response interceptors in this file.
 - Admin components (`AdminPanel`, `AdminUpdate`, `AdminUpdateList`, `AdminDelete`, `AdminVideo`, `AdminUpload`)
 - [`../components/SubmissionHistory.md`](../components/SubmissionHistory.md)
 
-**Exception:** [`../components/AdminUpload.md`](../components/AdminUpload.md) uses plain `axios` for direct multipart upload to Cloudinary (not this client).
-
-# API Connections
-
-All paths are relative to `http://localhost:3000`. Backend route docs (when present): `../../backend_docs/routes/`.
-
-| Area | Example paths used in frontend |
-|------|--------------------------------|
-| Auth | `POST /user/register`, `POST /user/login`, `GET /user/check`, `POST /user/logout` |
-| Problems | `GET /problem/getAllProblems`, `GET /problem/problemById/:id`, `POST /problem/create`, etc. |
-| Submissions | `POST /submission/run/:id`, `POST /submission/submit/:id` |
-| Video | `GET /video/create/:problemId`, `POST /video/save` |
-
-See also [`../../docs/API_FLOW.md`](../../docs/API_FLOW.md).
 
 # Database Connections
 

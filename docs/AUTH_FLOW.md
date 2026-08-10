@@ -72,10 +72,27 @@ sequenceDiagram
   participant Redis
   participant DB as MongoDB
 
-  Note over Browser,DB: Register / Login
+  Note over Browser,DB: Register
   Browser->>FE: Submit credentials
-  FE->>API: POST /user/register or /login
+  FE->>API: POST /user/register
   API->>DB: Create or find user + bcrypt verify
+  API->>DB: User.create (verified: false)
+  API->>API: generate email verification token
+  API->>Redis: (No session created yet)
+  API->>Email: Send verification link
+  API-->>FE: Success message (Not logged in)
+  FE->>FE: Navigate to /check-email
+
+  Note over Browser,DB: Email Verification
+  Browser->>API: GET /user/verify-email/:token (User clicks link)
+  API->>API: hash token → match with DB
+  API->>DB: Set verified: true, clear token
+  API-->>Browser: Redirect to /login with success
+
+  Note over Browser,DB: Login
+  Browser->>FE: Submit credentials
+  FE->>API: POST /user/login
+  API->>DB: Find user + bcrypt verify + check verified: true
   API->>API: generateTokens(user) → access + refresh JWTs
   API->>Redis: SET refreshToken:<userId> = hash(refreshToken), EX 7d
   API->>Browser: Set-Cookie accessToken (15m) + refreshToken (7d)
@@ -156,10 +173,12 @@ sequenceDiagram
 | `POST /user/login` | `limitLogin` → `login` |
 | `POST /user/logout` | `userMiddleware` → `logout` |
 | `POST /user/refresh` | (none) → `refreshAccessToken` |
-| `POST /user/forgot-password` | `limitLogin` → `forgotPassword` |
-| `POST /user/reset-password/:token` | (none) → `resetPassword` |
+| `POST /user/forgot-password` | `limitLogin` | `forgotPassword` |
+| `POST /user/reset-password/:token` | (none) | `resetPassword` |
 | `POST /user/change-password` | `userMiddleware` → `limitChangePassword` → `changePassword` |
-| `GET /user/check` | `userMiddleware` → inline JSON |
+| `GET /user/verify-email/:token` | (none) | `verifyEmail` |
+| `POST /user/resend-verification` | `limitLogin` | `resendVerificationEmail` |
+| `GET /user/check` | `userMiddleware` | check Auth status |
 | `POST /user/admin/Register` | `userMiddleware` → `adminMiddleware` → `adminRegister` |
 | `DELETE /user/profile` | `userMiddleware` → `deleteProfile` |
 | Problem admin routes | `userMiddleware` → `adminMiddleware` → `limitSubmitCode` (create/update) |
@@ -177,9 +196,9 @@ sequenceDiagram
 - **429 handling:** Interceptor attaches `rateLimitedFor` seconds to error object
 - **Guards:**
   - `/` — authenticated only
-  - `/login`, `/signup`, `/forgot-password`, `/reset-password/:token` — guest only
-  - `/change-password` — authenticated only
-  - `/problem/:problemId` — authenticated only
+  - `/login`, `/signup`, `/forgot-password`, `/reset-password/:token`, `/check-email`, `/verify-email/:token` — guest only
+  - `/change-password`, `/profile`, `/profile/edit` — authenticated only
+  - `/problem/:slug` — authenticated only
   - `/admin/*` — authenticated + admin role
 - **`useRateLimit` hook:** Manages cooldown countdown timer for rate-limited actions
 
@@ -198,9 +217,9 @@ sequenceDiagram
 
 ## Related
 
-- [backend_docs/middleware/userMiddleware.md](../backend_docs/middleware/userMiddleware.md)
-- [backend_docs/middleware/adminMiddleware.md](../backend_docs/middleware/adminMiddleware.md)
-- [backend_docs/middleware/rateLimitMiddleware.md](../backend_docs/middleware/rateLimitMiddleware.md)
-- [backend_docs/auth/userAuthenticate.md](../backend_docs/auth/userAuthenticate.md)
+- [authMiddleware.md](../backend_docs/middlewares/auth/authMiddleware.md) (token validation)
+- [adminMiddleware.md](../backend_docs/middlewares/auth/adminMiddleware.md) (role check)
+- [rateLimitMiddleware.md](../backend_docs/middlewares/rateLimitMiddleware.md) (Redis Lua token bucket and fixed window implementations)
+- [authController.md](../backend_docs/controllers/auth/authController.md)
 - [frontend_docs/state/authSlice.md](../frontend_docs/state/authSlice.md)
 - [frontend_docs/hooks/useRateLimit.md](../frontend_docs/hooks/useRateLimit.md)
