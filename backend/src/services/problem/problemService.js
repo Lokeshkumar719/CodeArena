@@ -3,11 +3,10 @@ const User = require('../../models/user');
 const Submission = require('../../models/submission');
 const SolutionVideo = require('../../models/solutionVideo');
 const ReusableProblemNo = require('../../models/reusableProblemNo');
+const problemRepository = require('../../repositories/problemRepository');
 
-const asyncHandler = require('../../utils/asyncHandler');
 const STATUS_CODES = require('../../constants/statusCodes');
 const ApiError = require('../../utils/ApiError');
-const validateObjectId = require('../../utils/validation/validateObjectId');
 const getNextProblemNo = require('../../utils/problem/getNextProblemNo');
 const slugify = require('../../utils/problem/slugify');
 
@@ -20,17 +19,17 @@ const deleteHiddenTestcasesZip = require('../../services/storage/deleteHiddenTes
 
 const { MAX_REFERENCE_VALIDATION_TESTCASES } = require('../../constants/judge0');
 
-const createProblem = asyncHandler(async (req, res) => {
+const createProblemService = async (body, fileBuffer, userId) => {
   let tags;
   let visibleTestCases;
   let startCode;
   let referenceSolution;
 
   try {
-    tags = JSON.parse(req.body.tags);
-    visibleTestCases = JSON.parse(req.body.visibleTestCases);
-    startCode = JSON.parse(req.body.startCode);
-    referenceSolution = JSON.parse(req.body.referenceSolution);
+    tags = JSON.parse(body.tags);
+    visibleTestCases = JSON.parse(body.visibleTestCases);
+    startCode = JSON.parse(body.startCode);
+    referenceSolution = JSON.parse(body.referenceSolution);
   } catch {
     throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Invalid request payload');
   }
@@ -43,81 +42,65 @@ const createProblem = asyncHandler(async (req, res) => {
     throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Visible testcases are required');
   }
 
-  if (!req.file) {
+  if (!fileBuffer) {
     throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Hidden testcases ZIP is required');
   }
 
-  const hiddenTestCases = extractHiddenTestcasesFromZip(req.file.buffer);
-
+  const hiddenTestCases = extractHiddenTestcasesFromZip(fileBuffer);
   const allTestCases = [...visibleTestCases, ...hiddenTestCases];
-
   const validationTestCases = allTestCases.slice(0, MAX_REFERENCE_VALIDATION_TESTCASES);
 
   await validateReferenceSolutions(referenceSolution, validationTestCases);
 
-  const title = req.body.title.trim();
-
-  const existingProblem = await Problem.findOne({
-    title,
-  });
+  const title = body.title.trim();
+  const existingProblem = await problemRepository.findProblemByTitle(title);
 
   if (existingProblem) {
     throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Problem title already exists');
   }
 
   const problemNo = await getNextProblemNo();
-
   const slug = slugify(title);
 
-  const hiddenTestCasesZip = await uploadHiddenTestcasesZip(req.file.buffer, problemNo);
-
+  const hiddenTestCasesZip = await uploadHiddenTestcasesZip(fileBuffer, problemNo);
   if (!hiddenTestCasesZip?.key) {
     throw new ApiError(STATUS_CODES.INTERNAL_SERVER_ERROR, 'Failed to upload hidden testcases');
   }
 
-  await Problem.create({
+  const problemData = {
     title,
     slug,
-    description: req.body.description,
-    inputFormat: req.body.inputFormat,
-    outputFormat: req.body.outputFormat,
-    constraints: req.body.constraints,
-
-    difficulty: req.body.difficulty,
-    timeLimit: Number(req.body.timeLimit),
-    memoryLimit: Number(req.body.memoryLimit),
-
+    description: body.description,
+    inputFormat: body.inputFormat,
+    outputFormat: body.outputFormat,
+    constraints: body.constraints,
+    difficulty: body.difficulty,
+    timeLimit: Number(body.timeLimit),
+    memoryLimit: Number(body.memoryLimit),
     tags,
     visibleTestCases,
     startCode,
     referenceSolution,
-
     problemNo,
     hiddenTestCasesZip,
-    problemCreator: req.user._id,
-  });
+    problemCreator: userId,
+  };
 
-  return res.status(STATUS_CODES.CREATED).json({
-    success: true,
-    message: 'Problem created successfully',
-  });
-});
+  const problem = await problemRepository.createProblem(problemData);
+  return problem;
+};
 
-const updateProblem = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-
-  validateObjectId(id);
-
+const updateProblemService = async (id, body, fileBuffer) => {
   let tags;
   let visibleTestCases;
   let startCode;
   let referenceSolution;
 
   try {
-    tags = JSON.parse(req.body.tags);
-    visibleTestCases = JSON.parse(req.body.visibleTestCases);
-    startCode = JSON.parse(req.body.startCode);
-    referenceSolution = JSON.parse(req.body.referenceSolution);
+    tags = JSON.parse(body.tags);
+    visibleTestCases = JSON.parse(body.visibleTestCases);
+    startCode = JSON.parse(body.startCode);
+    referenceSolution = JSON.parse(body.referenceSolution);
   } catch {
     throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Invalid request payload');
   }
@@ -130,129 +113,77 @@ const updateProblem = asyncHandler(async (req, res) => {
     throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Visible testcases are required');
   }
 
-  const dsaProblem = await Problem.findById(id);
-
+  const dsaProblem = await problemRepository.findProblemById(id);
   if (!dsaProblem) {
     throw new ApiError(STATUS_CODES.NOT_FOUND, 'Problem not found');
   }
 
-  const title = req.body.title.trim();
-
+  const title = body.title.trim();
   if (title !== dsaProblem.title) {
-    const existingProblem = await Problem.findOne({
-      title: req.body.title.trim(),
-    });
-
+    const existingProblem = await problemRepository.findProblemByTitle(title);
     if (existingProblem) {
       throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Problem title already exists');
     }
   }
 
   const slug = slugify(title);
-
   let hiddenTestCasesZip = dsaProblem.hiddenTestCasesZip;
 
-  if (req.file) {
-    const hiddenTestCases = extractHiddenTestcasesFromZip(req.file.buffer);
-
+  if (fileBuffer) {
+    const hiddenTestCases = extractHiddenTestcasesFromZip(fileBuffer);
     const allTestCases = [...visibleTestCases, ...hiddenTestCases];
-
     const validationTestCases = allTestCases.slice(0, MAX_REFERENCE_VALIDATION_TESTCASES);
 
     await validateReferenceSolutions(referenceSolution, validationTestCases);
 
-    hiddenTestCasesZip = await uploadHiddenTestcasesZip(req.file.buffer, dsaProblem.problemNo);
+    hiddenTestCasesZip = await uploadHiddenTestcasesZip(fileBuffer, dsaProblem.problemNo);
   }
 
-  const newProblem = await Problem.findByIdAndUpdate(
-    id,
-    {
-      title,
-      slug,
-      description: req.body.description,
-      inputFormat: req.body.inputFormat,
-      outputFormat: req.body.outputFormat,
-      constraints: req.body.constraints,
+  const updateData = {
+    title,
+    slug,
+    description: body.description,
+    inputFormat: body.inputFormat,
+    outputFormat: body.outputFormat,
+    constraints: body.constraints,
+    difficulty: body.difficulty,
+    timeLimit: Number(body.timeLimit),
+    memoryLimit: Number(body.memoryLimit),
+    tags,
+    visibleTestCases,
+    startCode,
+    referenceSolution,
+    hiddenTestCasesZip,
+  };
 
-      difficulty: req.body.difficulty,
-      timeLimit: Number(req.body.timeLimit),
-      memoryLimit: Number(req.body.memoryLimit),
+  const newProblem = await problemRepository.updateProblemById(id, updateData);
+  return newProblem;
+};
 
-      tags,
-      visibleTestCases,
-      startCode,
-      referenceSolution,
-
-      hiddenTestCasesZip,
-    },
-    {
-      runValidators: true,
-      returnDocument: 'after',
-    }
-  );
-
-  return res.status(STATUS_CODES.OK).json({
-    success: true,
-    message: 'Problem updated successfully',
-    data: newProblem,
-  });
-});
-
-const deleteProblem = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-
-  validateObjectId(id);
-
-  const problemToDelete = await Problem.findById(id);
+const deleteProblemService = async (id) => {
+  const problemToDelete = await problemRepository.findProblemById(id);
 
   if (!problemToDelete) {
     throw new ApiError(STATUS_CODES.NOT_FOUND, 'Problem not found');
   }
 
-  // delete related submissions
-  await Submission.deleteMany({
-    problemId: id,
-  });
+  await Submission.deleteMany({ problemId: id });
+  await SolutionVideo.deleteMany({ problemId: id });
 
-  // delete related solution videos
-  await SolutionVideo.deleteMany({
-    problemId: id,
-  });
+  await User.updateMany({}, { $pull: { problemSolved: id } });
 
-  // remove problem from solved list
-  await User.updateMany(
-    {},
-    {
-      $pull: {
-        problemSolved: id,
-      },
-    }
-  );
-
-  // Save released number
   await ReusableProblemNo.create({
     value: problemToDelete.problemNo,
   });
 
-  // delete hidden testcase ZIP from R2
-
   await deleteHiddenTestcasesZip(problemToDelete.hiddenTestCasesZip);
 
-  // delete actual problem
-  await Problem.findByIdAndDelete(id);
+  await problemRepository.deleteProblemById(id);
+};
 
-  return res.status(STATUS_CODES.OK).json({
-    success: true,
-    message: 'Problem deleted successfully',
-  });
-});
-
-const getProblemByIdAdmin = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-
-  validateObjectId(id);
-
-  const reqdProblem = await Problem.findById(id).select(
+const getProblemByIdAdminService = async (id) => {
+  const reqdProblem = await problemRepository.findProblemByIdWithSelectedFields(
+    id,
     '_id problemNo title description inputFormat outputFormat constraints timeLimit memoryLimit difficulty tags visibleTestCases hiddenTestCasesZip startCode referenceSolution'
   );
 
@@ -261,17 +192,12 @@ const getProblemByIdAdmin = asyncHandler(async (req, res) => {
   }
 
   const responseData = await attachVideoDetails(reqdProblem, id);
+  return responseData;
+};
 
-  return res.status(STATUS_CODES.OK).json({
-    success: true,
-    data: responseData,
-  });
-});
-
-const getProblemBySlug = asyncHandler(async (req, res) => {
-  const { slug } = req.params;
-
-  const reqdProblem = await Problem.findOne({ slug }).select(
+const getProblemBySlugService = async (slug) => {
+  const reqdProblem = await problemRepository.findProblemBySlugWithSelectedFields(
+    slug,
     '_id problemNo title slug description inputFormat outputFormat constraints timeLimit memoryLimit difficulty tags visibleTestCases startCode referenceSolution'
   );
 
@@ -280,61 +206,42 @@ const getProblemBySlug = asyncHandler(async (req, res) => {
   }
 
   const responseData = await attachVideoDetails(reqdProblem, reqdProblem._id);
+  return responseData;
+};
 
-  return res.status(STATUS_CODES.OK).json({
-    success: true,
-    data: responseData,
-  });
-});
-
-const getProblems = asyncHandler(async (req, res) => {
-  const userId = req.user?._id ?? null;
-
-  const result = await listProblems(req.query, userId);
+const getProblemsService = async (query, userId) => {
+  const result = await listProblems(query, userId);
 
   if (!result.success) {
     throw new ApiError(STATUS_CODES.BAD_REQUEST, result.errors?.[0] || 'Failed to fetch problems');
   }
 
-  return res.status(STATUS_CODES.OK).json({
-    success: true,
-    ...result.data,
-  });
-});
+  return result.data;
+};
 
-const solvedProblems = asyncHandler(async (req, res) => {
-  const userId = req.user._id;
+const solvedProblemsService = async (userId) => {
   const user = await User.findById(userId).populate({
     path: 'problemSolved',
     select: '_id title difficulty tags',
   });
-  return res.status(STATUS_CODES.OK).json({
-    success: true,
-    data: user.problemSolved,
-  });
-});
+  return user.problemSolved;
+};
 
-const submittedProblem = asyncHandler(async (req, res) => {
-  const userId = req.user._id;
-  const problemId = req.params.id;
-  validateObjectId(problemId);
+const submittedProblemService = async (userId, problemId) => {
   const ans = await Submission.find({
     userId,
     problemId,
   }).sort({ createdAt: -1 });
-  return res.status(STATUS_CODES.OK).json({
-    success: true,
-    data: ans,
-  });
-});
+  return ans;
+};
 
 module.exports = {
-  createProblem,
-  updateProblem,
-  deleteProblem,
-  getProblemBySlug,
-  getProblems,
-  solvedProblems,
-  submittedProblem,
-  getProblemByIdAdmin,
+  createProblemService,
+  updateProblemService,
+  deleteProblemService,
+  getProblemByIdAdminService,
+  getProblemBySlugService,
+  getProblemsService,
+  solvedProblemsService,
+  submittedProblemService,
 };

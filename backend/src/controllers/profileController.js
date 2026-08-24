@@ -1,14 +1,10 @@
-const asyncHandler = require('../../utils/asyncHandler');
-const {
-  getProfileService,
-  updateProfileService,
-  getPublicProfileService,
-} = require('../../services/profile/profileService');
+const asyncHandler = require('../utils/asyncHandler');
+const profileService = require('../services/profile/profileService');
 
-const STATUS_CODES = require('../../constants/statusCodes');
+const STATUS_CODES = require('../constants/statusCodes');
 
 const getMyProfile = asyncHandler(async (req, res) => {
-  const profile = await getProfileService(req.user._id);
+  const profile = await profileService.getProfileService(req.user._id);
 
   res.status(STATUS_CODES.OK).json({
     success: true,
@@ -18,7 +14,7 @@ const getMyProfile = asyncHandler(async (req, res) => {
 });
 
 const updateMyProfile = asyncHandler(async (req, res) => {
-  const profile = await updateProfileService(req.user._id, req.body);
+  const profile = await profileService.updateProfileService(req.user._id, req.body);
 
   res.status(STATUS_CODES.OK).json({
     success: true,
@@ -28,7 +24,7 @@ const updateMyProfile = asyncHandler(async (req, res) => {
 });
 
 const getPublicProfile = asyncHandler(async (req, res) => {
-  const profile = await getPublicProfileService(req.params.username);
+  const profile = await profileService.getPublicProfileService(req.params.username);
 
   res.status(STATUS_CODES.OK).json({
     success: true,

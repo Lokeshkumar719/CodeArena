@@ -1,12 +1,12 @@
-const Submission = require('../../models/submission');
+const submissionRepository = require('../../repositories/submissionRepository');
 
 const getProfileStats = async (userId, solvedCount) => {
   const [totalSubmissions, acceptedSubmissions] = await Promise.all([
-    Submission.countDocuments({
+    submissionRepository.countSubmissions({
       userId,
     }),
 
-    Submission.countDocuments({
+    submissionRepository.countSubmissions({
       userId,
       status: 'accepted',
     }),
