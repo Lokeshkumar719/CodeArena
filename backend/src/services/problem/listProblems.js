@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 
-const { Problem } = require('../../models/problem');
-const Submission = require('../../models/submission');
-const SolutionVideo = require('../../models/solutionVideo');
+const problemRepository = require('../../repositories/problemRepository');
+const submissionRepository = require('../../repositories/submissionRepository');
+const solutionVideoRepository = require('../../repositories/solutionVideoRepository');
 
 const { buildProblemQuery, buildPagination } = require('../../utils/problem/buildProblemQuery');
 
@@ -40,11 +40,11 @@ async function listProblems(queryParams, userId) {
   }
 
   const [totalProblems, problems, videos] = await Promise.all([
-    Problem.countDocuments(filter),
+    problemRepository.countProblems(filter),
 
-    Problem.find(filter, LISTING_PROJECTION).sort({ problemNo: 1 }).skip(skip).limit(limit).lean(),
+    problemRepository.findProblems(filter, LISTING_PROJECTION, { problemNo: 1 }, skip, limit),
 
-    SolutionVideo.find({}, { problemId: 1, _id: 0 }).lean(),
+    solutionVideoRepository.findAllVideoProblemIds(),
   ]);
 
   const totalPages = Math.ceil(totalProblems / limit);
@@ -94,14 +94,7 @@ async function listProblems(queryParams, userId) {
 }
 
 async function getSolvedProblemIds(userId) {
-  const accepted = await Submission.find(
-    { userId, status: 'accepted' },
-    { problemId: 1, _id: 0 }
-  ).lean();
-
-  const uniqueIds = [...new Set(accepted.map((s) => s.problemId.toString()))];
-
-  return uniqueIds.map((id) => new mongoose.Types.ObjectId(id));
+  return await submissionRepository.findAcceptedProblemIdsForUser(userId);
 }
 
 module.exports = {

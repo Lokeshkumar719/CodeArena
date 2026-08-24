@@ -6,12 +6,12 @@ const cookieParser = require('cookie-parser');
 const main = require('./config/db');
 const startUnverifiedUserCleanup = require('./services/jobs/unverifiedUserCleanup');
 
-const authRouter = require('./routes/auth/authRoutes');
-const problemRouter = require('./routes/problem/problemRoutes');
-const submitRouter = require('./routes/submission/submissionRoutes');
-const videoRouter = require('./routes/video/videoRoutes');
+const authRouter = require('./routes/authRoutes');
+const problemRouter = require('./routes/problemRoutes');
+const submitRouter = require('./routes/submissionRoutes');
+const videoRouter = require('./routes/videoRoutes');
 const statsRoutes = require('./routes/statsRoutes');
-const profileRouter = require('./routes/profile/profileRoutes');
+const profileRouter = require('./routes/profileRoutes');
 
 const errorMiddleware = require('./middlewares/errorMiddleware');
 const { redisClient, connectRedis } = require('./config/redis');

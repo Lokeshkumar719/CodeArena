@@ -1,45 +1,30 @@
-const Submission = require('../../models/submission');
-const { Problem } = require('../../models/problem');
-
 const { getLanguageById } = require('../../utils/judge/judge0Utils');
-const asyncHandler = require('../../utils/asyncHandler');
 const getExecutionLimits = require('../../utils/judge/getExecutionLimits');
 const ApiError = require('../../utils/ApiError');
-const validateSubmissionInput = require('../../utils/validation/validateSubmissionInput');
 const extractHiddenTestcasesFromR2 = require('../../services/storage/extractHiddenTestcasesFromR2');
-
 const executeCode = require('../../services/execution/executionService');
-
 const STATUS_CODES = require('../../constants/statusCodes');
 const SUBMISSION_STATUS = require('../../constants/submissionStatus');
 
-const submitCode = asyncHandler(async (req, res) => {
-  const userId = req.user._id;
+const problemRepository = require('../../repositories/problemRepository');
+const submissionRepository = require('../../repositories/submissionRepository');
+const userRepository = require('../../repositories/userRepository');
 
-  const problemId = req.params.id;
-
-  const { code, language } = req.body;
-
-  validateSubmissionInput(userId, problemId, code, language);
-
+const submitCodeService = async (userId, problemId, code, language) => {
   const languageId = getLanguageById(language);
-
   if (!languageId) {
     throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Unsupported language');
   }
 
-  const problem = await Problem.findById(problemId);
-
+  const problem = await problemRepository.findProblemById(problemId);
   if (!problem) {
     throw new ApiError(STATUS_CODES.NOT_FOUND, 'Problem not found');
   }
 
   const hiddenTestCases = await extractHiddenTestcasesFromR2(problem.hiddenTestCasesZip);
-
   const allTestcases = [...problem.visibleTestCases, ...hiddenTestCases];
 
-  // create initial pending submission
-  const submittedResult = await Submission.create({
+  const submittedResult = await submissionRepository.createSubmission({
     userId,
     problemId,
     code,
@@ -49,7 +34,6 @@ const submitCode = asyncHandler(async (req, res) => {
     testCasesTotal: allTestcases.length,
   });
 
-  // execute code against all testcases
   const { testCasesPassed, runtime, memory, status, errorMessage } = await executeCode(
     allTestcases,
     code,
@@ -57,64 +41,47 @@ const submitCode = asyncHandler(async (req, res) => {
     getExecutionLimits(problem)
   );
 
-  // update submission result
   submittedResult.status = status;
-
   submittedResult.testCasesPassed = testCasesPassed;
-
   submittedResult.runtime = runtime;
-
   submittedResult.memory = memory;
-
   submittedResult.errorMessage = errorMessage;
 
-  await submittedResult.save();
+  await submissionRepository.saveSubmission(submittedResult);
 
-  // add solved problem only if accepted
   if (status === SUBMISSION_STATUS.ACCEPTED) {
-    await req.user.updateOne({
-      $addToSet: {
-        problemSolved: problemId,
-      },
-    });
+    const user = await userRepository.findUserById(userId);
+    if (user) {
+      await user.updateOne({
+        $addToSet: {
+          problemSolved: problemId,
+        },
+      });
+    }
   }
 
-  return res.status(STATUS_CODES.CREATED).json({
-    success: true,
-    data: {
-      accepted: status === SUBMISSION_STATUS.ACCEPTED,
-      status,
-      error: errorMessage,
-      totalTestCases: submittedResult.testCasesTotal,
-      passedTestCases: testCasesPassed,
-      runtime,
-      memory,
-    },
-  });
-});
+  return {
+    accepted: status === SUBMISSION_STATUS.ACCEPTED,
+    status,
+    error: errorMessage,
+    totalTestCases: submittedResult.testCasesTotal,
+    passedTestCases: testCasesPassed,
+    runtime,
+    memory,
+  };
+};
 
-const runCode = asyncHandler(async (req, res) => {
-  const userId = req.user._id;
-
-  const problemId = req.params.id;
-
-  const { code, language } = req.body;
-
-  validateSubmissionInput(userId, problemId, code, language);
-
-  const problem = await Problem.findById(problemId);
-
+const runCodeService = async (problemId, code, language) => {
+  const problem = await problemRepository.findProblemById(problemId);
   if (!problem) {
     throw new ApiError(STATUS_CODES.NOT_FOUND, 'Problem not found');
   }
 
   const languageId = getLanguageById(language);
-
   if (!languageId) {
     throw new ApiError(STATUS_CODES.BAD_REQUEST, 'Unsupported language');
   }
 
-  // execute code only on visible testcases
   const { testResult, testCasesPassed, runtime, memory, status, errorMessage } = await executeCode(
     problem.visibleTestCases,
     code,
@@ -123,21 +90,18 @@ const runCode = asyncHandler(async (req, res) => {
     true
   );
 
-  return res.status(STATUS_CODES.OK).json({
-    success: true,
-    data: {
-      accepted: status === SUBMISSION_STATUS.ACCEPTED,
-      status,
-      testCases: testResult,
-      runtime,
-      memory,
-      error: errorMessage,
-      passedTestCases: testCasesPassed,
-    },
-  });
-});
+  return {
+    accepted: status === SUBMISSION_STATUS.ACCEPTED,
+    status,
+    testCases: testResult,
+    runtime,
+    memory,
+    error: errorMessage,
+    passedTestCases: testCasesPassed,
+  };
+};
 
 module.exports = {
-  submitCode,
-  runCode,
+  submitCodeService,
+  runCodeService,
 };
