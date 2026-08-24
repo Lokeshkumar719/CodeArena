@@ -1,18 +1,13 @@
 const cron = require('node-cron');
 
-const User = require('../../models/user');
+const userRepository = require('../../repositories/userRepository');
 
 const startUnverifiedUserCleanup = () => {
   cron.schedule('0 * * * *', async () => {
     try {
       const cutoffDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-      const result = await User.deleteMany({
-        isVerified: false,
-        createdAt: {
-          $lt: cutoffDate,
-        },
-      });
+      const result = await userRepository.deleteUnverifiedUsersOlderThan(cutoffDate);
 
       if (result.deletedCount > 0) {
         console.log(`[Cleanup Job] Deleted ${result.deletedCount} unverified users`);

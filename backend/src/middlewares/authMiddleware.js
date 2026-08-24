@@ -1,10 +1,10 @@
-const User = require('../../models/user');
+const User = require('../models/user');
 
-const asyncHandler = require('../../utils/asyncHandler');
-const STATUS_CODES = require('../../constants/statusCodes');
-const ApiError = require('../../utils/ApiError');
+const asyncHandler = require('../utils/asyncHandler');
+const STATUS_CODES = require('../constants/statusCodes');
+const ApiError = require('../utils/ApiError');
 
-const { verifyAccessToken } = require('../../services/auth/tokenService');
+const { verifyAccessToken, verifyRefreshToken } = require('../services/auth/tokenService');
 
 // this middleware checks whether the user is authenticated or not
 const authMiddleware = asyncHandler(async (req, res, next) => {

@@ -1,9 +1,7 @@
-const SolutionVideo = require('../../models/solutionVideo');
+const solutionVideoRepository = require('../../repositories/solutionVideoRepository');
 
 const attachVideoDetails = async (problem, problemId) => {
-  const video = await SolutionVideo.findOne({
-    problemId,
-  });
+  const video = await solutionVideoRepository.findVideoByProblemId(problemId);
 
   return {
     ...problem.toObject(),
